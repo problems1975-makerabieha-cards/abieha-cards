@@ -1,14 +1,15 @@
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, join_room, emit
-import random, uuid, os
+import random, uuid, os, threading
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "abieha-cards-secret")
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "abieha-final-secret")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 COLORS = ["red", "bluec", "greenc", "yellow"]
 TEAM_ORDER = ["A", "B", "C"]
 TEAM_NAMES = {"A": "الفريق الأزرق", "B": "الفريق البرتقالي", "C": "الفريق البنفسجي"}
+
 rooms = {}
 
 def build_deck():
@@ -16,11 +17,14 @@ def build_deck():
     for c in COLORS:
         deck.append({"c": c, "n": "0"})
         for i in range(1, 10):
-            deck += [{"c": c, "n": str(i)}, {"c": c, "n": str(i)}]
+            deck.append({"c": c, "n": str(i)})
+            deck.append({"c": c, "n": str(i)})
         for n in ["+2", "عكس", "تخطي"]:
-            deck += [{"c": c, "n": n}, {"c": c, "n": n}]
+            deck.append({"c": c, "n": n})
+            deck.append({"c": c, "n": n})
     for _ in range(4):
-        deck += [{"c": "black", "n": "لون"}, {"c": "black", "n": "+4"}]
+        deck.append({"c": "black", "n": "لون"})
+        deck.append({"c": "black", "n": "+4"})
     random.shuffle(deck)
     return deck
 
@@ -40,23 +44,42 @@ def draw_to(r, idx, count):
 def team_scores(r):
     scores = {"A": 0, "B": 0, "C": 0}
     for p in r["players"]:
-        if p.get("team") in scores:
-            scores[p["team"]] += p.get("wins", 0)
+        t = p.get("team")
+        if t in scores:
+            scores[t] += p.get("wins", 0)
     return scores
 
 def public_state(room):
     r = rooms[room]
     return {
-        "room": room, "started": r["started"], "turn": r["turn"],
-        "direction": r["direction"], "color": r["color"],
-        "mode": r.get("mode", "solo"), "teamMode": r.get("teamMode", "auto"),
-        "teamCount": r.get("teamCount", 2), "pendingDraw4": r.get("pendingDraw4", 0),
+        "room": room,
+        "started": r["started"],
+        "turn": r["turn"],
+        "direction": r["direction"],
+        "color": r["color"],
+        "mode": r.get("mode", "solo"),
+        "teamMode": r.get("teamMode", "auto"),
+        "teamCount": r.get("teamCount", 2),
+        "pendingDraw4": r.get("pendingDraw4", 0),
+        "pendingDraw2": r.get("pendingDraw2", 0),
         "top": r["discard"][-1] if r["discard"] else None,
-        "deckCount": len(r["deck"]), "teamScores": team_scores(r),
-        "players": [{"id": p["id"], "name": p["name"], "team": p.get("team"),
-                     "count": len(p["hand"]), "last": p.get("last", False),
-                     "wins": p.get("wins", 0)} for p in r["players"]],
-        "log": r["log"][:45],
+        "deckCount": len(r["deck"]),
+        "timeLeft": r.get("timeLeft", 0),
+        "timeLimit": r.get("timeLimit", 10),
+        "teamScores": team_scores(r),
+        "hostId": r.get("host"),
+        "players": [
+            {
+                "id": p["id"],
+                "name": p["name"],
+                "team": p.get("team"),
+                "count": len(p["hand"]),
+                "last": p.get("last", False),
+                "wins": p.get("wins", 0),
+            }
+            for p in r["players"]
+        ],
+        "log": r["log"][:60],
     }
 
 def send_state(room):
@@ -78,46 +101,116 @@ def find_player(room, player_id):
 
 def assign_auto_team(r):
     count = max(2, min(3, int(r.get("teamCount", 2) or 2)))
-    return TEAM_ORDER[:count][len(r["players"]) % count]
+    valid = TEAM_ORDER[:count]
+    return valid[len(r["players"]) % len(valid)]
 
 def is_allowed(r, card):
+    # During +4 punishment: player may stack another +4, or defend only with Skip/Reverse
+    # that matches the color chosen by the +4 owner. Otherwise they must draw the penalty.
     if r.get("pendingDraw4", 0) > 0:
-        return card["n"] in ["+4", "عكس", "تخطي"]
+        return card["n"] == "+4" or (card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"])
+
+    # During Skip/Reverse challenge: player may answer with Skip/Reverse in the requested color,
+    # otherwise the Draw button makes them draw two cards.
+    if r.get("pendingDraw2", 0) > 0:
+        return card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"]
+
     top = r["discard"][-1]
     return card["c"] == "black" or card["c"] == r["color"] or card["n"] == top["n"]
 
 def apply_effect(r, card):
+    # +4 chain
     if card["n"] == "+4":
         r["pendingDraw4"] = int(r.get("pendingDraw4", 0)) + 4
-        r["log"].insert(0, f"العقوبة الآن: اسحب {r['pendingDraw4']}")
+        r["pendingDraw2"] = 0
+        r["log"].insert(0, f"العقوبة الآن: اسحب {r['pendingDraw4']} أو رد +4 / تخطي / عكس بنفس اللون")
         r["turn"] = next_index(r)
         return
+
+    # Skip / Reverse defense while +4 is pending
     if r.get("pendingDraw4", 0) > 0 and card["n"] == "عكس":
         r["direction"] *= -1
-        r["log"].insert(0, "تم عكس عقوبة +4")
+        r["log"].insert(0, "تم عكس عقوبة +4 واللون مطلوب نفسه")
         r["turn"] = next_index(r)
         return
+
     if r.get("pendingDraw4", 0) > 0 and card["n"] == "تخطي":
-        skipped = next_index(r)
-        r["turn"] = skipped
-        r["log"].insert(0, f"تم تخطي {r['players'][skipped]['name']} والعقوبة مستمرة")
+        r["log"].insert(0, "تم تمرير عقوبة +4 بالتخطي")
         r["turn"] = next_index(r)
         return
+
+    # Skip / Reverse rules
+    if card["n"] in ["عكس", "تخطي"]:
+        # في حالة لاعبين فقط: العكس والتخطي يرجعون الدور لنفس اللاعب.
+        # يقدر بعدها يرمي تخطي على تخطي حتى لو لون ثاني، أو عكس بنفس اللون،
+        # وبعدها يكمل برقم مطابق للون الحالي.
+        if len(r["players"]) == 2:
+            current = r["turn"]
+            if card["n"] == "عكس":
+                r["direction"] *= -1
+                r["log"].insert(0, "عكس مع لاعبين: نفس اللاعب يلعب مرة ثانية")
+            else:
+                r["log"].insert(0, "تخطي مع لاعبين: نفس اللاعب يلعب مرة ثانية")
+            r["pendingDraw2"] = 0
+            r["turn"] = current
+            return
+
+        # أكثر من لاعبين: اللاعب التالي يرد بعكس/تخطي في نفس اللون أو يسحب كرتين.
+        if card["n"] == "عكس":
+            r["direction"] *= -1
+            r["log"].insert(0, "عكس: اللاعب التالي يرد بعكس/تخطي أو يسحب كرتين")
+        else:
+            r["log"].insert(0, "تخطي: اللاعب التالي يرد بعكس/تخطي أو يسحب كرتين")
+        r["pendingDraw2"] = 2
+        r["turn"] = next_index(r)
+        return
+
+    # normal +2
     if card["n"] == "+2":
         r["turn"] = next_index(r)
         draw_to(r, r["turn"], 2)
         r["log"].insert(0, f"{r['players'][r['turn']]['name']} سحب كرتين")
-    elif card["n"] == "تخطي":
         r["turn"] = next_index(r)
-        r["log"].insert(0, f"تم تخطي {r['players'][r['turn']]['name']}")
-    elif card["n"] == "عكس":
-        r["direction"] *= -1
-        r["log"].insert(0, "تغير اتجاه اللعب")
+        return
+
+    r["pendingDraw2"] = 0
     r["turn"] = next_index(r)
+
+def cancel_timer(r):
+    t = r.get("timer")
+    if t:
+        try:
+            t.cancel()
+        except Exception:
+            pass
+        r["timer"] = None
+
+def start_timer(room):
+    r = rooms[room]
+    cancel_timer(r)
+    r["timeLeft"] = r.get("timeLimit", 10)
+
+    def tick():
+        if not r["started"]:
+            return
+        r["timeLeft"] -= 1
+        if r["timeLeft"] <= 0:
+            idx = r["turn"]
+            r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته ⏱️ وتم تخطي دوره")
+            r["turn"] = next_index(r)
+            send_state(room)
+            start_timer(room)
+            return
+        send_state(room)
+        r["timer"] = threading.Timer(1, tick)
+        r["timer"].start()
+
+    r["timer"] = threading.Timer(1, tick)
+    r["timer"].start()
 
 @app.route("/")
 def index():
-    return render_template("online.html")
+    return render_template("index.html")
 
 @socketio.on("join")
 def on_join(data):
@@ -129,22 +222,32 @@ def on_join(data):
     selected_team = data.get("team", "A")
 
     if room not in rooms:
-        rooms[room] = {"players": [], "deck": [], "discard": [], "turn": 0, "direction": 1,
-                       "color": None, "started": False, "log": [], "mode": mode,
-                       "teamMode": team_mode, "teamCount": team_count, "pendingDraw4": 0}
+        rooms[room] = {
+            "players": [], "deck": [], "discard": [],
+            "turn": 0, "direction": 1, "color": None,
+            "started": False, "log": [],
+            "mode": mode, "teamMode": team_mode, "teamCount": team_count,
+            "pendingDraw4": 0, "pendingDraw2": 0, "timeLimit": 30, "timeLeft": 0, "timer": None,
+            "host": None
+        }
 
     r = rooms[room]
+
     if r["started"]:
         emit("error_msg", "اللعبة بدأت، انتظر الجولة القادمة")
         return
+
     if len(r["players"]) >= 6:
         emit("error_msg", "الغرفة ممتلئة، الحد 6 لاعبين")
         return
 
+    # first player locks options and becomes host
+    pid = str(uuid.uuid4())
     if len(r["players"]) == 0:
         r["mode"] = mode
         r["teamMode"] = team_mode
         r["teamCount"] = team_count
+        r["host"] = pid
 
     team = None
     if r.get("mode") == "teams":
@@ -155,17 +258,23 @@ def on_join(data):
             team = assign_auto_team(r)
 
     join_room(room)
-    pid = str(uuid.uuid4())
-    r["players"].append({"id": pid, "sid": request.sid, "name": name, "team": team,
-                         "hand": [], "last": False, "wins": 0})
+    r["players"].append({
+        "id": pid, "sid": request.sid, "name": name,
+        "team": team, "hand": [], "last": False, "wins": 0
+    })
+
     r["log"].insert(0, f"{name} دخل الغرفة" + (f" - {TEAM_NAMES.get(team, team)}" if team else ""))
+
     emit("joined", {"room": room, "playerId": pid})
     send_state(room)
 
 @socketio.on("change_team")
 def on_change_team(data):
-    room, player_id, team = data.get("room"), data.get("playerId"), data.get("team")
-    if room not in rooms: return
+    room = data.get("room")
+    player_id = data.get("playerId")
+    team = data.get("team")
+    if room not in rooms:
+        return
     r = rooms[room]
     if r["started"]:
         emit("error_msg", "لا يمكن تغيير الفريق بعد البداية")
@@ -180,89 +289,172 @@ def on_change_team(data):
 @socketio.on("start")
 def on_start(data):
     room = data.get("room")
-    if room not in rooms: return
+    player_id = data.get("playerId")
+    if room not in rooms:
+        return
     r = rooms[room]
+    if r.get("host") != player_id:
+        emit("error_msg", "فقط صاحب الغرفة يقدر يبدأ اللعبة ويحدد الوقت")
+        return
     if len(r["players"]) < 2:
         emit("error_msg", "لازم لاعبين على الأقل")
         return
+    try:
+        limit = int(data.get("timeLimit", r.get("timeLimit", 30)) or 30)
+    except Exception:
+        limit = 30
+    r["timeLimit"] = max(5, min(180, limit))
+
     r["deck"] = build_deck()
     r["discard"] = []
-    r["turn"] = 0
     r["direction"] = 1
     r["started"] = True
     r["color"] = None
     r["pendingDraw4"] = 0
+    r["pendingDraw2"] = 0
     r["log"] = ["بدأت اللعبة"]
+
+    # deal
     for p in r["players"]:
         p["hand"] = [r["deck"].pop() for _ in range(7)]
         p["last"] = False
+
+    # first non-black
     first = r["deck"].pop()
     while first["c"] == "black":
         r["deck"].insert(0, first)
         random.shuffle(r["deck"])
         first = r["deck"].pop()
+
     r["discard"].append(first)
     r["color"] = first["c"]
+
+    # host starts
+    host_idx = next((i for i,p in enumerate(r["players"]) if p["id"] == r["host"]), 0)
+    r["turn"] = host_idx
+
+    start_timer(room)
     send_state(room)
 
 @socketio.on("play")
 def on_play(data):
-    room, player_id = data.get("room"), data.get("playerId")
+    room = data.get("room")
+    player_id = data.get("playerId")
     index = int(data.get("index", -1))
-    if room not in rooms: return
+    chosen_color = data.get("color")
+
+    if room not in rooms:
+        return
     r = rooms[room]
     idx = find_player(room, player_id)
-    if idx < 0 or not r["started"] or idx != r["turn"]:
+
+    if idx < 0:
+        emit("error_msg", "اللاعب غير موجود")
+        return
+    if not r["started"]:
+        emit("error_msg", "اللعبة لم تبدأ")
+        return
+    if idx != r["turn"]:
         emit("error_msg", "مو دورك")
         return
+
     p = r["players"][idx]
     if index < 0 or index >= len(p["hand"]):
         emit("error_msg", "الكرت غير موجود")
         return
+
     card = p["hand"][index]
+
     if not is_allowed(r, card):
-        emit("error_msg", "عليك +4: مسموح فقط +4 أو عكس أو تخطي، أو اسحب العقوبة" if r.get("pendingDraw4",0)>0 else "هذا الكرت ما ينفع")
+        if r.get("pendingDraw4", 0) > 0:
+            emit("error_msg", "عليك +4: مسموح +4 أو عكس/تخطي بنفس اللون المطلوب، أو اسحب العقوبة")
+        elif r.get("pendingDraw2", 0) > 0:
+            emit("error_msg", "عليك رد عكس/تخطي بنفس اللون أو اضغط اسحب لتسحب كرتين")
+        else:
+            emit("error_msg", "هذا الكرت ما ينفع")
         return
+
+    # play
     p["hand"].pop(index)
     r["discard"].append(card)
-    r["color"] = random.choice(COLORS) if card["c"] == "black" else card["c"]
+
+    if card["c"] == "black":
+        if not chosen_color or chosen_color not in COLORS:
+            emit("error_msg", "اختر لون")
+            # put card back
+            p["hand"].insert(index, card)
+            r["discard"].pop()
+            return
+        r["color"] = chosen_color
+    else:
+        r["color"] = card["c"]
+
     r["log"].insert(0, f"{p['name']} رمى {card['n']}")
+
+    # win
     if len(p["hand"]) == 0:
-        p["wins"] += 1
+        p["wins"] = p.get("wins", 0) + 1
         r["started"] = False
-        r["log"].insert(0, f"🏆 فاز {TEAM_NAMES.get(p.get('team'), p['name']) if p.get('team') else p['name']}")
+        cancel_timer(r)
+        if r.get("mode") == "teams" and p.get("team"):
+            r["log"].insert(0, f"🏆 فاز {TEAM_NAMES.get(p['team'], p['team'])} بسبب {p['name']}")
+        else:
+            r["log"].insert(0, f"🏆 فاز {p['name']}")
         send_state(room)
         return
+
     apply_effect(r, card)
+
     for pp in r["players"]:
         if len(pp["hand"]) != 1:
             pp["last"] = False
+
+    start_timer(room)
     send_state(room)
 
 @socketio.on("draw")
 def on_draw(data):
-    room, player_id = data.get("room"), data.get("playerId")
-    if room not in rooms: return
+    room = data.get("room")
+    player_id = data.get("playerId")
+    if room not in rooms:
+        return
     r = rooms[room]
     idx = find_player(room, player_id)
-    if idx < 0 or not r["started"] or idx != r["turn"]:
+
+    if idx < 0:
+        emit("error_msg", "اللاعب غير موجود")
+        return
+    if not r["started"]:
+        emit("error_msg", "اللعبة لم تبدأ")
+        return
+    if idx != r["turn"]:
         emit("error_msg", "مو دورك")
         return
-    amount = int(r.get("pendingDraw4", 0) or 0)
-    if amount > 0:
-        draw_to(r, idx, amount)
-        r["log"].insert(0, f"{r['players'][idx]['name']} سحب عقوبة {amount}")
+
+    amount4 = int(r.get("pendingDraw4", 0) or 0)
+    amount2 = int(r.get("pendingDraw2", 0) or 0)
+    if amount4 > 0:
+        draw_to(r, idx, amount4)
+        r["log"].insert(0, f"{r['players'][idx]['name']} سحب عقوبة {amount4}")
         r["pendingDraw4"] = 0
+    elif amount2 > 0:
+        draw_to(r, idx, amount2)
+        r["log"].insert(0, f"{r['players'][idx]['name']} سحب كرتين بسبب عكس/تخطي")
+        r["pendingDraw2"] = 0
     else:
         draw_to(r, idx, 1)
         r["log"].insert(0, f"{r['players'][idx]['name']} سحب كرت")
+
     r["turn"] = next_index(r)
+    start_timer(room)
     send_state(room)
 
 @socketio.on("last_card")
 def on_last_card(data):
-    room, player_id = data.get("room"), data.get("playerId")
-    if room not in rooms: return
+    room = data.get("room")
+    player_id = data.get("playerId")
+    if room not in rooms:
+        return
     r = rooms[room]
     idx = find_player(room, player_id)
     if idx >= 0 and len(r["players"][idx]["hand"]) == 1:
@@ -272,6 +464,49 @@ def on_last_card(data):
         emit("error_msg", "تقدر تضغط كرت أخير لما يبقى عندك كرت واحد")
     send_state(room)
 
+
+@socketio.on("leave_room")
+def on_leave_room(data):
+    room = data.get("room")
+    player_id = data.get("playerId")
+    if room not in rooms:
+        return
+    r = rooms[room]
+    idx = find_player(room, player_id)
+    if idx < 0:
+        return
+    name = r["players"][idx]["name"]
+    r["players"].pop(idx)
+    if not r["players"]:
+        cancel_timer(r)
+        del rooms[room]
+        emit("left_room", {"ok": True})
+        return
+    if r.get("host") == player_id:
+        r["host"] = r["players"][0]["id"]
+    if r["turn"] >= len(r["players"]):
+        r["turn"] = 0
+    r["log"].insert(0, f"{name} خرج من الغرفة")
+    emit("left_room", {"ok": True})
+    send_state(room)
+
+@socketio.on("end_game")
+def on_end_game(data):
+    room = data.get("room")
+    player_id = data.get("playerId")
+    if room not in rooms:
+        return
+    r = rooms[room]
+    if r.get("host") != player_id:
+        emit("error_msg", "فقط صاحب الغرفة يقدر ينهي اللعبة")
+        return
+    r["started"] = False
+    r["pendingDraw4"] = 0
+    r["pendingDraw2"] = 0
+    cancel_timer(r)
+    r["log"].insert(0, "تم إنهاء اللعبة بواسطة صاحب الغرفة")
+    send_state(room)
+
 @socketio.on("disconnect")
 def on_disconnect():
     for room, r in list(rooms.items()):
@@ -279,6 +514,7 @@ def on_disconnect():
         r["players"] = [p for p in r["players"] if p["sid"] != request.sid]
         if len(r["players"]) != before:
             if not r["players"]:
+                cancel_timer(r)
                 del rooms[room]
             else:
                 if r["turn"] >= len(r["players"]):
@@ -289,4 +525,4 @@ def on_disconnect():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    socketio.run(app, host="0.0.0.0", port=port)
+    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
