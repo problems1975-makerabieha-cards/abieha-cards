@@ -185,11 +185,23 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
   <div class="table">
     <div class="tableInfo">
       <div class="info">
-        <h3 id="turn">-</h3>
-        <h3 id="need">-</h3>
         <h3 id="penaltyLine"></h3>
         <div id="timeText"></div>
-        <div id="top" style="display:flex;justify-content:center;margin-top:10px;"></div>
+       <div class="centerPlayArea">
+
+  <!-- زر السحب يسار -->
+  <button class="drawOutsideBtn" onclick="drawCard()">اسحب</button>
+
+  <!-- الكرت بالنص -->
+  <div id="top"></div>
+
+  <!-- الدور + اللون يمين -->
+  <div class="ovalInfo">
+    <div id="turn">-</div>
+    <div id="need">-</div>
+  </div>
+
+</div>
 
 
   </div>
