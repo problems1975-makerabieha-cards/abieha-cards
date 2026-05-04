@@ -112,12 +112,18 @@ def is_allowed(r, card):
 
     # During Skip/Reverse challenge: player may answer with Skip/Reverse in the requested color,
     # otherwise the Draw button makes them draw two cards.
-    if r.get("pendingDraw2", 0) > 0:
-        return (
-            (card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"]) or
-            (card["n"] in ["+2", "+4"])
+if r.get("pendingDraw2", 0) > 0:
+    top = r["discard"][-1]
+    return (
+        card["n"] in ["+2", "+4"] or
+        (
+            card["n"] in ["عكس", "تخطي"] and
+            (
+                card["n"] == top["n"] or
+                card["c"] == r["color"]
+            )
         )
-
+    )
     top = r["discard"][-1]
     return card["c"] == "black" or card["c"] == r["color"] or card["n"] == top["n"]
 
