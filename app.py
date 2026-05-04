@@ -254,6 +254,36 @@ def index():
         # Fallback for Render deploys where templates/ was accidentally removed
         return send_file("index.html")
 
+@socketio.on("kick_player")
+def on_kick_player(data):
+    room = data.get("room")
+    host_id = data.get("hostId")
+    target_id = data.get("targetId")
+
+    if room not in rooms:
+        return
+
+    r = rooms[room]
+
+    # فقط صاحب الغرفة يطرد
+    if r.get("host") != host_id:
+        emit("error_msg", "فقط قائد الغرفة يقدر يطرد")
+        return
+
+    idx = find_player(room, target_id)
+    if idx < 0:
+        return
+
+    name = r["players"][idx]["name"]
+    r["players"].pop(idx)
+
+    if r["turn"] >= len(r["players"]):
+        r["turn"] = 0
+
+    r["log"].insert(0, f"🚫 تم طرد {name} من الغرفة")
+
+    emit("kicked", {"room": room}, room=target_id)
+    send_state(room)
 @socketio.on("join")
 def on_join(data):
     room = (data.get("room") or "ROOM1").strip().upper()
