@@ -526,11 +526,10 @@ def on_leave_room(data):
         emit("left_room", {"ok": True})
         return
     # إذا اللي خرج هو صاحب الغرفة
-if r.get("host") == player_id:
-    new_host = r["players"][0]
-    r["host"] = new_host["id"]
-
-    r["log"].insert(0, f"{new_host['name']} أصبح قائد الغرفة 👑")
+    if r.get("host") == player_id:
+         new_host = r["players"][0]
+         r["host"] = new_host["id"]
+         r["log"].insert(0, f"{new_host['name']} أصبح قائد الغرفة 👑")
     if r["turn"] >= len(r["players"]):
         r["turn"] = 0
     r["log"].insert(0, f"{name} خرج من الغرفة")
