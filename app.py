@@ -105,23 +105,25 @@ def assign_auto_team(r):
     return valid[len(r["players"]) % len(valid)]
 
 def is_allowed(r, card):
-    if r.get("pendingDraw4", 0) > 0:
-        return card["n"] == "+4" or (card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"])
+    top = r["discard"][-1]
 
+    # إذا فيه عقوبة +4: لا أرقام، فقط +4 أو عكس/تخطي بنفس اللون
+    if r.get("pendingDraw4", 0) > 0:
+        return card["n"] == "+4" or (
+            card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"]
+        )
+
+    # إذا فيه عقوبة +2: لا أرقام، فقط +2/+4 أو عكس/تخطي حسب الكرت أو اللون
     if r.get("pendingDraw2", 0) > 0:
-        top = r["discard"][-1]
         return (
             card["n"] in ["+2", "+4"] or
             (
                 card["n"] in ["عكس", "تخطي"] and
-                (
-                    card["n"] == top["n"] or
-                    card["c"] == r["color"]
-                )
+                (card["n"] == top["n"] or card["c"] == r["color"])
             )
         )
 
-    top = r["discard"][-1]
+    # الوضع العادي: بعد تخطي/عكس تقدر تلعب رقم إذا نفس اللون
     return card["c"] == "black" or card["c"] == r["color"] or card["n"] == top["n"]
     # During Skip/Reverse challenge: player may answer with Skip/Reverse in the requested color,
     # otherwise the Draw button makes them draw two cards.
