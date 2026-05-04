@@ -220,19 +220,37 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
         <div id="timeText"></div>
         <div id="top" style="display:flex;justify-content:center;margin-top:10px;"></div>
 
-<div class="centerPlayArea">
+.centerPlayArea{
+  display:flex;
+  align-items:center;   /* 🔥 هذا اللي يخليهم بالنص */
+  justify-content:center;
+  gap:20px;
+  margin-top:20px;
+}
 
-  <!-- زر السحب يسار -->
-  <button class="drawOutsideBtn" onclick="drawCard()">اسحب</button>
+/* الكرت */
+#top{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 
-  <!-- الكرت بالنص -->
-  <div id="top"></div>
+/* 🔥 أهم جزء: يخلي النص بمحاذاة منتصف الكرت */
+.ovalInfo{
+  background:rgba(255,255,255,.15);
+  border:2px solid rgba(255,255,255,.6);
+  border-radius:999px;
+  padding:14px 20px;
+  min-width:120px;
 
-  <!-- معلومات يمين (بيضاوي) -->
-  <div class="ovalInfo">
-    <div id="turn">-</div>
-    <div id="need">-</div>
-  </div>
+  display:flex;
+  flex-direction:column;
+  justify-content:center;  /* 👈 يخليه بمنتصف الكرت عمودياً */
+
+  height:140px; /* 👈 نفس ارتفاع الكرت تقريباً */
+  text-align:center;
+  font-weight:900;
+}
 
 </div>
 
