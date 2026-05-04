@@ -32,8 +32,16 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .black{background:linear-gradient(145deg,#333,#050505)}
 .seat{position:absolute;width:clamp(108px,16vw,160px);min-height:clamp(72px,12vw,100px);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:clamp(6px,1.4vw,10px);border-radius:clamp(16px,2.8vw,24px);background:linear-gradient(180deg,rgba(16,45,89,.96),rgba(5,13,30,.98));border:1px solid rgba(120,190,255,.30);box-shadow:0 14px 28px #000b;overflow:hidden}
 .seat.active{outline:4px solid #ffd166;box-shadow:0 0 35px rgba(255,209,102,.9)}
-.seat.me{width:min(92%,820px);min-height:clamp(118px,22vh,160px)}
-.s0{left:50%;bottom:clamp(8px,2vw,18px);transform:translateX(-50%)}
+.seat.me{
+  width:min(92%,820px);
+  min-height:clamp(105px,18vh,135px);
+  padding-top:22px;
+}
+.s0{
+  left:50%;
+  bottom:-18px;
+  transform:translateX(-50%);
+}
 .s1{right:clamp(8px,2.6vw,34px);bottom:clamp(155px,27vh,205px)}
 .s2{right:clamp(8px,2.6vw,34px);top:clamp(92px,17vh,135px)}
 .s3{left:50%;top:clamp(8px,2vw,18px);transform:translateX(-50%)}
