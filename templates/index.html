@@ -31,20 +31,27 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .yellow{background:linear-gradient(145deg,#ffe56a,#d69000);color:#1b1600}
 .black{background:linear-gradient(145deg,#333,#050505)}
 .arena{
-  padding-bottom:140px; /* 👈 يخلق مساحة تحت */
+  padding-bottom:200px; /* 👈 يخلق مساحة تحت */
 } 
   .seat{position:absolute;width:clamp(108px,16vw,160px);min-height:clamp(72px,12vw,100px);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:clamp(6px,1.4vw,10px);border-radius:clamp(16px,2.8vw,24px);background:linear-gradient(180deg,rgba(16,45,89,.96),rgba(5,13,30,.98));border:1px solid rgba(120,190,255,.30);box-shadow:0 14px 28px #000b;overflow:hidden}
 .seat.active{outline:4px solid #ffd166;box-shadow:0 0 35px rgba(255,209,102,.9)}
 .seat.me{
   width:min(92%,820px);
-  min-height:110px;
-  padding:12px;
-  margin-top:20px; /* 👈 يبعد عن الكرت */
+  min-height:130px;
+
+  background:linear-gradient(180deg,#06142f,#020814);
+  border:2px solid rgba(255,209,102,.9);
+  border-radius:22px;
+
+  box-shadow:0 0 25px rgba(255,209,102,.5),0 18px 40px #000c;
+
+  padding:10px;
 }
 .s0{
   left:50%;
-  bottom:10px; /* 👈 تحت الطاولة */
+  bottom:-160px; /* 🔥 ينزل الكروت تحت الطاولة */
   transform:translateX(-50%);
+  z-index:5;
 }
 .s1{right:clamp(8px,2.6vw,34px);bottom:clamp(155px,27vh,205px)}
 .s2{right:clamp(8px,2.6vw,34px);top:clamp(92px,17vh,135px)}
