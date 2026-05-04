@@ -122,6 +122,13 @@ def is_allowed(r, card):
     return card["c"] == "black" or card["c"] == r["color"] or card["n"] == top["n"]
 
 def apply_effect(r, card):
+   # تأثير +2
+if card["n"] == "+2":
+    r["pendingDraw2"] = int(r.get("pendingDraw2", 0)) + 2
+    r["log"].insert(0, f"العقوبة الآن: {r['pendingDraw2']}")
+    r["turn"] = next_index(r)
+    return
+    
     # +4 chain
     if card["n"] == "+4":
         r["pendingDraw4"] = int(r.get("pendingDraw4", 0)) + 4
