@@ -181,7 +181,15 @@ function toggleTeamOptions(){
   document.querySelectorAll(".teamOnly").forEach(x=>x.classList.toggle("hidden",mode!=="teams"));
   document.querySelectorAll(".manualOnly").forEach(x=>x.classList.toggle("hidden",!(mode==="teams"&&teamMode==="manual")));
 }
+function kickPlayer(targetId){
+  if(!confirm("تأكيد طرد اللاعب؟")) return;
+  socket.emit("kick_player",{room:roomCode,hostId:myId,targetId});
+}
 
+socket.on("kicked",()=>{
+  alert("تم طردك من الغرفة");
+  location.reload();
+});
 function joinGame(){
   const name=document.getElementById("nameInput").value||"لاعب";
   roomCode=(document.getElementById("roomInput").value||"ROOM1").toUpperCase();
@@ -295,7 +303,11 @@ function renderSeats(){
     }
     seat.classList.remove("empty");
     const teamTxt = p.team ? ` — ${p.team}` : "";
-    seat.innerHTML = `<div class="playerName">👤 ${p.name}</div><div class="playerMeta"><span class="playerCards">${p.count ?? p.cards ?? 0}</span> كرت${teamTxt}</div>`;
+   const kickBtn = state.host === myId && p.id !== myId
+  ? `<button class="redBtn" onclick="kickPlayer('${p.id}')">طرد</button>`
+  : "";
+
+seat.innerHTML = `<div class="playerName">👤 ${p.name}</div><div class="playerMeta"><span class="playerCards">${p.count ?? p.cards ?? 0}</span> كرت${teamTxt}</div>${kickBtn}`;
     if(players[state.turn] && players[state.turn].id === p.id) seat.classList.add("active");
   }
 }
