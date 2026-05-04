@@ -232,7 +232,16 @@ function tableCardHtml(c){
 function render(){
   if(!state) return;
   document.getElementById("turn").innerHTML="🔥 الدور: "+state.players[state.turn].name;
-  document.getElementById("need").innerHTML="اللون: "+state.color;
+  const colorMap = {
+  red: "#ff4b4b",
+  yellow: "#ffd84d",
+  greenc: "#35d66b",
+  bluec: "#4da3ff",
+  black: "#ffffff"
+};
+
+document.getElementById("need").innerHTML =
+  "اللون: <span style='color:" + (colorMap[state.color] || "#fff") + "'>" + state.color + "</span>";
   let penalty = "";
   if(state.pendingDraw4>0) penalty = "عقوبة +4: "+state.pendingDraw4+" — رد بنفس اللون أو اسحب";
   else if(state.pendingDraw2>0) penalty = "عكس/تخطي: رد بنفس اللون أو اسحب كرتين";
