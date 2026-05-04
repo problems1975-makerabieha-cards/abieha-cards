@@ -79,6 +79,37 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .timerSetup{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.24);padding:8px 10px;border-radius:16px;margin:6px}
 .timerSetup select{min-width:100px;margin:0}
 #timeText{font-size:13px;opacity:.92;margin-top:6px}
+/* ===== تعديل مكان الكرت وزر السحب ===== */
+
+.centerPlayArea{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:14px;
+  margin-top:12px;
+}
+
+#top{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+#top .card{
+  width:clamp(100px,24vw,170px);
+  height:clamp(150px,36vw,250px);
+  font-size:clamp(40px,8vw,60px);
+}
+
+#top .card .mark{
+  font-size:clamp(45px,9vw,70px);
+}
+
+.drawSideBtn{
+  min-width:80px;
+  height:60px;
+  font-size:18px;
+}
 </style>
 </head>
 <body>
