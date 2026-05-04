@@ -222,18 +222,23 @@ def start_timer(room):
     def tick():
         if not r["started"]:
             return
+
         r["timeLeft"] -= 1
-       if r["timeLeft"] <= 0:
-    idx = r["turn"]
 
-    # إذا انتهى الوقت يسحب كرت
-    draw_to(r, idx, 1)
+        if r["timeLeft"] <= 0:
+            idx = r["turn"]
 
-    r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته ⏱️ وسحب كرت")
-    r["turn"] = next_index(r)
+            # يسحب كرت عند انتهاء الوقت
+            draw_to(r, idx, 1)
+
+            r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته ⏱️ وسحب كرت")
+
+            r["turn"] = next_index(r)
+
             send_state(room)
             start_timer(room)
             return
+
         send_state(room)
         r["timer"] = threading.Timer(1, tick)
         r["timer"].start()
