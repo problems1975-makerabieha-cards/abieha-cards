@@ -444,14 +444,15 @@ def on_draw(data):
         draw_to(r, idx, amount4)
         r["log"].insert(0, f"{r['players'][idx]['name']} سحب عقوبة {amount4}")
         r["pendingDraw4"] = 0
+
     elif amount2 > 0:
         draw_to(r, idx, amount2)
         r["log"].insert(0, f"{r['players'][idx]['name']} سحب عقوبة +2 عدد {amount2}")
         r["pendingDraw2"] = 0
+
     else:
         draw_to(r, idx, 1)
         r["log"].insert(0, f"{r['players'][idx]['name']} سحب كرت")
-
     r["turn"] = next_index(r)
     start_timer(room)
     send_state(room)
