@@ -128,11 +128,16 @@ def is_allowed(r, card):
     # During Skip/Reverse challenge: player may answer with Skip/Reverse in the requested color,
     # otherwise the Draw button makes them draw two cards.
 def is_allowed(r, card):
-    if r.get("pendingDraw4", 0) > 0:
-        return card["n"] == "+4" or (card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"])
+    top = r["discard"][-1]
 
+    # إذا فيه عقوبة +4: لا أرقام
+    if r.get("pendingDraw4", 0) > 0:
+        return card["n"] == "+4" or (
+            card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"]
+        )
+
+    # إذا فيه عقوبة +2: لا أرقام
     if r.get("pendingDraw2", 0) > 0:
-        top = r["discard"][-1]
         return (
             card["n"] in ["+2", "+4"] or
             (
@@ -144,7 +149,8 @@ def is_allowed(r, card):
             )
         )
 
-    top = r["discard"][-1]
+    # اللعب العادي:
+    # إذا الموجود عكس/تخطي، يسمح برقم نفس اللون
     return card["c"] == "black" or card["c"] == r["color"] or card["n"] == top["n"]
 
 def apply_effect(r, card):
