@@ -110,46 +110,66 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
   height:60px;
   font-size:18px;
 }
+/* توزيع العناصر */
 .centerPlayArea{
-  display:grid;
-  grid-template-columns: 90px auto 120px;
+  display:flex;
   align-items:center;
   justify-content:center;
-  gap:14px;
-  margin-top:12px;
+  gap:18px;
+  margin-top:20px;
+  position:relative;
 }
 
-.sideInfo{
-  background:rgba(255,255,255,.14);
-  border:2px solid rgba(255,255,255,.55);
+/* الكرت بالنص */
+#top{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+/* تكبير الكرت */
+#top .card{
+  width:clamp(110px,26vw,180px);
+  height:clamp(160px,38vw,260px);
+  font-size:clamp(42px,9vw,64px);
+}
+
+/* الشكل البيضاوي يمين */
+.ovalInfo{
+  background:rgba(255,255,255,.15);
+  border:2px solid rgba(255,255,255,.6);
   border-radius:999px;
-  padding:14px 18px;
-  min-width:115px;
+  padding:16px 22px;
+  min-width:130px;
+  text-align:center;
   font-weight:900;
-  line-height:1.8;
+  line-height:1.9;
   box-shadow:0 10px 25px #0008;
 }
 
-.drawSideBtn{
-  width:78px;
-  height:58px;
+/* زر السحب يسار خارج الكرت */
+.drawOutsideBtn{
+  position:relative;
+  transform:translateX(-10px);
+  min-width:80px;
+  height:60px;
   font-size:18px;
 }
 
+/* موبايل */
 @media (max-width:600px){
   .centerPlayArea{
-    grid-template-columns: 72px auto 96px;
-    gap:8px;
+    gap:10px;
   }
-  .sideInfo{
+  .ovalInfo{
     min-width:90px;
     padding:10px 12px;
     font-size:12px;
   }
-  .drawSideBtn{
-    width:66px;
+  .drawOutsideBtn{
+    min-width:65px;
     height:50px;
-    font-size:15px;
+    font-size:14px;
   }
 }
 </style>
@@ -201,14 +221,19 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
         <div id="top" style="display:flex;justify-content:center;margin-top:10px;"></div>
 
 <div class="centerPlayArea">
-  <button class="drawSideBtn" onclick="drawCard()">اسحب</button>
 
+  <!-- زر السحب يسار -->
+  <button class="drawOutsideBtn" onclick="drawCard()">اسحب</button>
+
+  <!-- الكرت بالنص -->
   <div id="top"></div>
 
-  <div class="sideInfo">
+  <!-- معلومات يمين (بيضاوي) -->
+  <div class="ovalInfo">
     <div id="turn">-</div>
     <div id="need">-</div>
   </div>
+
 </div>
 
 <div class="ruleHint">دحدر والعب بسرعة لا تنام .</div>
