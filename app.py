@@ -121,15 +121,15 @@ def is_allowed(r, card):
     top = r["discard"][-1]
     return card["c"] == "black" or card["c"] == r["color"] or card["n"] == top["n"]
 
- def apply_effect(r, card):
-        # +2
+def apply_effect(r, card):
+    # +2 (stack)
     if card["n"] == "+2":
         r["pendingDraw2"] = int(r.get("pendingDraw2", 0)) + 2
         r["log"].insert(0, f"العقوبة الآن: {r['pendingDraw2']}")
         r["turn"] = next_index(r)
-        return return
-    
-    # +4 chain
+        return
+
+    # +4 (stack)
     if card["n"] == "+4":
         r["pendingDraw4"] = int(r.get("pendingDraw4", 0)) + 4
         r["pendingDraw2"] = 0
@@ -137,55 +137,48 @@ def is_allowed(r, card):
         r["turn"] = next_index(r)
         return
 
-    # Skip / Reverse defense while +4 is pending
+    # دفاع ضد +4
     if r.get("pendingDraw4", 0) > 0 and card["n"] == "عكس":
         r["direction"] *= -1
-        r["log"].insert(0, "تم عكس عقوبة +4 واللون مطلوب نفسه")
+        r["log"].insert(0, "تم عكس عقوبة +4")
         r["turn"] = next_index(r)
         return
 
     if r.get("pendingDraw4", 0) > 0 and card["n"] == "تخطي":
-        r["log"].insert(0, "تم تمرير عقوبة +4 بالتخطي")
+        r["log"].insert(0, "تم تمرير عقوبة +4")
         r["turn"] = next_index(r)
         return
 
-    # Skip / Reverse rules
+    # عكس / تخطي
     if card["n"] in ["عكس", "تخطي"]:
-        # في حالة لاعبين فقط: العكس والتخطي يرجعون الدور لنفس اللاعب.
-        # يقدر بعدها يرمي تخطي على تخطي حتى لو لون ثاني، أو عكس بنفس اللون،
-        # وبعدها يكمل برقم مطابق للون الحالي.
+
+        # لاعبين فقط
         if len(r["players"]) == 2:
             current = r["turn"]
+
             if card["n"] == "عكس":
                 r["direction"] *= -1
-                r["log"].insert(0, "عكس مع لاعبين: نفس اللاعب يلعب مرة ثانية")
+                r["log"].insert(0, "عكس: نفس اللاعب يلعب")
             else:
-                r["log"].insert(0, "تخطي مع لاعبين: نفس اللاعب يلعب مرة ثانية")
-            r["pendingDraw2"] = 0
+                r["log"].insert(0, "تخطي: نفس اللاعب يلعب")
+
             r["turn"] = current
             return
 
-        # أكثر من لاعبين: اللاعب التالي يرد بعكس/تخطي في نفس اللون أو يسحب كرتين.
+        # أكثر من لاعبين
         if card["n"] == "عكس":
             r["direction"] *= -1
-            r["log"].insert(0, "عكس: اللاعب التالي يرد بعكس/تخطي أو يسحب كرتين")
+            r["log"].insert(0, "عكس: اللاعب التالي يرد أو يسحب")
         else:
-            r["log"].insert(0, "تخطي: اللاعب التالي يرد بعكس/تخطي أو يسحب كرتين")
+            r["log"].insert(0, "تخطي: اللاعب التالي يرد أو يسحب")
+
         r["pendingDraw2"] = 2
         r["turn"] = next_index(r)
         return
 
-    # normal +2
-    if card["n"] == "+2":
-        r["turn"] = next_index(r)
-        draw_to(r, r["turn"], 2)
-        r["log"].insert(0, f"{r['players'][r['turn']]['name']} سحب كرتين")
-        r["turn"] = next_index(r)
-        return
-
+    # كرت عادي
     r["pendingDraw2"] = 0
     r["turn"] = next_index(r)
-
 def cancel_timer(r):
     t = r.get("timer")
     if t:
