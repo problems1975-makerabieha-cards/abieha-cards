@@ -146,6 +146,10 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 
 <section class="logBox hidden" id="logBox">
   <div id="log" class="log"></div>
+  <div style="display:flex;gap:6px;margin-top:8px">
+  <input id="chatInput" placeholder="اكتب رسالة..." style="flex:1;min-width:0">
+  <button onclick="sendChat()">إرسال</button>
+</div>
 </section>
 
 <div id="colorPicker">
@@ -164,6 +168,13 @@ let myId = null;
 let state = null;
 let selectedIndex = null;
 
+  function sendChat(){
+  const input = document.getElementById("chatInput");
+  const text = input.value.trim();
+  if(!text) return;
+  socket.emit("chat",{room:roomCode,playerId:myId,text});
+  input.value = "";
+}
 function toggleTeamOptions(){
   const mode=document.getElementById("modeInput").value;
   const teamMode=document.getElementById("teamModeInput").value;
