@@ -30,16 +30,20 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .greenc{background:linear-gradient(145deg,#46ee91,#04783a)}
 .yellow{background:linear-gradient(145deg,#ffe56a,#d69000);color:#1b1600}
 .black{background:linear-gradient(145deg,#333,#050505)}
-.seat{position:absolute;width:clamp(108px,16vw,160px);min-height:clamp(72px,12vw,100px);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:clamp(6px,1.4vw,10px);border-radius:clamp(16px,2.8vw,24px);background:linear-gradient(180deg,rgba(16,45,89,.96),rgba(5,13,30,.98));border:1px solid rgba(120,190,255,.30);box-shadow:0 14px 28px #000b;overflow:hidden}
+.arena{
+  padding-bottom:140px; /* 👈 يخلق مساحة تحت */
+} 
+  .seat{position:absolute;width:clamp(108px,16vw,160px);min-height:clamp(72px,12vw,100px);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:clamp(6px,1.4vw,10px);border-radius:clamp(16px,2.8vw,24px);background:linear-gradient(180deg,rgba(16,45,89,.96),rgba(5,13,30,.98));border:1px solid rgba(120,190,255,.30);box-shadow:0 14px 28px #000b;overflow:hidden}
 .seat.active{outline:4px solid #ffd166;box-shadow:0 0 35px rgba(255,209,102,.9)}
 .seat.me{
   width:min(92%,820px);
-  min-height:clamp(105px,18vh,135px);
-  padding-top:22px;
+  min-height:110px;
+  padding:12px;
+  margin-top:20px; /* 👈 يبعد عن الكرت */
 }
 .s0{
   left:50%;
-  bottom:-60px;
+  bottom:10px; /* 👈 تحت الطاولة */
   transform:translateX(-50%);
 }
 .s1{right:clamp(8px,2.6vw,34px);bottom:clamp(155px,27vh,205px)}
@@ -47,7 +51,19 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .s3{left:50%;top:clamp(8px,2vw,18px);transform:translateX(-50%)}
 .s4{left:clamp(8px,2.6vw,34px);top:clamp(92px,17vh,135px)}
 .s5{left:clamp(8px,2.6vw,34px);bottom:clamp(155px,27vh,205px)}
-.hand{width:100%;min-height:clamp(96px,18vh,132px);white-space:nowrap;overflow-x:auto;border-radius:20px;padding:clamp(6px,1.5vw,12px);background:rgba(0,0,0,.38);border:1px solid rgba(255,255,255,.12);scrollbar-width:thin}
+.hand{
+  width:100%;
+  min-height:90px;
+  white-space:nowrap;
+  overflow-x:auto;
+  border-radius:20px;
+  padding:8px;
+  background:rgba(0,0,0,.38);
+  border:1px solid rgba(255,255,255,.12);
+
+  display:flex;
+  gap:6px;
+}
 .hand .card{width:clamp(46px,8vw,68px);height:clamp(68px,12vw,100px);font-size:clamp(17px,3.2vw,24px);margin:clamp(1px,.7vw,4px);border-radius:clamp(12px,2vw,17px)}
 .log{height:128px;overflow:auto;background:rgba(0,0,0,.38);border-radius:16px;padding:10px;line-height:1.7;text-align:right}
 #timerBar{height:10px;background:linear-gradient(to right,red,orange);width:100%}
