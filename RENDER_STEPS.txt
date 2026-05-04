@@ -1,0 +1,12 @@
+Render setup:
+
+1) Create a GitHub repo and upload these files.
+2) Render > New > Web Service.
+3) Connect the GitHub repo.
+4) Build Command:
+   pip install -r requirements.txt
+5) Start Command:
+   gunicorn --worker-class eventlet -w 1 app:app
+6) Deploy.
+
+After deployment, open the Render URL and test with two devices using the same room code.
