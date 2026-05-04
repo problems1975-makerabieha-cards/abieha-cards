@@ -105,8 +105,6 @@ def assign_auto_team(r):
     return valid[len(r["players"]) % len(valid)]
 
 def is_allowed(r, card):
-    # During +4 punishment: player may stack another +4, or defend only with Skip/Reverse
-    # that matches the color chosen by the +4 owner. Otherwise they must draw the penalty.
     if r.get("pendingDraw4", 0) > 0:
         return card["n"] == "+4" or (card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"])
 
