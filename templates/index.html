@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UNO أبيها - النهائي</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;font-family:Arial,Tahoma,sans-serif;color:white;text-align:center;background:radial-gradient(circle at 50% 0%,rgba(70,140,255,.28),transparent 35%),linear-gradient(180deg,#0c234a,#050b18 75%)}
+main{max-width:1320px;margin:auto;padding:clamp(8px,2vw,16px)}
+h1{margin:8px 0 10px;text-shadow:0 4px 10px #000;font-size:clamp(22px,5vw,36px)}
+.join,.controls,.logBox{background:linear-gradient(135deg,rgba(22,53,105,.95),rgba(7,17,38,.95));border:1px solid rgba(120,190,255,.25);border-radius:24px;padding:12px;margin-bottom:14px;box-shadow:0 18px 55px #0008}
+input,select{border:0;border-radius:14px;padding:12px 14px;margin:6px;font-size:16px;min-width:160px}
+button{border:0;border-radius:15px;padding:12px 18px;margin:6px;font-weight:900;cursor:pointer;color:#071126;background:linear-gradient(180deg,#fff0a6,#ffd166);box-shadow:0 7px 0 #9b6a00,0 12px 22px #0008}
+button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
+.green{background:linear-gradient(180deg,#7affb2,#35dd7b);box-shadow:0 7px 0 #0b7d3b,0 12px 22px #0008}
+.blueBtn{background:linear-gradient(180deg,#79c6ff,#2f80ff);color:white;box-shadow:0 7px 0 #06449d,0 12px 22px #0008}
+.redBtn{background:linear-gradient(180deg,#ff8aa0,#ff4d6d);color:white;box-shadow:0 7px 0 #a50d28,0 12px 22px #0008}
+.hidden{display:none}
+.arena{position:relative;min-height:clamp(560px,78vh,760px);border-radius:clamp(20px,4vw,34px);overflow:hidden;padding:clamp(10px,2vw,22px);background:radial-gradient(circle at 50% 42%,rgba(68,140,255,.20),transparent 43%),linear-gradient(135deg,rgba(20,55,105,.8),rgba(5,10,24,.97));border:1px solid rgba(120,190,255,.26);box-shadow:inset 0 0 120px #0009,0 26px 85px #000b}
+.table{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(70%,760px);height:clamp(300px,48vh,430px);min-width:0;min-height:0;border-radius:50%/45%;background:radial-gradient(circle,#2f86ff,#123e91 58%,#09245b);border:clamp(5px,1.3vw,10px) solid rgba(255,255,255,.12);box-shadow:inset 0 0 70px rgba(76,201,240,.28),inset 0 -45px 90px rgba(0,0,0,.30),0 0 0 6px rgba(76,201,240,.20),0 35px 85px #000c}
+.tableInfo{position:relative;z-index:2;height:100%;display:grid;place-items:center}
+.info{min-width:300px;padding:14px;border-radius:24px;background:rgba(0,0,0,.30);border:1px solid rgba(255,255,255,.14);box-shadow:0 15px 35px #0007}
+.deckZone{display:flex;justify-content:center;align-items:center;gap:clamp(10px,3vw,26px);margin-top:8px}
+.card{display:inline-flex;align-items:center;justify-content:center;position:relative;width:clamp(50px,8vw,76px);height:clamp(74px,11.8vw,112px);border-radius:clamp(13px,2vw,19px);margin:clamp(2px,.8vw,5px);font-size:clamp(18px,3.6vw,28px);font-weight:900;cursor:pointer;border:clamp(2px,.7vw,4px) solid #fff8e8;box-shadow:0 10px 18px #0009;overflow:hidden;transition:.14s;isolation:isolate}
+.card:hover{transform:translateY(-7px) rotate(-2deg);filter:brightness(1.08)}
+.red{background:linear-gradient(145deg,#ff4b66,#aa071b)}
+.bluec{background:linear-gradient(145deg,#45b6ff,#064dbb)}
+.greenc{background:linear-gradient(145deg,#46ee91,#04783a)}
+.yellow{background:linear-gradient(145deg,#ffe56a,#d69000);color:#1b1600}
+.black{background:linear-gradient(145deg,#333,#050505)}
+.seat{position:absolute;width:clamp(108px,16vw,160px);min-height:clamp(72px,12vw,100px);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:clamp(6px,1.4vw,10px);border-radius:clamp(16px,2.8vw,24px);background:linear-gradient(180deg,rgba(16,45,89,.96),rgba(5,13,30,.98));border:1px solid rgba(120,190,255,.30);box-shadow:0 14px 28px #000b;overflow:hidden}
+.seat.active{outline:4px solid #ffd166;box-shadow:0 0 35px rgba(255,209,102,.9)}
+.seat.me{width:min(92%,820px);min-height:clamp(118px,22vh,160px)}
+.s0{left:50%;bottom:clamp(8px,2vw,18px);transform:translateX(-50%)}
+.s1{right:clamp(8px,2.6vw,34px);bottom:clamp(155px,27vh,205px)}
+.s2{right:clamp(8px,2.6vw,34px);top:clamp(92px,17vh,135px)}
+.s3{left:50%;top:clamp(8px,2vw,18px);transform:translateX(-50%)}
+.s4{left:clamp(8px,2.6vw,34px);top:clamp(92px,17vh,135px)}
+.s5{left:clamp(8px,2.6vw,34px);bottom:clamp(155px,27vh,205px)}
+.hand{width:100%;min-height:clamp(96px,18vh,132px);white-space:nowrap;overflow-x:auto;border-radius:20px;padding:clamp(6px,1.5vw,12px);background:rgba(0,0,0,.38);border:1px solid rgba(255,255,255,.12);scrollbar-width:thin}
+.hand .card{width:clamp(46px,8vw,68px);height:clamp(68px,12vw,100px);font-size:clamp(17px,3.2vw,24px);margin:clamp(1px,.7vw,4px);border-radius:clamp(12px,2vw,17px)}
+.log{height:128px;overflow:auto;background:rgba(0,0,0,.38);border-radius:16px;padding:10px;line-height:1.7;text-align:right}
+#timerBar{height:10px;background:linear-gradient(to right,red,orange);width:100%}
+#colorPicker{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;place-items:center}
+#colorPicker.show{display:grid}
+.pickerBox{background:#111;padding:20px;border-radius:20px}
+.pickerBox button{width:60px;height:60px;margin:10px;border-radius:50%;border:none;cursor:pointer}
+
+.card::before{content:"";position:absolute;right:7%;top:6%;width:30%;aspect-ratio:1;border-radius:50%;background:url("https://dirtyface.pythonanywhere.com/media/e59c7ec4856a4d67a0dea3147d58edc0.jpeg") center/cover no-repeat;opacity:.92;box-shadow:0 2px 8px #0009;border:1px solid rgba(255,255,255,.35);z-index:1}
+.card::after{content:"أبيها";position:absolute;left:8%;bottom:6%;font-size:clamp(9px,1.7vw,13px);letter-spacing:.3px;opacity:.95;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.33);border:1px solid rgba(255,255,255,.22);z-index:2}
+.card .mark{position:absolute;top:53%;left:50%;transform:translate(-50%,-50%);font-size:clamp(22px,4.6vw,34px);text-shadow:0 3px 8px #000;z-index:3}
+.card .skullBig{position:absolute;top:20%;left:50%;transform:translateX(-50%);font-size:clamp(34px,7vw,58px);opacity:.18;z-index:0;filter:drop-shadow(0 4px 8px #000)}
+.hand .card .mark{font-size:clamp(20px,4vw,28px)}
+.playerName{font-weight:900;font-size:clamp(12px,2.2vw,17px);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 5px #000}
+.playerMeta{font-size:clamp(10px,1.8vw,13px);opacity:.9;line-height:1.35}
+.playerCards{font-weight:900;color:#ffd166}
+.seat.empty{opacity:.28}
+@media (max-width:760px){
+  input,select{min-width:128px;font-size:14px;padding:10px}
+  button{padding:10px 12px;margin:4px;border-radius:13px}
+  .join,.controls,.logBox{border-radius:18px;padding:8px}
+  .arena{min-height:620px}
+  .table{top:43%;width:76%;height:300px}
+  .info{min-width:0;width:min(260px,78vw);padding:10px;border-radius:18px}
+  .info h3{font-size:15px;margin:7px 0}
+  .ruleHint{font-size:11px;line-height:1.45}
+  .s1,.s5{bottom:178px}.s2,.s4{top:98px}
+  .log{height:90px;font-size:12px}
+}
+@media (max-width:480px){
+  .seat{width:104px}.seat.me{width:96%}
+  .table{width:82%;height:270px}
+  .s1{right:4px}.s2{right:4px}.s4{left:4px}.s5{left:4px}
+}
+.exitRow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:8px}
+.ruleHint{font-size:13px;opacity:.86;line-height:1.7;margin-top:7px}
+.timerSetup{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.24);padding:8px 10px;border-radius:16px;margin:6px}
+.timerSetup select{min-width:100px;margin:0}
+#timeText{font-size:13px;opacity:.92;margin-top:6px}
+</style>
+</head>
+<body>
+<main>
+<h1>UNO أبيها - النهائي</h1>
+
+<div class="join" id="joinBox">
+  <input id="nameInput" placeholder="اسم اللاعب">
+  <input id="roomInput" value="ROOM1">
+  <select id="modeInput" onchange="toggleTeamOptions()">
+    <option value="solo">فردي</option>
+    <option value="teams">جماعي</option>
+  </select>
+  <select id="teamModeInput" class="teamOnly hidden" onchange="toggleTeamOptions()">
+    <option value="auto">تلقائي</option>
+    <option value="manual">يدوي</option>
+  </select>
+  <select id="teamCountInput" class="teamOnly hidden">
+    <option value="2">فريقين</option>
+    <option value="3">3 فرق</option>
+  </select>
+  <select id="teamInput" class="manualOnly hidden">
+    <option value="A">أزرق</option>
+    <option value="B">برتقالي</option>
+    <option value="C">بنفسجي</option>
+  </select>
+  <button class="green" onclick="joinGame()">دخول</button>
+</div>
+
+<div class="controls hidden" id="controls">
+  <span class="timerSetup">⏱️ وقت اللاعب قبل البداية: <select id="timeLimitInput"><option value="10">10 ثواني</option><option value="15">15 ثانية</option><option value="20">20 ثانية</option><option value="30" selected>30 ثانية</option><option value="45">45 ثانية</option><option value="60">60 ثانية</option><option value="90">90 ثانية</option><option value="120">120 ثانية</option></select></span>
+  <button class="blueBtn" onclick="startGame()">ابدأ</button>
+  <button onclick="lastCard()">كرت أخير</button>
+  <button class="redBtn" onclick="endGame()">إنهاء اللعبة</button>
+  <button onclick="leaveGame()">رجوع / خروج من الغرفة</button>
+</div>
+
+<section class="arena hidden" id="arena">
+  <div id="timerBar"></div>
+  <div class="table">
+    <div class="tableInfo">
+      <div class="info">
+        <h3 id="turn">-</h3>
+        <h3 id="need">-</h3>
+        <h3 id="penaltyLine"></h3>
+        <div id="timeText"></div>
+        <button onclick="drawCard()">اسحب</button>
+        <div class="ruleHint">+4: ترد بـ +4 أو تخطي/عكس بنفس اللون المطلوب. التخطي/العكس: ترد بتخطي/عكس أو تسحب كرتين.</div>
+        <div id="top"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="seat s0 me" id="seat0">
+    <div id="hand" class="hand"></div>
+  </div>
+  <div class="seat s1" id="seat1"></div>
+  <div class="seat s2" id="seat2"></div>
+  <div class="seat s3" id="seat3"></div>
+  <div class="seat s4" id="seat4"></div>
+  <div class="seat s5" id="seat5"></div>
+</section>
+
+<section class="logBox hidden" id="logBox">
+  <div id="log" class="log"></div>
+</section>
+
+<div id="colorPicker">
+  <div class="pickerBox">
+    <button style="background:red" onclick="chooseColor('red')"></button>
+    <button style="background:blue" onclick="chooseColor('bluec')"></button>
+    <button style="background:green" onclick="chooseColor('greenc')"></button>
+    <button style="background:gold" onclick="chooseColor('yellow')"></button>
+  </div>
+</div>
+
+<script>
+const socket = io();
+let roomCode = "";
+let myId = null;
+let state = null;
+let selectedIndex = null;
+
+function toggleTeamOptions(){
+  const mode=document.getElementById("modeInput").value;
+  const teamMode=document.getElementById("teamModeInput").value;
+  document.querySelectorAll(".teamOnly").forEach(x=>x.classList.toggle("hidden",mode!=="teams"));
+  document.querySelectorAll(".manualOnly").forEach(x=>x.classList.toggle("hidden",!(mode==="teams"&&teamMode==="manual")));
+}
+
+function joinGame(){
+  const name=document.getElementById("nameInput").value||"لاعب";
+  roomCode=(document.getElementById("roomInput").value||"ROOM1").toUpperCase();
+  const mode=document.getElementById("modeInput").value;
+  const teamMode=document.getElementById("teamModeInput").value;
+  const teamCount=document.getElementById("teamCountInput").value;
+  const team=document.getElementById("teamInput").value;
+  socket.emit("join",{name,room:roomCode,mode,teamMode,teamCount,team});
+}
+
+socket.on("joined",data=>{
+  myId=data.playerId;
+  roomCode=data.room;
+  document.getElementById("joinBox").classList.add("hidden");
+  document.getElementById("controls").classList.remove("hidden");
+  document.getElementById("arena").classList.remove("hidden");
+  document.getElementById("logBox").classList.remove("hidden");
+});
+
+socket.on("error_msg",msg=>alert(msg));
+
+function startGame(){
+  const timeLimit = parseInt(document.getElementById("timeLimitInput")?.value || "30", 10);
+  socket.emit("start",{room:roomCode,playerId:myId,timeLimit});
+}
+function drawCard(){socket.emit("draw",{room:roomCode,playerId:myId});}
+function lastCard(){socket.emit("last_card",{room:roomCode,playerId:myId});}
+function endGame(){socket.emit("end_game",{room:roomCode,playerId:myId});}
+function leaveGame(){socket.emit("leave_room",{room:roomCode,playerId:myId});}
+socket.on("left_room",()=>{location.reload();});
+
+function playCard(i){
+  const card = state.myHand[i];
+  if(card.c === "black"){
+    selectedIndex = i;
+    document.getElementById("colorPicker").classList.add("show");
+  } else {
+    socket.emit("play",{room:roomCode,playerId:myId,index:i});
+  }
+}
+
+function chooseColor(color){
+  socket.emit("play",{room:roomCode,playerId:myId,index:selectedIndex,color});
+  document.getElementById("colorPicker").classList.remove("show");
+}
+
+socket.on("state",data=>{
+  state=data;
+  render();
+});
+
+function cardHtml(c,i){
+  return `<div class="card ${c.c}" onclick="playCard(${i})"><span class="skullBig">☠</span><span class="mark">${c.n}</span></div>`;
+}
+function tableCardHtml(c){
+  return `<div class="card ${c.c}"><span class="skullBig">☠</span><span class="mark">${c.n}</span></div>`;
+}
+
+function render(){
+  if(!state) return;
+  document.getElementById("turn").innerHTML="🔥 الدور: "+state.players[state.turn].name;
+  document.getElementById("need").innerHTML="اللون: "+state.color;
+  let penalty = "";
+  if(state.pendingDraw4>0) penalty = "عقوبة +4: "+state.pendingDraw4+" — رد بنفس اللون أو اسحب";
+  else if(state.pendingDraw2>0) penalty = "عكس/تخطي: رد بنفس اللون أو اسحب كرتين";
+  document.getElementById("penaltyLine").innerHTML = penalty;
+  document.getElementById("top").innerHTML = state.top ? tableCardHtml(state.top) : "";
+  document.getElementById("hand").innerHTML = (state.myHand||[]).map((c,i)=>cardHtml(c,i)).join("");
+  document.getElementById("log").innerHTML = (state.log||[]).join("<br>");
+  const percent = state.timeLimit ? Math.max(0, Math.min(100, (state.timeLeft/state.timeLimit)*100)) : 0;
+  document.getElementById("timerBar").style.width = percent+"%";
+  document.getElementById("timeText").innerHTML = state.started ? ("⏱️ الوقت المتبقي: " + state.timeLeft + " ثانية") : ("⏱️ وقت اللاعب: " + state.timeLimit + " ثانية");
+  renderSeats();
+}
+
+function renderSeats(){
+  if(!state || !state.players) return;
+  const players = state.players;
+  const meIndex = players.findIndex(p => p.id === myId);
+  for(let i=0;i<6;i++){
+    const seat = document.getElementById("seat"+i);
+    if(!seat) continue;
+    seat.classList.toggle("active", false);
+    if(i===0){
+      const me = players[meIndex] || players[0];
+      seat.classList.toggle("empty", !me);
+      if(me){
+        const hand = document.getElementById("hand");
+        seat.querySelectorAll(".playerName,.playerMeta").forEach(x=>x.remove());
+        seat.insertAdjacentHTML("afterbegin", `<div class="playerName">👤 ${me.name}</div><div class="playerMeta"><span class="playerCards">${(state.myHand||[]).length}</span> كرت</div>`);
+        if(players[state.turn] && players[state.turn].id === me.id) seat.classList.add("active");
+        if(hand && hand.parentElement !== seat) seat.appendChild(hand);
+      }
+      continue;
+    }
+    const idx = meIndex >= 0 ? (meIndex + i) % players.length : i;
+    const p = players[idx];
+    if(!p || idx === meIndex || i >= players.length){
+      seat.classList.add("empty");
+      seat.innerHTML = "";
+      continue;
+    }
+    seat.classList.remove("empty");
+    const teamTxt = p.team ? ` — ${p.team}` : "";
+    seat.innerHTML = `<div class="playerName">👤 ${p.name}</div><div class="playerMeta"><span class="playerCards">${p.count ?? p.cards ?? 0}</span> كرت${teamTxt}</div>`;
+    if(players[state.turn] && players[state.turn].id === p.id) seat.classList.add("active");
+  }
+}
+</script>
+</main>
+</body>
+</html>

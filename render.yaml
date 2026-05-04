@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: abieha-cards
+    env: python
+    plan: free
+    buildCommand: ./render-build.sh
+    startCommand: ./start.sh
