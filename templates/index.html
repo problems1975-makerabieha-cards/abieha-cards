@@ -33,10 +33,9 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .drawOutsideBtn{position:absolute;right:-95px;top:50%;transform:translateY(-50%) rotate(-8deg);width:105px;height:72px;font-size:20px;z-index:35;display:flex;align-items:center;justify-content:center;border:3px solid #fff3b0;box-shadow:0 0 22px rgba(255,209,102,.9),0 8px 0 #9b6a00,0 14px 24px #0008}
 .ovalInfo{
   position:absolute !important;
-
-  top:20px !important;        /* 👈 تحت الوقت مباشرة */
-  left:50% !important;
-  transform:translateX(-50%) !important;
+  left:-140px !important;   /* مربع الدور يسار الكرت */
+  top:50% !important;
+  transform:translateY(-50%) !important;
 
   width:170px !important;
   min-height:75px !important;
@@ -51,7 +50,7 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
   text-align:center;
   font-weight:900;
 
-  z-index:25 !important;
+  z-index:30 !important;
 }
 #timeText{font-size:13px;opacity:.92;margin-bottom:12px;position:relative;z-index:40}
 #penaltyLine{font-size:14px;min-height:18px;margin:0 0 6px;color:#fff;text-shadow:0 3px 8px #000;position:relative;z-index:40}
@@ -100,8 +99,8 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 
 /* ===== آيباد وموبايل ===== */
 @media(max-width:900px){.drawOutsideBtn{right:-78px;width:92px;height:62px;font-size:18px}.table{width:92vw;height:440px}.seat.s0.me{bottom:-105px}}
-@media(max-width:760px){input,select{min-width:128px;font-size:14px;padding:10px}button{padding:10px 12px;margin:4px;border-radius:13px}.join,.controls,.logBox{border-radius:18px;padding:8px}.arena{min-height:690px;padding-bottom:200px}.table{top:40%;width:94vw;height:390px}.centerPlayArea{width:220px;height:210px}#top .card{width:95px;height:142px}.drawOutsideBtn{right:-65px;top:50%;width:74px;height:54px;font-size:15px}.ovalInfo{bottom:-78px;width:132px;font-size:12px}.seat:not(.me){width:88px;min-height:58px;font-size:11px}.s1{right:2%;top:50%}.s2{right:4%;top:13%}.s3{top:1%}.s4{left:4%;top:13%}.s5{left:2%;top:50%}.seat.s0.me{bottom:-98px;width:98%;min-height:160px}.hand{min-height:155px}.hand .card{width:72px;height:108px;margin-left:-15px}.hand .card .mark{font-size:28px}.log{height:90px;font-size:12px}}
-@media(max-width:480px){.arena{min-height:650px;padding-bottom:185px}.table{width:96vw;height:360px}.centerPlayArea{width:190px;height:190px}.drawOutsideBtn{right:-54px;width:66px;height:48px;font-size:14px}.ovalInfo{bottom:-72px;width:118px;font-size:11px}#top .card{width:86px;height:128px}.seat:not(.me){width:76px;min-height:52px}.hand .card{width:66px;height:100px;margin-left:-14px}.seat.s0.me{bottom:-92px}}
+@media(max-width:760px){input,select{min-width:128px;font-size:14px;padding:10px}button{padding:10px 12px;margin:4px;border-radius:13px}.join,.controls,.logBox{border-radius:18px;padding:8px}.arena{min-height:690px;padding-bottom:200px}.table{top:40%;width:94vw;height:390px}.centerPlayArea{width:220px;height:210px}#top .card{width:95px;height:142px}.drawOutsideBtn{right:-65px;top:50%;width:74px;height:54px;font-size:15px}.ovalInfo{left:-95px !important;top:50% !important;transform:translateY(-50%) !important;width:130px !important;font-size:12px !important}.seat:not(.me){width:88px;min-height:58px;font-size:11px}.s1{right:2%;top:50%}.s2{right:4%;top:13%}.s3{top:1%}.s4{left:4%;top:13%}.s5{left:2%;top:50%}.seat.s0.me{bottom:-98px;width:98%;min-height:160px}.hand{min-height:155px}.hand .card{width:72px;height:108px;margin-left:-15px}.hand .card .mark{font-size:28px}.log{height:90px;font-size:12px}}
+@media(max-width:480px){.arena{min-height:650px;padding-bottom:185px}.table{width:96vw;height:360px}.centerPlayArea{width:190px;height:190px}.drawOutsideBtn{right:-54px;width:66px;height:48px;font-size:14px}.ovalInfo{left:-80px !important;top:50% !important;transform:translateY(-50%) !important;width:112px !important;font-size:11px !important}#top .card{width:86px;height:128px}.seat:not(.me){width:76px;min-height:52px}.hand .card{width:66px;height:100px;margin-left:-14px}.seat.s0.me{bottom:-92px}}
 </style>
 </head>
 <body>
