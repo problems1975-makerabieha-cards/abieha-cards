@@ -31,7 +31,28 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 #top .card{width:125px;height:185px;font-size:54px;transform:rotate(-7deg);z-index:25}
 #top .card .mark{font-size:58px}
 .drawOutsideBtn{position:absolute;right:-95px;top:50%;transform:translateY(-50%) rotate(-8deg);width:105px;height:72px;font-size:20px;z-index:35;display:flex;align-items:center;justify-content:center;border:3px solid #fff3b0;box-shadow:0 0 22px rgba(255,209,102,.9),0 8px 0 #9b6a00,0 14px 24px #0008}
-.ovalInfo{position:absolute;left:50%;bottom:-88px;transform:translateX(-50%);width:178px;min-height:76px;border-radius:20px;background:rgba(0,0,0,.42);border:2px solid rgba(255,255,255,.68);display:flex;flex-direction:column;justify-content:center;text-align:center;font-weight:900;line-height:1.55;z-index:30;box-shadow:0 12px 26px #0009}
+.ovalInfo{
+  position:absolute !important;
+
+  top:20px !important;        /* 👈 تحت الوقت مباشرة */
+  left:50% !important;
+  transform:translateX(-50%) !important;
+
+  width:170px !important;
+  min-height:75px !important;
+
+  border-radius:18px !important;
+  background:rgba(0,0,0,.45) !important;
+  border:2px solid rgba(255,255,255,.7) !important;
+
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  text-align:center;
+  font-weight:900;
+
+  z-index:25 !important;
+}
 #timeText{font-size:13px;opacity:.92;margin-bottom:12px;position:relative;z-index:40}
 #penaltyLine{font-size:14px;min-height:18px;margin:0 0 6px;color:#fff;text-shadow:0 3px 8px #000;position:relative;z-index:40}
 
