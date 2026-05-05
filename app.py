@@ -238,11 +238,11 @@ def start_timer(room):
 
         r["timeLeft"] -= 1
 
-if r["timeLeft"] <= 0:
-    idx = r["turn"]
+    if r["timeLeft"] <= 0:
+        idx = r["turn"]
 
-    amount4 = int(r.get("pendingDraw4", 0) or 0)
-    amount2 = int(r.get("pendingDraw2", 0) or 0)
+        amount4 = int(r.get("pendingDraw4", 0) or 0)
+        amount2 = int(r.get("pendingDraw2", 0) or 0)
 
     if amount4 > 0:
         total = amount4 + 1
