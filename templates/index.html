@@ -63,9 +63,13 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .greenc{background:linear-gradient(145deg,#46ee91,#04783a)}
 .yellow{background:linear-gradient(145deg,#ffe56a,#d69000);color:#1b1600}
 .black{background:linear-gradient(145deg,#333,#050505)}
-.card::before{content:"";position:absolute;right:7%;top:6%;width:30%;aspect-ratio:1;border-radius:50%;background:url("https://dirtyface.pythonanywhere.com/media/e59c7ec4856a4d67a0dea3147d58edc0.jpeg") center/cover no-repeat;opacity:.92;box-shadow:0 2px 8px #0009;border:1px solid rgba(255,255,255,.35);z-index:1}
+.card::before{content:"";position:absolute;right:7%;top:6%;width:30%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.22);opacity:.95;box-shadow:0 2px 8px #0009;border:1px solid rgba(255,255,255,.55);z-index:1}
 .card::after{content:"أبيها";position:absolute;left:8%;bottom:6%;font-size:13px;letter-spacing:.3px;opacity:.95;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.33);border:1px solid rgba(255,255,255,.22);z-index:2}
 .card .mark{position:absolute;top:53%;left:50%;transform:translate(-50%,-50%);font-size:34px;text-shadow:0 3px 8px #000;z-index:3}
+.cornerNum{position:absolute;right:7%;top:6%;width:30%;aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:clamp(13px,2vw,20px);font-weight:900;color:#fff;text-shadow:0 2px 5px #000;z-index:7;line-height:1}
+#top .cornerNum{font-size:22px}
+.hand .cornerNum{font-size:16px}
+
 .card .skullBig{position:absolute;top:20%;left:50%;transform:translateX(-50%);font-size:58px;opacity:.18;z-index:0;filter:drop-shadow(0 4px 8px #000)}
 
 /* ===== أماكن اللاعبين حول الطاولة ===== */
@@ -362,6 +366,18 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
     margin-left:-8px !important;
   }
 }
+
+/* ===== SORTED HAND + CORNER NUMBER FINAL OVERRIDE ===== */
+.card::before{background:rgba(255,255,255,.22) !important;background-image:none !important;}
+.cornerNum{position:absolute !important;right:7% !important;top:6% !important;width:30% !important;aspect-ratio:1 !important;border-radius:50% !important;display:flex !important;align-items:center !important;justify-content:center !important;font-weight:900 !important;color:#fff !important;text-shadow:0 2px 5px #000 !important;z-index:8 !important;pointer-events:none !important;}
+.hand .cornerNum{font-size:16px !important;}
+#top .cornerNum{font-size:22px !important;}
+.seat.s0.me{overflow:hidden !important;}
+.seat.s0.me .hand{overflow-x:auto !important;overflow-y:visible !important;justify-content:flex-start !important;scrollbar-width:thin;}
+.seat.s0.me .hand .card:nth-child(odd){transform:rotate(-7deg) translateY(6px) !important;}
+.seat.s0.me .hand .card:nth-child(even){transform:rotate(7deg) translateY(6px) !important;}
+.seat.s0.me .hand .card:hover{transform:translateY(-22px) scale(1.08) !important;z-index:99 !important;}
+
 </style>
 </head>
 <body>
@@ -534,21 +550,58 @@ socket.on("state",data=>{
 
 function cardSymbol(n){
   if(n === "عكس") return "↺";
-  if(n === "تخطي") return "🚫";
+  if(n === "تخطي") return "⊘";
   return n;
 }
 
-function cardHtml(c,i){
-  return `<div class="card ${c.c}" onclick="playCard(${i})">
+function cardValueOrder(n){
+  const v = parseInt(n, 10);
+  if(!Number.isNaN(v)) return v;
+  if(n === "تخطي") return 10;
+  if(n === "عكس") return 11;
+  if(n === "+2") return 12;
+  if(n === "+4") return 13;
+  if(n === "لون") return 14;
+  return 99;
+}
+
+function colorOrder(c){
+  const order = {
+    bluec: 1,
+    yellow: 2,
+    red: 3,
+    greenc: 4,
+    black: 5
+  };
+  return order[c] || 99;
+}
+
+function sortedHandWithIndex(hand){
+  return (hand || [])
+    .map((c, i) => ({...c, realIndex: i}))
+    .sort((a, b) => {
+      const ca = colorOrder(a.c);
+      const cb = colorOrder(b.c);
+      if(ca !== cb) return ca - cb;
+      return cardValueOrder(a.n) - cardValueOrder(b.n);
+    });
+}
+
+function cardHtml(c){
+  const symbol = cardSymbol(c.n);
+  return `<div class="card ${c.c}" onclick="playCard(${c.realIndex})">
+    <span class="cornerNum">${symbol}</span>
     <span class="skullBig">☠</span>
-    <span class="mark">${cardSymbol(c.n)}</span>
+    <span class="mark">${symbol}</span>
   </div>`;
 }
 
 function tableCardHtml(c){
+  const symbol = cardSymbol(c.n);
   return `<div class="card ${c.c}">
+    <span class="cornerNum">${symbol}</span>
     <span class="skullBig">☠</span>
-    <span class="mark">${cardSymbol(c.n)}</span>
+    <span class="mark">${symbol}</span>
   </div>`;
 }
 function render(){
@@ -569,7 +622,8 @@ document.getElementById("need").innerHTML =
   else if(state.pendingDraw2>0) penalty = "عكس/تخطي: رد بنفس اللون أو اسحب كرتين";
   document.getElementById("penaltyLine").innerHTML = penalty;
   document.getElementById("top").innerHTML = state.top ? tableCardHtml(state.top) : "";
-  document.getElementById("hand").innerHTML = (state.myHand||[]).map((c,i)=>cardHtml(c,i)).join("");
+  const sortedHand = sortedHandWithIndex(state.myHand);
+  document.getElementById("hand").innerHTML = sortedHand.map(c=>cardHtml(c)).join("");
   document.getElementById("log").innerHTML = (state.log||[]).join("<br>");
   const percent = state.timeLimit ? Math.max(0, Math.min(100, (state.timeLeft/state.timeLimit)*100)) : 0;
   document.getElementById("timerBar").style.width = percent+"%";
