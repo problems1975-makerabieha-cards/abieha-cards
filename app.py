@@ -431,19 +431,23 @@ def on_start(data):
     player_id = data.get("playerId")
     if room not in rooms:
         return
+
     r = rooms[room]
+
     if r.get("host") != player_id:
         emit("error_msg", "فقط صاحب الغرفة يقدر يبدأ اللعبة ويحدد الوقت")
         return
+
     if len(r["players"]) < 2:
         emit("error_msg", "لازم لاعبين على الأقل")
         return
+
     try:
         limit = int(data.get("timeLimit", r.get("timeLimit", 30)) or 30)
     except Exception:
         limit = 30
-    r["timeLimit"] = max(5, min(180, limit))
 
+    r["timeLimit"] = max(5, min(180, limit))
     r["deck"] = build_deck()
     r["discard"] = []
     r["direction"] = 1
@@ -453,15 +457,12 @@ def on_start(data):
     r["pendingDraw2"] = 0
     r["log"] = ["بدأت اللعبة"]
 
-    # deal
     for p in r["players"]:
         p["hand"] = [r["deck"].pop() for _ in range(7)]
         p["last"] = False
 
-    # first card
     first = r["deck"].pop()
 
-    # نمنع فقط كرت "لون"
     while first["c"] == "black" and first["n"] == "لون":
         r["deck"].insert(0, first)
         random.shuffle(r["deck"])
@@ -469,13 +470,11 @@ def on_start(data):
 
     r["discard"].append(first)
 
-    # تعيين اللون دائماً (مهم)
     if first["c"] == "black":
-    r["color"] = random.choice(COLORS)
+        r["color"] = random.choice(COLORS)
     else:
         r["color"] = first["c"]
 
-    # تطبيق العقوبة إذا كانت +2 أو +4
     if first["n"] == "+2":
         r["pendingDraw2"] = 2
         r["log"].insert(0, "🔥 بداية: +2 — اللاعب الأول يرد أو يسحب")
@@ -484,20 +483,8 @@ def on_start(data):
         r["pendingDraw4"] = 4
         r["pendingDraw2"] = 0
         r["log"].insert(0, f"🔥 بداية: +4 — اللون {r['color']}")
-    else:
-        r["color"] = first["c"]
 
-    # إذا بداية اللعبة طلعت +2 أو +4، تطبق العقوبة مباشرة على أول لاعب
-    if first["n"] == "+2":
-        r["pendingDraw2"] = 2
-        r["log"].insert(0, "بداية قوية: أول كرت +2 — اللاعب الأول يرد أو يسحب")
-
-    elif first["n"] == "+4":
-        r["pendingDraw4"] = 4
-        r["pendingDraw2"] = 0
-        r["log"].insert(0, "بداية قوية: أول كرت +4 — اللاعب الأول يرد أو يسحب")
-    # host starts
-    host_idx = next((i for i,p in enumerate(r["players"]) if p["id"] == r["host"]), 0)
+    host_idx = next((i for i, p in enumerate(r["players"]) if p["id"] == r["host"]), 0)
     r["turn"] = host_idx
 
     start_timer(room)
