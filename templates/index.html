@@ -76,13 +76,14 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .playerMeta{font-size:clamp(10px,1.8vw,13px);opacity:.9;line-height:1.35}.playerCards{font-weight:900;color:#ffd166}.seat.empty{opacity:.22}
 
 /* ===== كروت اللاعب مثل المروحة ===== */
-.seat.s0.me{left:50%;bottom:-115px;transform:translateX(-50%);width:min(96%,920px);min-height:200px;background:transparent;border:0;box-shadow:none;z-index:30;overflow:visible}
+.seat.s0.me{left:50%;bottom:-60px;transform:translateX(-50%);width:min(96%,920px);min-height:220px;background:transparent;border:0;box-shadow:none;z-index:30;overflow:visible}
 .seat.s0.me .playerName,.seat.s0.me .playerMeta{position:relative;top:10px;z-index:40}
 .hand{width:100%;min-height:185px;white-space:nowrap;overflow:visible;border-radius:20px;padding:0;background:transparent;border:0;display:flex;gap:0;align-items:flex-end;justify-content:center}
 .hand .card{flex:0 0 auto;width:92px;height:138px;font-size:28px;margin-left:-20px;transform-origin:bottom center}
 .hand .card .mark{font-size:34px}
 .hand{
-  transform:translateY(-45px);
+  transform:translateY(-30px); /* 👈 يرفع الكروت */
+  min-height:180px;
 }
 
 .hand .card:nth-child(1){transform:rotate(22deg) translateY(18px)}
