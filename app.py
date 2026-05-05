@@ -577,45 +577,35 @@ def on_play(data):
     r["log"].insert(0, f"{p['name']} رمى {card['n']}")
 
     # win
-if len(p["hand"]) == 0:
-    winner_idx = idx
-    winner = r["players"][winner_idx]
+    if len(p["hand"]) == 0:
+        winner = p
+        winner["wins"] = winner.get("wins", 0) + 1
+        winner["score"] = max(0, winner.get("score", 0) - 10)
 
-    winner["wins"] = winner.get("wins", 0) + 1
+        for i, pp in enumerate(r["players"]):
+            if i == idx:
+                continue
 
-    # الفائز يخصم منه 10 نقاط
-    winner["score"] = max(0, winner.get("score", 0) - 10)
+            add_score = sum(card_points(card) for card in pp["hand"])
+            pp["score"] = pp.get("score", 0) + add_score
+            r["log"].insert(0, f"📊 {pp['name']} انضاف عليه {add_score} نقطة — المجموع {pp['score']}")
 
-    # الخاسرون تنضاف عليهم نقاط الكروت اللي بيدهم
-    for i, pp in enumerate(r["players"]):
-        if i == winner_idx:
-            continue
+        r["started"] = False
+        cancel_timer(r)
 
-        add_score = sum(card_points(card) for card in pp["hand"])
-        pp["score"] = pp.get("score", 0) + add_score
+        if r.get("mode") == "teams" and winner.get("team"):
+            r["log"].insert(0, f"🏆 فاز {TEAM_NAMES.get(winner['team'], winner['team'])} بسبب {winner['name']} وخصم 10 نقاط")
+        else:
+            r["log"].insert(0, f"🏆 فاز {winner['name']} وخصم 10 نقاط")
 
-        r["log"].insert(
-            0,
-            f"📊 {pp['name']} انضاف عليه {add_score} نقطة — المجموع {pp['score']}"
-        )
+        losers = [pp for pp in r["players"] if pp.get("score", 0) >= 500]
+        if losers:
+            for loser in losers:
+                r["log"].insert(0, f"💀 {loser['name']} وصل 500 نقطة وخسر اللعبة")
+            r["gameOver"] = True
 
-    r["started"] = False
-    cancel_timer(r)
-
-    if r.get("mode") == "teams" and winner.get("team"):
-        r["log"].insert(0, f"🏆 فاز {TEAM_NAMES.get(winner['team'], winner['team'])} بسبب {winner['name']} وخصم 10 نقاط")
-    else:
-        r["log"].insert(0, f"🏆 فاز {winner['name']} وخصم 10 نقاط")
-
-    # إذا لاعب وصل 500 يخسر
-    losers = [pp for pp in r["players"] if pp.get("score", 0) >= 500]
-    if losers:
-        for loser in losers:
-            r["log"].insert(0, f"💀 {loser['name']} وصل 500 نقطة وخسر اللعبة")
-        r["gameOver"] = True
-
-    send_state(room)
-    return
+        send_state(room)
+        return
 
     apply_effect(r, card)
 
@@ -625,7 +615,6 @@ if len(p["hand"]) == 0:
 
     start_timer(room)
     send_state(room)
-
 @socketio.on("draw")
 def on_draw(data):
     room = data.get("room")
