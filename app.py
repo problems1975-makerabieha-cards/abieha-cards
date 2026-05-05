@@ -393,14 +393,14 @@ def on_join(data):
 
     join_room(room)
      r["players"].append({
-        "id": pid,
-        "sid": request.sid,
-        "name": name,
-        "team": team,
-        "hand": [],
-        "last": False,
-        "wins": 0,
-        "score": 0
+         "id": pid,
+         "sid": request.sid,
+         "name": name,
+         "team": team,
+         "hand": [],
+         "last": False,
+         "wins": 0,
+         "score": 0
     })
 
     r["log"].insert(0, f"{name} دخل الغرفة" + (f" - {TEAM_NAMES.get(team, team)}" if team else ""))
