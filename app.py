@@ -227,22 +227,15 @@ def cancel_timer(r):
             pass
         r["timer"] = None
 
-def start_timer(room):
-    r = rooms[room]
-    cancel_timer(r)
-    r["timeLeft"] = r.get("timeLimit", 10)
+def handle_timeout(room):
+    r = rooms.get(room)
+    if not r:
+        return
 
-    def tick():
-        if not r["started"]:
-            return
+    idx = r["turn"]
 
-        r["timeLeft"] -= 1
-
-    if r["timeLeft"] <= 0:
-        idx = r["turn"]
-
-        amount4 = int(r.get("pendingDraw4", 0) or 0)
-        amount2 = int(r.get("pendingDraw2", 0) or 0)
+    amount4 = int(r.get("pendingDraw4", 0) or 0)
+    amount2 = int(r.get("pendingDraw2", 0) or 0)
 
     if amount4 > 0:
         total = amount4 + 1
@@ -260,7 +253,8 @@ def start_timer(room):
         draw_to(r, idx, 1)
         r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته ⏱️ وسحب كرت عقوبة")
 
-    next_turn(r)
+    r["turn"] = next_index(r)
+    start_timer(room)
 
 
 def start_timer(room):
@@ -268,18 +262,22 @@ def start_timer(room):
     if not r:
         return
 
+    # إلغاء المؤقت القديم
     old_timer = r.get("timer")
     if old_timer:
-        old_timer.cancel()
+        try:
+            old_timer.cancel()
+        except:
+            pass
 
-    r["timeLeft"] = 30
+    r["timeLeft"] = r.get("timeLimit", 30)
 
     def tick():
         rr = rooms.get(room)
-        if not rr:
+        if not rr or not rr["started"]:
             return
 
-        rr["timeLeft"] = max(0, rr.get("timeLeft", 30) - 1)
+        rr["timeLeft"] -= 1
 
         if rr["timeLeft"] <= 0:
             handle_timeout(room)
