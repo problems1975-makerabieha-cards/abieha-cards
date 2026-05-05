@@ -1,65 +1,271 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>UNO أبيها - النهائي</title>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<style>
-*{box-sizing:border-box}
-:root{--gold:#ffd166;--dark:#050b18;--panel:rgba(6,18,42,.78)}
-body{margin:0;min-height:100vh;font-family:Arial,Tahoma,sans-serif;color:white;text-align:center;background:radial-gradient(circle at 50% 0%,rgba(70,140,255,.28),transparent 35%),linear-gradient(180deg,#0c234a,#050b18 75%)}
-main{max-width:1320px;margin:auto;padding:clamp(8px,2vw,16px)}
-h1{margin:8px 0 10px;text-shadow:0 4px 10px #000;font-size:clamp(22px,5vw,36px)}
-.join,.controls,.logBox{background:linear-gradient(135deg,rgba(22,53,105,.95),rgba(7,17,38,.95));border:1px solid rgba(120,190,255,.25);border-radius:24px;padding:12px;margin-bottom:14px;box-shadow:0 18px 55px #0008}
-input,select{border:0;border-radius:14px;padding:12px 14px;margin:6px;font-size:16px;min-width:160px}
-button{border:0;border-radius:15px;padding:12px 18px;margin:6px;font-weight:900;cursor:pointer;color:#071126;background:linear-gradient(180deg,#fff0a6,#ffd166);box-shadow:0 7px 0 #9b6a00,0 12px 22px #0008}
-button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
-.green{background:linear-gradient(180deg,#7affb2,#35dd7b);box-shadow:0 7px 0 #0b7d3b,0 12px 22px #0008}
-.blueBtn{background:linear-gradient(180deg,#79c6ff,#2f80ff);color:white;box-shadow:0 7px 0 #06449d,0 12px 22px #0008}
-.redBtn{background:linear-gradient(180deg,#ff8aa0,#ff4d6d);color:white;box-shadow:0 7px 0 #a50d28,0 12px 22px #0008}
-.hidden{display:none!important}
-.avatarSelectWrap{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.18);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:4px 8px;margin:6px}
-#avatarInput{min-width:86px;font-size:22px;padding:8px 10px;margin:0}
+from flask import Flask, render_template, request, send_file
+from flask_socketio import SocketIO, join_room, emit
+import random, uuid, os, threading
 
-/* ===== ARENA ===== */
-.arena{position:relative;min-height:780px;border-radius:clamp(20px,4vw,34px);overflow:visible;padding:clamp(10px,2vw,22px);padding-bottom:260px;background:radial-gradient(circle at 50% 42%,rgba(68,140,255,.20),transparent 43%),linear-gradient(135deg,rgba(20,55,105,.8),rgba(5,10,24,.97));border:1px solid rgba(120,190,255,.26);box-shadow:inset 0 0 120px #0009,0 26px 85px #000b}
-.table{position:absolute;left:50%;top:39%;transform:translate(-50%,-50%);width:min(90vw,1040px);height:clamp(430px,58vh,570px);border-radius:50%;background:linear-gradient(rgba(0,0,0,.15),rgba(0,0,0,.28)),url('/static/bg-table.png') center/contain no-repeat,#050505;border:clamp(5px,1.3vw,10px) solid rgba(255,255,255,.12);box-shadow:inset 0 0 70px rgba(0,0,0,.55),0 0 0 6px rgba(76,201,240,.15),0 35px 85px #000c}
-.tableInfo{position:relative;z-index:2;height:100%;display:grid;place-items:center}.info{position:relative;min-width:0;padding:0;background:transparent;border:0;box-shadow:none}
-#timeText{font-size:13px;opacity:.92;margin-bottom:12px;position:relative;z-index:40}#penaltyLine{font-size:14px;min-height:18px;margin:0 0 6px;color:#fff;text-shadow:0 3px 8px #000;position:relative;z-index:40}
+app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-/* ===== CENTER PLAY ===== */
-.centerPlayArea{position:relative;display:flex;align-items:center;justify-content:center;gap:0;width:280px;height:260px;margin:auto}
-#top{display:flex;justify-content:center;align-items:center;position:relative;z-index:25}
-#top .card{width:125px;height:185px;font-size:54px;transform:rotate(-7deg);z-index:25}#top .card .mark{font-size:58px}
-.drawOutsideBtn{position:absolute;right:-118px;top:50%;transform:translateY(-50%) rotate(-7deg);width:108px;height:72px;font-size:20px;z-index:80;display:flex;align-items:center;justify-content:center;border:3px solid #fff3b0;box-shadow:0 0 22px rgba(255,209,102,.9),0 8px 0 #9b6a00,0 14px 24px #0008}
-.ovalInfo{position:absolute;left:-150px;top:50%;transform:translateY(-50%);width:176px;min-height:78px;border-radius:18px;background:rgba(0,0,0,.45);border:2px solid rgba(255,255,255,.7);display:flex;flex-direction:column;justify-content:center;text-align:center;font-weight:900;z-index:80}
+rooms = {}
 
-/* ===== CARDS ===== */
-.card{display:inline-flex;align-items:center;justify-content:center;position:relative;width:76px;height:112px;border-radius:19px;margin:4px;font-size:28px;font-weight:900;cursor:pointer;border:4px solid #fff8e8;box-shadow:0 10px 18px #0009;overflow:hidden;transition:.14s;isolation:isolate}.card:hover{filter:brightness(1.08)}
-.red{background:linear-gradient(145deg,#ff4b66,#aa071b)}.bluec{background:linear-gradient(145deg,#45b6ff,#064dbb)}.greenc{background:linear-gradient(145deg,#46ee91,#04783a)}.yellow{background:linear-gradient(145deg,#ffe56a,#d69000);color:#1b1600}.black{background:linear-gradient(145deg,#333,#050505)}
-.card::before{content:"";position:absolute;right:7%;top:6%;width:30%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.22);box-shadow:0 2px 8px #0009;border:1px solid rgba(255,255,255,.55);z-index:1}.card::after{content:"أبيها";position:absolute;left:8%;bottom:6%;font-size:13px;letter-spacing:.3px;opacity:.95;padding:2px 7px;border-radius:999px;background:rgba(0,0,0,.33);border:1px solid rgba(255,255,255,.22);z-index:2}
-.card .mark{position:absolute;top:53%;left:50%;transform:translate(-50%,-50%);font-size:34px;text-shadow:0 3px 8px #000;z-index:3;font-family:Arial,Tahoma,sans-serif;font-weight:900}.card .skullBig{position:absolute;top:20%;left:50%;transform:translateX(-50%);font-size:58px;opacity:.18;z-index:0;filter:drop-shadow(0 4px 8px #000)}
-.cornerNum{position:absolute;right:7%;top:6%;width:30%;aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;color:#fff;text-shadow:0 2px 5px #000;z-index:8;pointer-events:none;line-height:1}.hand .cornerNum{font-size:16px}#top .cornerNum{font-size:22px}
+COLORS = ["red", "bluec", "greenc", "yellow"]
 
-/* ===== SEATS ===== */
-.seat{position:absolute;width:118px;min-height:70px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;padding:7px;border-radius:18px;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.18);box-shadow:none;overflow:hidden;z-index:10}.seat.active{outline:4px solid var(--gold);box-shadow:0 0 35px rgba(255,209,102,.9)}
-.s1{right:5%;top:48%;bottom:auto}.s2{right:8%;top:12%}.s3{left:50%;top:4%;transform:translateX(-50%)}.s4{left:8%;top:12%}.s5{left:5%;top:48%;bottom:auto}
-.playerName{font-weight:900;font-size:clamp(12px,2.2vw,17px);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 2px 5px #000}.playerMeta{font-size:clamp(10px,1.8vw,13px);opacity:.9;line-height:1.35}.playerCards{font-weight:900;color:var(--gold)}.playerScore{margin-top:3px;color:#ffd166;font-weight:900;font-size:clamp(10px,1.8vw,13px);text-shadow:0 0 8px #000,0 0 10px rgba(255,209,102,.35)}.playerScore.danger{color:#ff4d6d;animation:scorePulse .9s infinite ease-in-out}@keyframes scorePulse{0%,100%{transform:scale(1);filter:brightness(1)}50%{transform:scale(1.08);filter:brightness(1.25)}}.seat.empty{opacity:.22}
-.avatarBadge{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:26px;background:radial-gradient(circle at 35% 25%,rgba(255,255,255,.35),rgba(255,209,102,.20) 45%,rgba(0,0,0,.45));border:2px solid rgba(255,255,255,.75);box-shadow:0 0 14px rgba(255,209,102,.45),0 8px 18px #0009;margin-bottom:3px;line-height:1}.seat.active .avatarBadge{animation:avatarBounce 1.05s infinite ease-in-out}@keyframes avatarBounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.08)}}
+# =========================
+# أدوات مساعدة
+# =========================
 
-/* ===== MY HAND ===== */
-.seat.s0.me{left:50%;bottom:-30px;transform:translateX(-50%);width:100%;max-width:100vw;min-height:255px;background:transparent;border:0;box-shadow:none;z-index:60;overflow:hidden;padding-inline:12px}.seat.s0.me .avatarBadge{width:34px;height:34px;font-size:22px;display:inline-grid;margin:0 0 2px}.seat.s0.me .playerName,.seat.s0.me .playerMeta{position:relative;top:0;margin-bottom:4px;z-index:90}
-.seat.s0.me .hand{width:100%;max-width:100%;min-height:205px;display:flex;align-items:flex-end;justify-content:flex-start;overflow-x:auto;overflow-y:visible;background:transparent;border:0;padding:30px 18px 35px;gap:0;transform:none;scrollbar-width:thin;white-space:nowrap}.seat.s0.me .hand .card{flex:0 0 auto;width:78px;height:116px;margin-left:-12px;transform-origin:bottom center;transition:transform .18s ease,filter .18s ease}.seat.s0.me .hand .card:first-child{margin-left:0}.seat.s0.me .hand .card:nth-child(odd){transform:rotate(-7deg) translateY(6px)}.seat.s0.me .hand .card:nth-child(even){transform:rotate(7deg) translateY(6px)}.seat.s0.me .hand .card:hover{transform:translateY(-22px) scale(1.08)!important;z-index:99;filter:brightness(1.12)}
+def next_index(r):
+    return (r["turn"] + r["direction"]) % len(r["players"])
 
-/* ===== CHAT ===== */
-.log{height:128px;overflow:auto;background:rgba(0,0,0,.38);border-radius:16px;padding:10px;line-height:1.7;text-align:right}#timerBar{height:10px;background:linear-gradient(to right,red,orange);width:100%}#colorPicker{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;place-items:center;z-index:999}#colorPicker.show{display:grid}.pickerBox{background:#111;padding:20px;border-radius:20px}.pickerBox button{width:60px;height:60px;margin:10px;border-radius:50%;border:none;cursor:pointer}.timerSetup{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.24);padding:8px 10px;border-radius:16px;margin:6px}.timerSetup select{min-width:100px;margin:0}
+def draw_to(r, idx, n):
+    for _ in range(n):
+        if not r["deck"]:
+            r["deck"] = r["discard"][:-1]
+            r["discard"] = r["discard"][-1:]
+            random.shuffle(r["deck"])
+        r["players"][idx]["hand"].append(r["deck"].pop())
 
+def send_state(room):
+    r = rooms.get(room)
+    if not r:
+        return
 
-/* ===== FINAL RESULTS ===== */
-.finalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;place-items:center;z-index:2000;padding:16px}
-.finalOverlay.show{display:grid}
-.finalBox{width:min(92vw,620px);background:linear-gradient(135deg,rgba(22,53,105,.98),rgba(5,10,24,.98));border:2px solid var(--gold);border-radius:28px;padding:22px;box-shadow:0 0 50px rgba(255,209,102,.35),0 30px 90px #000;color:#fff;text-align:center}
+    for p in r["players"]:
+        payload = {
+            "players": [
+                {
+                    "id": pp["id"],
+                    "name": pp["name"],
+                    "count": len(pp["hand"]),
+                    "team": pp.get("team"),
+                    "score": pp.get("score", 0),
+                    "wins": pp.get("wins", 0),
+                } for pp in r["players"]
+            ],
+            "myHand": p["hand"],
+            "top": r["discard"][-1] if r["discard"] else None,
+            "turn": r["turn"],
+            "color": r["color"],
+            "log": r["log"],
+            "timeLeft": r.get("timeLeft", 0),
+            "timeLimit": r.get("timeLimit", 30),
+            "started": r["started"],
+        }
+        socketio.emit("state", payload, room=p["sid"])
+
+# =========================
+# سكورات الكروت
+# =========================
+
+def card_points(card):
+    n = card.get("n")
+
+    if n in ["عكس", "تخطي", "+2"]:
+        return 20
+    if n == "لون":
+        return 40
+    if n == "+4":
+        return 50
+
+    try:
+        return int(n)
+    except:
+        return 0
+
+# =========================
+# إنشاء الأوراق
+# =========================
+
+def build_deck():
+    deck = []
+    for c in COLORS:
+        for i in range(10):
+            deck.append({"c": c, "n": str(i)})
+        for _ in range(2):
+            deck.append({"c": c, "n": "تخطي"})
+            deck.append({"c": c, "n": "عكس"})
+            deck.append({"c": c, "n": "+2"})
+    for _ in range(4):
+        deck.append({"c": "black", "n": "+4"})
+        deck.append({"c": "black", "n": "لون"})
+    random.shuffle(deck)
+    return deck
+
+# =========================
+# التايمر
+# =========================
+
+def cancel_timer(r):
+    t = r.get("timer")
+    if t:
+        try:
+            t.cancel()
+        except:
+            pass
+
+def start_timer(room):
+    r = rooms.get(room)
+    if not r:
+        return
+
+    cancel_timer(r)
+    r["timeLeft"] = r.get("timeLimit", 30)
+
+    def tick():
+        rr = rooms.get(room)
+        if not rr or not rr.get("started"):
+            return
+
+        rr["timeLeft"] -= 1
+        send_state(room)
+
+        if rr["timeLeft"] <= 0:
+            handle_timeout(room)
+            return
+
+        rr["timer"] = threading.Timer(1, tick)
+        rr["timer"].start()
+
+    r["timer"] = threading.Timer(1, tick)
+    r["timer"].start()
+
+def handle_timeout(room):
+    r = rooms.get(room)
+    if not r:
+        return
+
+    idx = r["turn"]
+    draw_to(r, idx, 1)
+    r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته وسحب كرت")
+
+    r["turn"] = next_index(r)
+    start_timer(room)
+    send_state(room)
+
+# =========================
+# المسارات
+# =========================
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+# =========================
+# الانضمام
+# =========================
+
+@socketio.on("join")
+def on_join(data):
+    room = (data.get("room") or "ROOM1").upper()
+    name = data.get("name") or "لاعب"
+
+    if room not in rooms:
+        rooms[room] = {
+            "players": [],
+            "deck": [],
+            "discard": [],
+            "turn": 0,
+            "direction": 1,
+            "color": None,
+            "started": False,
+            "log": [],
+            "timeLimit": 30,
+        }
+
+    r = rooms[room]
+
+    pid = str(uuid.uuid4())
+    join_room(room)
+
+    r["players"].append({
+        "id": pid,
+        "sid": request.sid,
+        "name": name,
+        "hand": [],
+        "score": 0,
+        "wins": 0
+    })
+
+    emit("joined", {"room": room, "playerId": pid})
+    send_state(room)
+
+# =========================
+# بدء اللعبة
+# =========================
+
+@socketio.on("start")
+def on_start(data):
+    room = data.get("room")
+    if room not in rooms:
+        return
+
+    r = rooms[room]
+
+    r["deck"] = build_deck()
+    r["discard"] = []
+    r["started"] = True
+    r["log"] = ["بدأت اللعبة"]
+
+    for p in r["players"]:
+        p["hand"] = [r["deck"].pop() for _ in range(7)]
+
+    first = r["deck"].pop()
+    r["discard"].append(first)
+    r["color"] = first["c"]
+
+    r["turn"] = 0
+
+    start_timer(room)
+    send_state(room)
+
+# =========================
+# اللعب
+# =========================
+
+@socketio.on("play")
+def on_play(data):
+    room = data.get("room")
+    player_id = data.get("playerId")
+    index = int(data.get("index", -1))
+
+    if room not in rooms:
+        return
+
+    r = rooms[room]
+    idx = next(i for i,p in enumerate(r["players"]) if p["id"]==player_id)
+
+    p = r["players"][idx]
+    card = p["hand"].pop(index)
+    r["discard"].append(card)
+    r["color"] = card["c"]
+
+    # فوز
+    if len(p["hand"]) == 0:
+        p["wins"] += 1
+        p["score"] = max(0, p["score"] - 10)
+
+        for i, pp in enumerate(r["players"]):
+            if i == idx:
+                continue
+            add = sum(card_points(c) for c in pp["hand"])
+            pp["score"] += add
+
+        r["started"] = False
+        cancel_timer(r)
+
+        r["log"].insert(0, f"🏆 فاز {p['name']}")
+
+        send_state(room)
+        return
+
+    r["turn"] = next_index(r)
+    start_timer(room)
+    send_state(room)
+
+# =========================
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port).finalBox{width:min(92vw,620px);background:linear-gradient(135deg,rgba(22,53,105,.98),rgba(5,10,24,.98));border:2px solid var(--gold);border-radius:28px;padding:22px;box-shadow:0 0 50px rgba(255,209,102,.35),0 30px 90px #000;color:#fff;text-align:center}
 .finalBox h2{margin:0 0 12px;font-size:clamp(24px,5vw,36px);color:var(--gold);text-shadow:0 3px 10px #000}
 .finalWinner{font-size:clamp(20px,4vw,30px);font-weight:900;margin:10px 0 16px;color:#7affb2;text-shadow:0 0 12px rgba(122,255,178,.5)}
 .finalTable{width:100%;border-collapse:collapse;margin-top:12px;overflow:hidden;border-radius:14px}
