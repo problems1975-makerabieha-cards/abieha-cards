@@ -458,15 +458,31 @@ def on_start(data):
         p["hand"] = [r["deck"].pop() for _ in range(7)]
         p["last"] = False
 
-# first playable card
+# first card
 first = r["deck"].pop()
-while first["c"] == "black":
+
+# نمنع فقط كرت تغيير اللون العادي، ونسمح +4
+while first["c"] == "black" and first["n"] == "لون":
     r["deck"].insert(0, first)
     random.shuffle(r["deck"])
     first = r["deck"].pop()
 
 r["discard"].append(first)
-r["color"] = first["c"]
+
+if first["n"] == "+4":
+    r["color"] = random.choice(COLORS)
+    r["pendingDraw4"] = 4
+    r["pendingDraw2"] = 0
+    r["log"].insert(0, f"بداية قوية: أول كرت +4 — اللون {r['color']}")
+
+elif first["n"] == "+2":
+    r["color"] = first["c"]
+    r["pendingDraw2"] = 2
+    r["pendingDraw4"] = 0
+    r["log"].insert(0, "بداية قوية: أول كرت +2 — اللاعب الأول يرد أو يسحب")
+
+else:
+    r["color"] = first["c"]
 
 # إذا بداية اللعبة طلعت +2 أو +4، تطبق العقوبة مباشرة على أول لاعب
 if first["n"] == "+2":
