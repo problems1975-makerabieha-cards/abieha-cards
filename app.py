@@ -357,11 +357,22 @@ def on_join(data):
 
     if room not in rooms:
         rooms[room] = {
-            "players": [], "deck": [], "discard": [],
-            "turn": 0, "direction": 1, "color": None,
-            "started": False, "log": [],
-            "mode": mode, "teamMode": team_mode, "teamCount": team_count,
-            "pendingDraw4": 0, "pendingDraw2": 0, "timeLimit": 30, "timeLeft": 0, "timer": None,
+            "players": [],
+            "deck": [],
+            "discard": [],
+            "turn": 0,
+            "direction": 1,
+            "color": None,
+            "started": False,
+            "log": [],
+            "mode": mode,
+            "teamMode": team_mode,
+            "teamCount": team_count,
+            "pendingDraw4": 0,
+            "pendingDraw2": 0,
+            "timeLimit": 30,
+            "timeLeft": 0,
+            "timer": None,
             "host": None
         }
 
@@ -375,8 +386,8 @@ def on_join(data):
         emit("error_msg", "الغرفة ممتلئة، الحد 6 لاعبين")
         return
 
-    # first player locks options and becomes host
     pid = str(uuid.uuid4())
+
     if len(r["players"]) == 0:
         r["mode"] = mode
         r["teamMode"] = team_mode
@@ -405,9 +416,9 @@ def on_join(data):
     })
 
     r["log"].insert(0, f"{name} دخل الغرفة" + (f" - {TEAM_NAMES.get(team, team)}" if team else ""))
+
     emit("joined", {"room": room, "playerId": pid})
     send_state(room)
-
 @socketio.on("chat")
 def on_chat(data):
     room = data.get("room")
