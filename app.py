@@ -263,16 +263,29 @@ if r["timeLeft"] <= 0:
     next_turn(r)
 
 
-def tick():
+def start_timer(room):
     r = rooms.get(room)
     if not r:
         return
 
-    r["timeLeft"] = max(0, r.get("timeLeft", 0) - 1)
+    old_timer = r.get("timer")
+    if old_timer:
+        old_timer.cancel()
 
-    if r["timeLeft"] <= 0:
-        handle_timeout(room)
-        return
+    def tick():
+        r = rooms.get(room)
+        if not r:
+            return
+
+        r["timeLeft"] = max(0, r.get("timeLeft", 0) - 1)
+
+        if r["timeLeft"] <= 0:
+            handle_timeout(room)
+            return
+
+        r["timer"] = threading.Timer(1, tick)
+        r["timer"].daemon = True
+        r["timer"].start()
 
     r["timer"] = threading.Timer(1, tick)
     r["timer"].daemon = True
