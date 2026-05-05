@@ -189,67 +189,174 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
   }
 }
 /* UNO style layout */
+/* ===== ABIHA UNO OFFICIAL TABLE STYLE ===== */
+
+.arena{
+  min-height:760px !important;
+  overflow:hidden !important;
+  padding-bottom:230px !important;
+}
+
 .table{
-  top:40% !important;
-  width:min(82vw,900px) !important;
-  height:clamp(390px,52vh,520px) !important;
+  left:50% !important;
+  top:42% !important;
+  transform:translate(-50%,-50%) !important;
+  width:min(88vw,980px) !important;
+  height:clamp(420px,58vh,560px) !important;
+  border-radius:50% !important;
 }
 
 .info{
   background:transparent !important;
   border:0 !important;
   box-shadow:none !important;
+  min-width:0 !important;
+  padding:0 !important;
 }
 
-.s0{
-  left:50% !important;
-  bottom:-150px !important;
-  transform:translateX(-50%) !important;
-  width:min(95%,900px) !important;
-  background:transparent !important;
-  border:0 !important;
-  box-shadow:none !important;
+.centerPlayArea{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:24px !important;
+  position:relative !important;
 }
 
-.hand{
-  justify-content:center;
-  background:transparent !important;
-  border:0 !important;
-  overflow-x:auto;
-  min-height:160px;
+#top .card{
+  width:125px !important;
+  height:185px !important;
+  transform:rotate(-7deg) !important;
+  z-index:20 !important;
 }
 
-.hand .card{
-  width:82px !important;
-  height:122px !important;
-  margin-left:-18px !important;
-  transform-origin:bottom center;
+.drawOutsideBtn{
+  position:absolute !important;
+  left:24% !important;
+  top:35% !important;
+  width:92px !important;
+  height:65px !important;
+  transform:rotate(-10deg) !important;
+  z-index:15 !important;
 }
 
-.hand .card:nth-child(1){transform:rotate(-18deg)}
-.hand .card:nth-child(2){transform:rotate(-13deg)}
-.hand .card:nth-child(3){transform:rotate(-8deg)}
-.hand .card:nth-child(4){transform:rotate(-3deg)}
-.hand .card:nth-child(5){transform:rotate(2deg)}
-.hand .card:nth-child(6){transform:rotate(7deg)}
-.hand .card:nth-child(7){transform:rotate(12deg)}
-.hand .card:nth-child(8){transform:rotate(17deg)}
-
-.hand .card:hover{
-  transform:translateY(-20px) scale(1.08) !important;
-  z-index:20;
+.ovalInfo{
+  position:absolute !important;
+  left:7% !important;
+  bottom:24% !important;
+  width:165px !important;
+  min-height:78px !important;
+  border-radius:18px !important;
+  background:linear-gradient(90deg,#00b7ff,#00345f) !important;
+  border:2px solid rgba(255,255,255,.7) !important;
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:center !important;
+  font-weight:900 !important;
+  box-shadow:0 12px 25px #0009 !important;
 }
 
 .seat:not(.me){
-  width:120px !important;
+  width:118px !important;
   min-height:70px !important;
+  background:rgba(0,0,0,.25) !important;
+  border:1px solid rgba(255,255,255,.18) !important;
+  box-shadow:none !important;
+  z-index:10 !important;
 }
 
 .s1{right:5% !important;top:48% !important;bottom:auto !important}
-.s2{right:10% !important;top:12% !important}
+.s2{right:8% !important;top:12% !important}
 .s3{left:50% !important;top:4% !important;transform:translateX(-50%) !important}
-.s4{left:10% !important;top:12% !important}
+.s4{left:8% !important;top:12% !important}
 .s5{left:5% !important;top:48% !important;bottom:auto !important}
+
+.seat.s0.me{
+  left:50% !important;
+  bottom:-115px !important;
+  transform:translateX(-50%) !important;
+  width:min(96%,920px) !important;
+  min-height:200px !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+  z-index:30 !important;
+}
+
+.seat.s0.me .hand{
+  display:flex !important;
+  justify-content:center !important;
+  align-items:flex-end !important;
+  gap:0 !important;
+  overflow:visible !important;
+  background:transparent !important;
+  border:0 !important;
+  min-height:185px !important;
+  padding:0 !important;
+}
+
+.seat.s0.me .hand .card{
+  flex:0 0 auto !important;
+  width:92px !important;
+  height:138px !important;
+  margin-left:-20px !important;
+  transform-origin:bottom center !important;
+}
+
+.seat.s0.me .hand .card:nth-child(1){transform:rotate(-22deg) translateY(18px) !important}
+.seat.s0.me .hand .card:nth-child(2){transform:rotate(-16deg) translateY(10px) !important}
+.seat.s0.me .hand .card:nth-child(3){transform:rotate(-10deg) translateY(4px) !important}
+.seat.s0.me .hand .card:nth-child(4){transform:rotate(-4deg) !important}
+.seat.s0.me .hand .card:nth-child(5){transform:rotate(3deg) !important}
+.seat.s0.me .hand .card:nth-child(6){transform:rotate(9deg) translateY(4px) !important}
+.seat.s0.me .hand .card:nth-child(7){transform:rotate(15deg) translateY(10px) !important}
+.seat.s0.me .hand .card:nth-child(8){transform:rotate(21deg) translateY(18px) !important}
+
+.seat.s0.me .hand .card:hover{
+  transform:translateY(-32px) scale(1.12) !important;
+  z-index:99 !important;
+}
+
+@media(max-width:760px){
+  .arena{
+    min-height:690px !important;
+    padding-bottom:200px !important;
+  }
+
+  .table{
+    top:40% !important;
+    width:94vw !important;
+    height:390px !important;
+  }
+
+  #top .card{
+    width:95px !important;
+    height:142px !important;
+  }
+
+  .drawOutsideBtn{
+    left:17% !important;
+    top:36% !important;
+    width:72px !important;
+    height:52px !important;
+  }
+
+  .ovalInfo{
+    left:3% !important;
+    bottom:27% !important;
+    width:110px !important;
+    font-size:12px !important;
+  }
+
+  .seat.s0.me{
+    bottom:-105px !important;
+  }
+
+  .seat.s0.me .hand .card{
+    width:72px !important;
+    height:108px !important;
+    margin-left:-15px !important;
+  }
+}
 </style>
 </head>
 <body>
