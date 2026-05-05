@@ -40,7 +40,20 @@ def draw_to(r, idx, count):
             r["discard"] = [keep]
         if r["deck"]:
             r["players"][idx]["hand"].append(r["deck"].pop())
+def card_points(card):
+    n = card.get("n")
 
+    if n in ["عكس", "تخطي", "+2"]:
+        return 20
+    if n == "لون":
+        return 40
+    if n == "+4":
+        return 50
+
+    try:
+        return int(n)
+    except:
+        return 0
 def team_scores(r):
     scores = {"A": 0, "B": 0, "C": 0}
     for p in r["players"]:
@@ -76,7 +89,8 @@ def public_state(room):
                 "count": len(p["hand"]),
                 "last": p.get("last", False),
                 "wins": p.get("wins", 0),
-            }
+                "score": p.get("score", 0),
+             }
             for p in r["players"]
         ],
    "log": [
@@ -378,9 +392,15 @@ def on_join(data):
             team = assign_auto_team(r)
 
     join_room(room)
-    r["players"].append({
-        "id": pid, "sid": request.sid, "name": name,
-        "team": team, "hand": [], "last": False, "wins": 0
+     r["players"].append({
+        "id": pid,
+        "sid": request.sid,
+        "name": name,
+        "team": team,
+        "hand": [],
+        "last": False,
+        "wins": 0,
+        "score": 0
     })
 
     r["log"].insert(0, f"{name} دخل الغرفة" + (f" - {TEAM_NAMES.get(team, team)}" if team else ""))
@@ -546,16 +566,45 @@ def on_play(data):
     r["log"].insert(0, f"{p['name']} رمى {card['n']}")
 
     # win
-    if len(p["hand"]) == 0:
-        p["wins"] = p.get("wins", 0) + 1
-        r["started"] = False
-        cancel_timer(r)
-        if r.get("mode") == "teams" and p.get("team"):
-            r["log"].insert(0, f"🏆 فاز {TEAM_NAMES.get(p['team'], p['team'])} بسبب {p['name']}")
-        else:
-            r["log"].insert(0, f"🏆 فاز {p['name']}")
-        send_state(room)
-        return
+if len(p["hand"]) == 0:
+    winner_idx = idx
+    winner = r["players"][winner_idx]
+
+    winner["wins"] = winner.get("wins", 0) + 1
+
+    # الفائز يخصم منه 10 نقاط
+    winner["score"] = max(0, winner.get("score", 0) - 10)
+
+    # الخاسرون تنضاف عليهم نقاط الكروت اللي بيدهم
+    for i, pp in enumerate(r["players"]):
+        if i == winner_idx:
+            continue
+
+        add_score = sum(card_points(card) for card in pp["hand"])
+        pp["score"] = pp.get("score", 0) + add_score
+
+        r["log"].insert(
+            0,
+            f"📊 {pp['name']} انضاف عليه {add_score} نقطة — المجموع {pp['score']}"
+        )
+
+    r["started"] = False
+    cancel_timer(r)
+
+    if r.get("mode") == "teams" and winner.get("team"):
+        r["log"].insert(0, f"🏆 فاز {TEAM_NAMES.get(winner['team'], winner['team'])} بسبب {winner['name']} وخصم 10 نقاط")
+    else:
+        r["log"].insert(0, f"🏆 فاز {winner['name']} وخصم 10 نقاط")
+
+    # إذا لاعب وصل 500 يخسر
+    losers = [pp for pp in r["players"] if pp.get("score", 0) >= 500]
+    if losers:
+        for loser in losers:
+            r["log"].insert(0, f"💀 {loser['name']} وصل 500 نقطة وخسر اللعبة")
+        r["gameOver"] = True
+
+    send_state(room)
+    return
 
     apply_effect(r, card)
 
