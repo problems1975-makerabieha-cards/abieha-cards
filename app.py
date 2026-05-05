@@ -458,16 +458,25 @@ def on_start(data):
         p["hand"] = [r["deck"].pop() for _ in range(7)]
         p["last"] = False
 
-    # first non-black
+# first playable card
+first = r["deck"].pop()
+while first["c"] == "black":
+    r["deck"].insert(0, first)
+    random.shuffle(r["deck"])
     first = r["deck"].pop()
-    while first["c"] == "black":
-        r["deck"].insert(0, first)
-        random.shuffle(r["deck"])
-        first = r["deck"].pop()
 
-    r["discard"].append(first)
-    r["color"] = first["c"]
+r["discard"].append(first)
+r["color"] = first["c"]
 
+# إذا بداية اللعبة طلعت +2 أو +4، تطبق العقوبة مباشرة على أول لاعب
+if first["n"] == "+2":
+    r["pendingDraw2"] = 2
+    r["log"].insert(0, "بداية قوية: أول كرت +2 — اللاعب الأول يرد أو يسحب")
+
+elif first["n"] == "+4":
+    r["pendingDraw4"] = 4
+    r["pendingDraw2"] = 0
+    r["log"].insert(0, "بداية قوية: أول كرت +4 — اللاعب الأول يرد أو يسحب")
     # host starts
     host_idx = next((i for i,p in enumerate(r["players"]) if p["id"] == r["host"]), 0)
     r["turn"] = host_idx
