@@ -391,7 +391,7 @@ def on_join(data):
         else:
             team = assign_auto_team(r)
 
-     join_room(room)
+    join_room(room)
 
     r["players"].append({
         "id": pid,
@@ -405,7 +405,6 @@ def on_join(data):
     })
 
     r["log"].insert(0, f"{name} دخل الغرفة" + (f" - {TEAM_NAMES.get(team, team)}" if team else ""))
-
     emit("joined", {"room": room, "playerId": pid})
     send_state(room)
 
