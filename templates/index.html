@@ -188,6 +188,68 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
     font-size:14px;
   }
 }
+/* UNO style layout */
+.table{
+  top:40% !important;
+  width:min(82vw,900px) !important;
+  height:clamp(390px,52vh,520px) !important;
+}
+
+.info{
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+}
+
+.s0{
+  left:50% !important;
+  bottom:-150px !important;
+  transform:translateX(-50%) !important;
+  width:min(95%,900px) !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+}
+
+.hand{
+  justify-content:center;
+  background:transparent !important;
+  border:0 !important;
+  overflow-x:auto;
+  min-height:160px;
+}
+
+.hand .card{
+  width:82px !important;
+  height:122px !important;
+  margin-left:-18px !important;
+  transform-origin:bottom center;
+}
+
+.hand .card:nth-child(1){transform:rotate(-18deg)}
+.hand .card:nth-child(2){transform:rotate(-13deg)}
+.hand .card:nth-child(3){transform:rotate(-8deg)}
+.hand .card:nth-child(4){transform:rotate(-3deg)}
+.hand .card:nth-child(5){transform:rotate(2deg)}
+.hand .card:nth-child(6){transform:rotate(7deg)}
+.hand .card:nth-child(7){transform:rotate(12deg)}
+.hand .card:nth-child(8){transform:rotate(17deg)}
+
+.hand .card:hover{
+  transform:translateY(-20px) scale(1.08) !important;
+  z-index:20;
+}
+
+.seat:not(.me){
+  width:120px !important;
+  min-height:70px !important;
+}
+
+.s1{right:5% !important;top:48% !important;bottom:auto !important}
+.s2{right:10% !important;top:12% !important}
+.s3{left:50% !important;top:4% !important;transform:translateX(-50%) !important}
+.s4{left:10% !important;top:12% !important}
+.s5{left:5% !important;top:48% !important;bottom:auto !important}
 </style>
 </head>
 <body>
