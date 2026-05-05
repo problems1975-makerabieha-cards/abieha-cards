@@ -461,7 +461,7 @@ def on_start(data):
 # first card
 first = r["deck"].pop()
 
-# نمنع فقط كرت تغيير اللون العادي، ونسمح +4
+# نمنع فقط كرت "لون"
 while first["c"] == "black" and first["n"] == "لون":
     r["deck"].insert(0, first)
     random.shuffle(r["deck"])
@@ -469,18 +469,21 @@ while first["c"] == "black" and first["n"] == "لون":
 
 r["discard"].append(first)
 
-if first["n"] == "+4":
+# تعيين اللون دائماً (مهم)
+if first["c"] == "black":
     r["color"] = random.choice(COLORS)
+else:
+    r["color"] = first["c"]
+
+# تطبيق العقوبة إذا كانت +2 أو +4
+if first["n"] == "+2":
+    r["pendingDraw2"] = 2
+    r["log"].insert(0, "🔥 بداية: +2 — اللاعب الأول يرد أو يسحب")
+
+elif first["n"] == "+4":
     r["pendingDraw4"] = 4
     r["pendingDraw2"] = 0
-    r["log"].insert(0, f"بداية قوية: أول كرت +4 — اللون {r['color']}")
-
-elif first["n"] == "+2":
-    r["color"] = first["c"]
-    r["pendingDraw2"] = 2
-    r["pendingDraw4"] = 0
-    r["log"].insert(0, "بداية قوية: أول كرت +2 — اللاعب الأول يرد أو يسحب")
-
+    r["log"].insert(0, f"🔥 بداية: +4 — اللون {r['color']}")
 else:
     r["color"] = first["c"]
 
