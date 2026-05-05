@@ -79,7 +79,14 @@ def public_state(room):
             }
             for p in r["players"]
         ],
-        "log": r["log"][:60],
+   "log": [
+    x for x in r.get("log", [])[:60]
+    if (
+        "دخل الغرفة" in x or
+        "خرج من الغرفة" in x or
+        x.startswith("💬")
+    )
+],
     }
 
 def send_state(room):
