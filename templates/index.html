@@ -81,14 +81,20 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .hand{width:100%;min-height:185px;white-space:nowrap;overflow:visible;border-radius:20px;padding:0;background:transparent;border:0;display:flex;gap:0;align-items:flex-end;justify-content:center}
 .hand .card{flex:0 0 auto;width:92px;height:138px;font-size:28px;margin-left:-20px;transform-origin:bottom center}
 .hand .card .mark{font-size:34px}
-.hand .card:nth-child(1){transform:rotate(-22deg) translateY(18px)}
-.hand .card:nth-child(2){transform:rotate(-16deg) translateY(10px)}
-.hand .card:nth-child(3){transform:rotate(-10deg) translateY(4px)}
-.hand .card:nth-child(4){transform:rotate(-4deg)}
-.hand .card:nth-child(5){transform:rotate(3deg)}
-.hand .card:nth-child(6){transform:rotate(9deg) translateY(4px)}
-.hand .card:nth-child(7){transform:rotate(15deg) translateY(10px)}
-.hand .card:nth-child(8){transform:rotate(21deg) translateY(18px)}
+.hand{
+  transform:translateY(-45px);
+}
+
+.hand .card:nth-child(1){transform:rotate(22deg) translateY(18px)}
+.hand .card:nth-child(2){transform:rotate(16deg) translateY(10px)}
+.hand .card:nth-child(3){transform:rotate(10deg) translateY(4px)}
+.hand .card:nth-child(4){transform:rotate(4deg)}
+.hand .card:nth-child(5){transform:rotate(-3deg)}
+.hand .card:nth-child(6){transform:rotate(-9deg) translateY(4px)}
+.hand .card:nth-child(7){transform:rotate(-15deg) translateY(10px)}
+.hand .card:nth-child(8){transform:rotate(-21deg) translateY(18px)}
+.hand .card:nth-child(9){transform:rotate(-25deg) translateY(24px)}
+.hand .card:nth-child(10){transform:rotate(-28deg) translateY(30px)}
 .hand .card:hover{transform:translateY(-32px) scale(1.12)!important;z-index:99}
 
 .log{height:128px;overflow:auto;background:rgba(0,0,0,.38);border-radius:16px;padding:10px;line-height:1.7;text-align:right}
@@ -271,13 +277,25 @@ socket.on("state",data=>{
   render();
 });
 
-function cardHtml(c,i){
-  return `<div class="card ${c.c}" onclick="playCard(${i})"><span class="skullBig">☠</span><span class="mark">${c.n}</span></div>`;
-}
-function tableCardHtml(c){
-  return `<div class="card ${c.c}"><span class="skullBig">☠</span><span class="mark">${c.n}</span></div>`;
+function cardSymbol(n){
+  if(n === "عكس") return "↔";
+  if(n === "تخطي") return "⊘";
+  return n;
 }
 
+function cardHtml(c,i){
+  return `<div class="card ${c.c}" onclick="playCard(${i})">
+    <span class="skullBig">☠</span>
+    <span class="mark">${cardSymbol(c.n)}</span>
+  </div>`;
+}
+
+function tableCardHtml(c){
+  return `<div class="card ${c.c}">
+    <span class="skullBig">☠</span>
+    <span class="mark">${cardSymbol(c.n)}</span>
+  </div>`;
+}
 function render(){
   if(!state) return;
   document.getElementById("turn").innerHTML="🔥 الدور: "+state.players[state.turn].name;
