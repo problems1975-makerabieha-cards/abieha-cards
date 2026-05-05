@@ -272,20 +272,22 @@ def start_timer(room):
     if old_timer:
         old_timer.cancel()
 
+    r["timeLeft"] = 30
+
     def tick():
-        r = rooms.get(room)
-        if not r:
+        rr = rooms.get(room)
+        if not rr:
             return
 
-        r["timeLeft"] = max(0, r.get("timeLeft", 0) - 1)
+        rr["timeLeft"] = max(0, rr.get("timeLeft", 30) - 1)
 
-        if r["timeLeft"] <= 0:
+        if rr["timeLeft"] <= 0:
             handle_timeout(room)
             return
 
-        r["timer"] = threading.Timer(1, tick)
-        r["timer"].daemon = True
-        r["timer"].start()
+        rr["timer"] = threading.Timer(1, tick)
+        rr["timer"].daemon = True
+        rr["timer"].start()
 
     r["timer"] = threading.Timer(1, tick)
     r["timer"].daemon = True
