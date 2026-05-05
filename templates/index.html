@@ -108,6 +108,189 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 @media(max-width:900px){.drawOutsideBtn{right:-78px;width:92px;height:62px;font-size:18px}.table{width:92vw;height:440px}.seat.s0.me{bottom:-105px}}
 @media(max-width:760px){input,select{min-width:128px;font-size:14px;padding:10px}button{padding:10px 12px;margin:4px;border-radius:13px}.join,.controls,.logBox{border-radius:18px;padding:8px}.arena{min-height:690px;padding-bottom:200px}.table{top:40%;width:94vw;height:390px}.centerPlayArea{width:220px;height:210px}#top .card{width:95px;height:142px}.drawOutsideBtn{right:-65px;top:50%;width:74px;height:54px;font-size:15px}.ovalInfo{left:-95px !important;top:50% !important;transform:translateY(-50%) !important;width:130px !important;font-size:12px !important}.seat:not(.me){width:88px;min-height:58px;font-size:11px}.s1{right:2%;top:50%}.s2{right:4%;top:13%}.s3{top:1%}.s4{left:4%;top:13%}.s5{left:2%;top:50%}.seat.s0.me{bottom:-98px;width:98%;min-height:160px}.hand{min-height:155px}.hand .card{width:72px;height:108px;margin-left:-15px}.hand .card .mark{font-size:28px}.log{height:90px;font-size:12px}}
 @media(max-width:480px){.arena{min-height:650px;padding-bottom:185px}.table{width:96vw;height:360px}.centerPlayArea{width:190px;height:190px}.drawOutsideBtn{right:-54px;width:66px;height:48px;font-size:14px}.ovalInfo{left:-80px !important;top:50% !important;transform:translateY(-50%) !important;width:112px !important;font-size:11px !important}#top .card{width:86px;height:128px}.seat:not(.me){width:76px;min-height:52px}.hand .card{width:66px;height:100px;margin-left:-14px}.seat.s0.me{bottom:-92px}}
+
+/* ===== FINAL UNO STYLE OVERRIDE - clean fan layout ===== */
+.arena{
+  min-height:780px !important;
+  overflow:visible !important;
+  padding-bottom:260px !important;
+}
+
+.table{
+  top:39% !important;
+  width:min(90vw,1040px) !important;
+  height:clamp(430px,58vh,570px) !important;
+}
+
+.seat.s0.me{
+  left:50% !important;
+  bottom:-35px !important;
+  transform:translateX(-50%) !important;
+  width:min(98%,980px) !important;
+  min-height:280px !important;
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+  overflow:visible !important;
+  z-index:60 !important;
+}
+
+.seat.s0.me .playerName,
+.seat.s0.me .playerMeta{
+  position:relative !important;
+  top:0 !important;
+  margin-bottom:4px !important;
+  z-index:90 !important;
+}
+
+.seat.s0.me .hand{
+  width:100% !important;
+  min-height:245px !important;
+  display:flex !important;
+  align-items:flex-end !important;
+  justify-content:center !important;
+  overflow:visible !important;
+  background:transparent !important;
+  border:0 !important;
+  padding:0 18px !important;
+  gap:0 !important;
+  transform:translateY(-25px) !important;
+}
+
+.seat.s0.me .hand .card{
+  flex:0 0 auto !important;
+  width:96px !important;
+  height:144px !important;
+  margin-left:-26px !important;
+  transform-origin:bottom center !important;
+  transition:transform .18s ease, filter .18s ease !important;
+}
+
+.seat.s0.me .hand .card:first-child{
+  margin-left:0 !important;
+}
+
+/* Fan direction مثل الصورة */
+.seat.s0.me .hand .card:nth-child(1){transform:rotate(-26deg) translateY(42px) !important}
+.seat.s0.me .hand .card:nth-child(2){transform:rotate(-22deg) translateY(32px) !important}
+.seat.s0.me .hand .card:nth-child(3){transform:rotate(-18deg) translateY(24px) !important}
+.seat.s0.me .hand .card:nth-child(4){transform:rotate(-13deg) translateY(15px) !important}
+.seat.s0.me .hand .card:nth-child(5){transform:rotate(-7deg) translateY(7px) !important}
+.seat.s0.me .hand .card:nth-child(6){transform:rotate(-2deg) translateY(0) !important}
+.seat.s0.me .hand .card:nth-child(7){transform:rotate(4deg) translateY(1px) !important}
+.seat.s0.me .hand .card:nth-child(8){transform:rotate(10deg) translateY(8px) !important}
+.seat.s0.me .hand .card:nth-child(9){transform:rotate(16deg) translateY(18px) !important}
+.seat.s0.me .hand .card:nth-child(10){transform:rotate(22deg) translateY(30px) !important}
+.seat.s0.me .hand .card:nth-child(11){transform:rotate(27deg) translateY(42px) !important}
+.seat.s0.me .hand .card:nth-child(12){transform:rotate(31deg) translateY(54px) !important}
+.seat.s0.me .hand .card:nth-child(13){transform:rotate(34deg) translateY(66px) !important}
+.seat.s0.me .hand .card:nth-child(n+14){transform:rotate(36deg) translateY(76px) !important}
+
+.seat.s0.me .hand .card:hover{
+  transform:translateY(-48px) scale(1.14) !important;
+  z-index:999 !important;
+  filter:brightness(1.12) !important;
+}
+
+/* زر السحب يمين الكرت واضح */
+.drawOutsideBtn{
+  right:-118px !important;
+  top:50% !important;
+  transform:translateY(-50%) rotate(-7deg) !important;
+  width:108px !important;
+  height:72px !important;
+  font-size:20px !important;
+  z-index:80 !important;
+}
+
+/* الدور واللون يسار الكرت */
+.ovalInfo{
+  left:-150px !important;
+  top:50% !important;
+  transform:translateY(-50%) !important;
+  width:176px !important;
+  min-height:78px !important;
+  z-index:80 !important;
+}
+
+/* رموز العكس والتخطي أوضح */
+.card .mark{
+  font-family:Arial, Tahoma, sans-serif !important;
+  font-weight:900 !important;
+}
+
+/* iPad */
+@media(max-width:900px){
+  .arena{
+    min-height:730px !important;
+    padding-bottom:245px !important;
+  }
+  .seat.s0.me{
+    bottom:-25px !important;
+    min-height:260px !important;
+  }
+  .seat.s0.me .hand{
+    min-height:225px !important;
+    transform:translateY(-18px) !important;
+  }
+  .seat.s0.me .hand .card{
+    width:82px !important;
+    height:123px !important;
+    margin-left:-22px !important;
+  }
+  .drawOutsideBtn{
+    right:-92px !important;
+    width:88px !important;
+    height:60px !important;
+    font-size:17px !important;
+  }
+  .ovalInfo{
+    left:-118px !important;
+    width:138px !important;
+    font-size:13px !important;
+  }
+}
+
+/* Mobile */
+@media(max-width:600px){
+  .arena{
+    min-height:680px !important;
+    padding-bottom:225px !important;
+  }
+  .table{
+    top:38% !important;
+    width:96vw !important;
+    height:370px !important;
+  }
+  .seat.s0.me{
+    bottom:-12px !important;
+    min-height:230px !important;
+    width:100% !important;
+  }
+  .seat.s0.me .hand{
+    min-height:205px !important;
+    padding:0 10px !important;
+    transform:translateY(-12px) !important;
+  }
+  .seat.s0.me .hand .card{
+    width:68px !important;
+    height:102px !important;
+    margin-left:-18px !important;
+  }
+  .drawOutsideBtn{
+    right:-66px !important;
+    width:66px !important;
+    height:48px !important;
+    font-size:14px !important;
+  }
+  .ovalInfo{
+    left:-82px !important;
+    width:110px !important;
+    min-height:60px !important;
+    font-size:11px !important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -279,8 +462,8 @@ socket.on("state",data=>{
 });
 
 function cardSymbol(n){
-  if(n === "عكس") return "↔";
-  if(n === "تخطي") return "⊘";
+  if(n === "عكس") return "↺";
+  if(n === "تخطي") return "🚫";
   return n;
 }
 
