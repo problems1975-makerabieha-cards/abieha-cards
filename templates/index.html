@@ -357,6 +357,45 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
     margin-left:-15px !important;
   }
 }
+/* زر السحب واضح وثابت */
+.drawOutsideBtn{
+  position:absolute !important;
+  right:50% !important;
+  top:18% !important;
+  transform:translateX(50%) rotate(-8deg) !important;
+
+  width:110px !important;
+  height:72px !important;
+  font-size:20px !important;
+
+  z-index:80 !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  border:3px solid #fff3b0 !important;
+  box-shadow:0 0 22px rgba(255,209,102,.9), 0 8px 0 #9b6a00 !important;
+}
+
+/* آيباد */
+@media(max-width:900px){
+  .drawOutsideBtn{
+    top:20% !important;
+    width:95px !important;
+    height:62px !important;
+    font-size:18px !important;
+  }
+}
+
+/* موبايل */
+@media(max-width:600px){
+  .drawOutsideBtn{
+    top:22% !important;
+    width:78px !important;
+    height:54px !important;
+    font-size:15px !important;
+  }
+}
 </style>
 </head>
 <body>
