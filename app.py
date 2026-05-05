@@ -238,19 +238,32 @@ def start_timer(room):
 
         r["timeLeft"] -= 1
 
-        if r["timeLeft"] <= 0:
-            idx = r["turn"]
+    if r["timeLeft"] <= 0:
+        idx = r["turn"]
 
-            # يسحب كرت عند انتهاء الوقت
-            draw_to(r, idx, 1)
+    amount4 = int(r.get("pendingDraw4", 0) or 0)
+    amount2 = int(r.get("pendingDraw2", 0) or 0)
 
-            r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته ⏱️ وسحب كرت")
+    if amount4 > 0:
+        total = amount4 + 1
+        draw_to(r, idx, total)
+        r["pendingDraw4"] = 0
+        r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته ⏱️ وسحب عقوبة {amount4} + كرت = {total}")
 
-            r["turn"] = next_index(r)
+    elif amount2 > 0:
+        total = amount2 + 1
+        draw_to(r, idx, total)
+        r["pendingDraw2"] = 0
+        r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته ⏱️ وسحب عقوبة {amount2} + كرت = {total}")
 
-            send_state(room)
-            start_timer(room)
-            return
+    else:
+        draw_to(r, idx, 1)
+        r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته ⏱️ وسحب كرت عقوبة")
+
+    r["turn"] = next_index(r)
+    send_state(room)
+    start_timer(room)
+    return
 
         send_state(room)
         r["timer"] = threading.Timer(1, tick)
