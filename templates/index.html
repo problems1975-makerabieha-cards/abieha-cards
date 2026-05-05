@@ -49,7 +49,20 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .avatarBadge{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;font-size:26px;background:radial-gradient(circle at 35% 25%,rgba(255,255,255,.35),rgba(255,209,102,.20) 45%,rgba(0,0,0,.45));border:2px solid rgba(255,255,255,.75);box-shadow:0 0 14px rgba(255,209,102,.45),0 8px 18px #0009;margin-bottom:3px;line-height:1}.seat.active .avatarBadge{animation:avatarBounce 1.05s infinite ease-in-out}@keyframes avatarBounce{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.08)}}
 
 /* ===== MY HAND ===== */
-.seat.s0.me{left:50%;bottom:-30px;transform:translateX(-50%);width:100%;max-width:100vw;min-height:255px;background:transparent;border:0;box-shadow:none;z-index:60;overflow:hidden;padding-inline:12px}.seat.s0.me .avatarBadge{width:34px;height:34px;font-size:22px;display:inline-grid;margin:0 0 2px}.seat.s0.me .playerName,.seat.s0.me .playerMeta{position:relative;top:0;margin-bottom:4px;z-index:90}
+.seat.s0.me{
+  left:50%;
+  bottom:-30px;
+  transform:translateX(-50%);
+  width:100%;
+  max-width:100vw;
+  min-height:255px;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  z-index:5; /* 👈 أهم تعديل */
+  overflow:hidden;
+  padding-inline:12px;
+}
 .seat.s0.me .hand{width:100%;max-width:100%;min-height:205px;display:flex;align-items:flex-end;justify-content:flex-start;overflow-x:auto;overflow-y:visible;background:transparent;border:0;padding:30px 18px 35px;gap:0;transform:none;scrollbar-width:thin;white-space:nowrap}.seat.s0.me .hand .card{flex:0 0 auto;width:78px;height:116px;margin-left:-12px;transform-origin:bottom center;transition:transform .18s ease,filter .18s ease}.seat.s0.me .hand .card:first-child{margin-left:0}.seat.s0.me .hand .card:nth-child(odd){transform:rotate(-7deg) translateY(6px)}.seat.s0.me .hand .card:nth-child(even){transform:rotate(7deg) translateY(6px)}.seat.s0.me .hand .card:hover{transform:translateY(-22px) scale(1.08)!important;z-index:99;filter:brightness(1.12)}
 
 /* ===== CHAT ===== */
