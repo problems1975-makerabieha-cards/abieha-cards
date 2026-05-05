@@ -257,21 +257,20 @@ if r["timeLeft"] <= 0:
         r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته ⏱️ وسحب {total}")
 
     else:
-        draw_to(r, idx, 1)
-        r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته ⏱️ وسحب كرت")
+def tick():
+    r = rooms.get(room)
+    if not r:
+        return
 
-    r["turn"] = next_index(r)
-    send_state(room)
-    start_timer(room)
-    return
+    r["timeLeft"] = max(0, r.get("timeLeft", 0) - 1)
 
-    send_state(room)
-        r["timer"] = threading.Timer(1, tick)
-        r["timer"].start()
+    if r["timeLeft"] <= 0:
+        handle_timeout(room)
+        return
 
     r["timer"] = threading.Timer(1, tick)
+    r["timer"].daemon = True
     r["timer"].start()
-
 @app.route("/")
 def index():
     try:
