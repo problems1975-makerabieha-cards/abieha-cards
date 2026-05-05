@@ -121,7 +121,14 @@ function cardSymbol(n){if(n==="عكس")return"↺";if(n==="تخطي")return"⊘"
 function cardValueOrder(n){const v=parseInt(n,10);if(!Number.isNaN(v))return v;if(n==="تخطي")return 10;if(n==="عكس")return 11;if(n==="+2")return 12;if(n==="+4")return 13;if(n==="لون")return 14;return 99}
 function colorOrder(c){return({bluec:1,yellow:2,red:3,greenc:4,black:5})[c]||99}
 function sortedHandWithIndex(hand){return(hand||[]).map((c,i)=>({...c,realIndex:i})).sort((a,b)=>{const ca=colorOrder(a.c),cb=colorOrder(b.c);if(ca!==cb)return ca-cb;return cardValueOrder(a.n)-cardValueOrder(b.n)})}
-function cardHtml(c){const symbol=cardSymbol(c.n);return `<div class="card ${c.c}" onclick="playCard(${c.realIndex})"><span class="cornerNum">${symbol}</span><span class="skullBig">☠</span><span class="mark">${symbol}</span></div>`}
+function cardHtml(c){
+  const symbol = cardSymbol(c.n);
+  return `<div class="card ${c.c}" onclick="playCard(${c.realIndex})">
+    <span class="cornerNum">${symbol}</span>
+    <span class="skullBig">☠</span>
+    <span class="mark">${symbol}</span>
+  </div>`;
+}
 function tableCardHtml(c){const symbol=cardSymbol(c.n);return `<div class="card ${c.c}"><span class="cornerNum">${symbol}</span><span class="skullBig">☠</span><span class="mark">${symbol}</span></div>`}
 function scoreHtml(p){const score=Number(p?.score||0);const cls=score>=450?"playerScore danger":"playerScore";return `<div class="${cls}">النقاط: ${score} / 500</div>`}
 function render(){if(!state)return;document.getElementById("turn").innerHTML="🔥 الدور: "+state.players[state.turn].name;const colorMap={red:"#ff4b4b",yellow:"#ffd84d",greenc:"#35d66b",bluec:"#4da3ff",black:"#ffffff"};document.getElementById("need").innerHTML="اللون: <span style='color:"+(colorMap[state.color]||"#fff")+"'>"+state.color+"</span>";let penalty="";if(state.pendingDraw4>0)penalty="عقوبة +4: "+state.pendingDraw4+" — رد بنفس اللون أو اسحب";else if(state.pendingDraw2>0)penalty="عكس/تخطي: رد بنفس اللون أو اسحب كرتين";document.getElementById("penaltyLine").innerHTML=penalty;document.getElementById("top").innerHTML=state.top?tableCardHtml(state.top):"";document.getElementById("hand").innerHTML=sortedHandWithIndex(state.myHand).map(c=>cardHtml(c)).join("");document.getElementById("log").innerHTML=(state.log||[]).join("<br>");const percent=state.timeLimit?Math.max(0,Math.min(100,(state.timeLeft/state.timeLimit)*100)):0;document.getElementById("timerBar").style.width=percent+"%";document.getElementById("timeText").innerHTML=state.started?("⏱️ الوقت المتبقي: "+state.timeLeft+" ثانية"):("⏱️ وقت اللاعب: "+state.timeLimit+" ثانية");renderSeats()}
