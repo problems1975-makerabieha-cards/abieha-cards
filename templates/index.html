@@ -165,11 +165,16 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 
 /* زر السحب يسار خارج الكرت */
 .drawOutsideBtn{
-  position:relative;
-  transform:translateX(-10px);
-  min-width:80px;
-  height:60px;
-  font-size:18px;
+  position:absolute !important;
+
+  top:-70px !important;   /* 👈 فوق الكرت */
+  left:50% !important;
+  transform:translateX(-50%) !important;
+
+  width:90px !important;
+  height:60px !important;
+
+  z-index:15 !important;
 }
 
 /* موبايل */
@@ -241,20 +246,26 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 
 .ovalInfo{
   position:absolute !important;
-  left:7% !important;
-  bottom:24% !important;
-  width:165px !important;
-  min-height:78px !important;
-  border-radius:18px !important;
-  background:linear-gradient(90deg,#00b7ff,#00345f) !important;
-  border:2px solid rgba(255,255,255,.7) !important;
-  display:flex !important;
-  flex-direction:column !important;
-  justify-content:center !important;
-  font-weight:900 !important;
-  box-shadow:0 12px 25px #0009 !important;
-}
 
+  bottom:-80px !important;  /* 👈 تحت الكرت */
+  left:50% !important;
+  transform:translateX(-50%) !important;
+
+  width:160px !important;
+  min-height:70px !important;
+
+  border-radius:18px !important;
+  background:rgba(0,0,0,.35) !important;
+  border:2px solid rgba(255,255,255,.6) !important;
+
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  text-align:center;
+  font-weight:900;
+
+  z-index:12;
+}
 .seat:not(.me){
   width:118px !important;
   min-height:70px !important;
