@@ -60,18 +60,26 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .s5{left:clamp(8px,2.6vw,34px);bottom:clamp(155px,27vh,205px)}
 .hand{
   width:100%;
-  min-height:90px;
+  min-height:110px;
   white-space:nowrap;
   overflow-x:auto;
+  overflow-y:hidden;
   border-radius:20px;
-  padding:8px;
+  padding:10px;
   background:rgba(0,0,0,.38);
   border:1px solid rgba(255,255,255,.12);
-
   display:flex;
   gap:6px;
+  align-items:center;
 }
-.hand .card{width:clamp(46px,8vw,68px);height:clamp(68px,12vw,100px);font-size:clamp(17px,3.2vw,24px);margin:clamp(1px,.7vw,4px);border-radius:clamp(12px,2vw,17px)}
+.hand .card{
+  flex:0 0 auto;
+  width:68px;
+  height:100px;
+  font-size:24px;
+  margin:4px;
+  border-radius:17px;
+}
 .log{height:128px;overflow:auto;background:rgba(0,0,0,.38);border-radius:16px;padding:10px;line-height:1.7;text-align:right}
 #timerBar{height:10px;background:linear-gradient(to right,red,orange);width:100%}
 #colorPicker{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;place-items:center}
@@ -101,6 +109,12 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
   .log{height:90px;font-size:12px}
 }
 @media (max-width:480px){
+  .hand .card{
+  width:68px;
+  height:100px;
+  font-size:24px;
+  flex:0 0 auto;
+}
   .seat{width:104px}.seat.me{width:96%}
   .table{width:82%;height:270px}
   .s1{right:4px}.s2{right:4px}.s4{left:4px}.s5{left:4px}
