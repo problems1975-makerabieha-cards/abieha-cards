@@ -255,32 +255,36 @@ def handle_timeout(room):
 
     r["turn"] = next_index(r)
     start_timer(room)
-
+    send_state(room)
 
 def start_timer(room):
     r = rooms.get(room)
     if not r:
         return
 
-    # إلغاء المؤقت القديم
     old_timer = r.get("timer")
     if old_timer:
         try:
             old_timer.cancel()
-        except:
+        except Exception:
             pass
 
     r["timeLeft"] = r.get("timeLimit", 30)
+    send_state(room)
 
     def tick():
         rr = rooms.get(room)
-        if not rr or not rr["started"]:
+        if not rr or not rr.get("started"):
             return
 
-        rr["timeLeft"] -= 1
+        rr["timeLeft"] = max(0, rr.get("timeLeft", 0) - 1)
+
+        # مهم جداً: تحديث الواجهة كل ثانية
+        send_state(room)
 
         if rr["timeLeft"] <= 0:
             handle_timeout(room)
+            send_state(room)
             return
 
         rr["timer"] = threading.Timer(1, tick)
