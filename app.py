@@ -257,6 +257,12 @@ if r["timeLeft"] <= 0:
         r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته ⏱️ وسحب {total}")
 
     else:
+        draw_to(r, idx, 1)
+        r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته ⏱️ وسحب كرت عقوبة")
+
+    next_turn(r)
+
+
 def tick():
     r = rooms.get(room)
     if not r:
