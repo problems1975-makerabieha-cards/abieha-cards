@@ -391,16 +391,17 @@ def on_join(data):
         else:
             team = assign_auto_team(r)
 
-    join_room(room)
-     r["players"].append({
-         "id": pid,
-         "sid": request.sid,
-         "name": name,
-         "team": team,
-         "hand": [],
-         "last": False,
-         "wins": 0,
-         "score": 0
+     join_room(room)
+
+    r["players"].append({
+        "id": pid,
+        "sid": request.sid,
+        "name": name,
+        "team": team,
+        "hand": [],
+        "last": False,
+        "wins": 0,
+        "score": 0
     })
 
     r["log"].insert(0, f"{name} دخل الغرفة" + (f" - {TEAM_NAMES.get(team, team)}" if team else ""))
