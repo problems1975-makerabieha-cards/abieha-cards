@@ -290,7 +290,78 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
     font-size:11px !important;
   }
 }
+/* ===== FIX PLAYER FAN INSIDE SCREEN ===== */
 
+.seat.s0.me{
+  width:100% !important;
+  max-width:100vw !important;
+  left:50% !important;
+  bottom:-30px !important;
+  transform:translateX(-50%) !important;
+  overflow:hidden !important;
+  padding-inline:12px !important;
+}
+
+.seat.s0.me .hand{
+  width:100% !important;
+  max-width:100% !important;
+  overflow-x:auto !important;
+  overflow-y:visible !important;
+  justify-content:flex-start !important;
+  align-items:flex-end !important;
+  padding:30px 18px 35px !important;
+  gap:0 !important;
+  transform:none !important;
+  scrollbar-width:thin;
+}
+
+.seat.s0.me .hand .card{
+  width:78px !important;
+  height:116px !important;
+  margin-left:-12px !important;
+  flex:0 0 auto !important;
+  transform-origin:bottom center !important;
+}
+
+/* مروحة هادية بدون خروج قوي */
+.seat.s0.me .hand .card:nth-child(odd){
+  transform:rotate(-7deg) translateY(6px) !important;
+}
+
+.seat.s0.me .hand .card:nth-child(even){
+  transform:rotate(7deg) translateY(6px) !important;
+}
+
+.seat.s0.me .hand .card:hover{
+  transform:translateY(-22px) scale(1.08) !important;
+  z-index:99 !important;
+}
+
+/* آيباد */
+@media(max-width:900px){
+  .seat.s0.me .hand .card{
+    width:70px !important;
+    height:104px !important;
+    margin-left:-10px !important;
+  }
+}
+
+/* موبايل */
+@media(max-width:600px){
+  .seat.s0.me{
+    bottom:-15px !important;
+  }
+
+  .seat.s0.me .hand{
+    padding-inline:12px !important;
+  }
+
+  .seat.s0.me .hand .card{
+    width:62px !important;
+    height:94px !important;
+    margin-left:-8px !important;
+  }
+}
 </style>
 </head>
 <body>
