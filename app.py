@@ -458,44 +458,44 @@ def on_start(data):
         p["hand"] = [r["deck"].pop() for _ in range(7)]
         p["last"] = False
 
-# first card
-first = r["deck"].pop()
-
-# نمنع فقط كرت "لون"
-while first["c"] == "black" and first["n"] == "لون":
-    r["deck"].insert(0, first)
-    random.shuffle(r["deck"])
+    # first card
     first = r["deck"].pop()
 
-r["discard"].append(first)
+    # نمنع فقط كرت "لون"
+    while first["c"] == "black" and first["n"] == "لون":
+        r["deck"].insert(0, first)
+        random.shuffle(r["deck"])
+        first = r["deck"].pop()
 
-# تعيين اللون دائماً (مهم)
-if first["c"] == "black":
+    r["discard"].append(first)
+
+    # تعيين اللون دائماً (مهم)
+    if first["c"] == "black":
     r["color"] = random.choice(COLORS)
-else:
-    r["color"] = first["c"]
+    else:
+        r["color"] = first["c"]
 
-# تطبيق العقوبة إذا كانت +2 أو +4
-if first["n"] == "+2":
-    r["pendingDraw2"] = 2
-    r["log"].insert(0, "🔥 بداية: +2 — اللاعب الأول يرد أو يسحب")
+    # تطبيق العقوبة إذا كانت +2 أو +4
+    if first["n"] == "+2":
+        r["pendingDraw2"] = 2
+        r["log"].insert(0, "🔥 بداية: +2 — اللاعب الأول يرد أو يسحب")
 
-elif first["n"] == "+4":
-    r["pendingDraw4"] = 4
-    r["pendingDraw2"] = 0
-    r["log"].insert(0, f"🔥 بداية: +4 — اللون {r['color']}")
-else:
-    r["color"] = first["c"]
+    elif first["n"] == "+4":
+        r["pendingDraw4"] = 4
+        r["pendingDraw2"] = 0
+        r["log"].insert(0, f"🔥 بداية: +4 — اللون {r['color']}")
+    else:
+        r["color"] = first["c"]
 
-# إذا بداية اللعبة طلعت +2 أو +4، تطبق العقوبة مباشرة على أول لاعب
-if first["n"] == "+2":
-    r["pendingDraw2"] = 2
-    r["log"].insert(0, "بداية قوية: أول كرت +2 — اللاعب الأول يرد أو يسحب")
+    # إذا بداية اللعبة طلعت +2 أو +4، تطبق العقوبة مباشرة على أول لاعب
+    if first["n"] == "+2":
+        r["pendingDraw2"] = 2
+        r["log"].insert(0, "بداية قوية: أول كرت +2 — اللاعب الأول يرد أو يسحب")
 
-elif first["n"] == "+4":
-    r["pendingDraw4"] = 4
-    r["pendingDraw2"] = 0
-    r["log"].insert(0, "بداية قوية: أول كرت +4 — اللاعب الأول يرد أو يسحب")
+    elif first["n"] == "+4":
+        r["pendingDraw4"] = 4
+        r["pendingDraw2"] = 0
+        r["log"].insert(0, "بداية قوية: أول كرت +4 — اللاعب الأول يرد أو يسحب")
     # host starts
     host_idx = next((i for i,p in enumerate(r["players"]) if p["id"] == r["host"]), 0)
     r["turn"] = host_idx
