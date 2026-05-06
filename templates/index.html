@@ -66,8 +66,67 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .seat.s0.me .hand{width:100%;max-width:100%;min-height:205px;display:flex;align-items:flex-end;justify-content:flex-start;overflow-x:auto;overflow-y:visible;background:transparent;border:0;padding:30px 18px 35px;gap:0;transform:none;scrollbar-width:thin;white-space:nowrap}.seat.s0.me .hand .card{flex:0 0 auto;width:78px;height:116px;margin-left:-12px;transform-origin:bottom center;transition:transform .18s ease,filter .18s ease}.seat.s0.me .hand .card:first-child{margin-left:0}.seat.s0.me .hand .card:nth-child(odd){transform:rotate(-7deg) translateY(6px)}.seat.s0.me .hand .card:nth-child(even){transform:rotate(7deg) translateY(6px)}.seat.s0.me .hand .card:hover{transform:translateY(-22px) scale(1.08)!important;z-index:99;filter:brightness(1.12)}
 
 /* ===== CHAT ===== */
-.log{height:128px;overflow:auto;background:rgba(0,0,0,.38);border-radius:16px;padding:10px;line-height:1.7;text-align:right}#timerBar{height:10px;background:linear-gradient(to right,red,orange);width:100%}#colorPicker{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;place-items:center;z-index:999}#colorPicker.show{display:grid}.pickerBox{background:#111;padding:20px;border-radius:20px}.pickerBox button{width:60px;height:60px;margin:10px;border-radius:50%;border:none;cursor:pointer}.timerSetup{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,.24);padding:8px 10px;border-radius:16px;margin:6px}.timerSetup select{min-width:100px;margin:0}
-
+.log{
+  height:190px;
+  overflow:auto;
+  background:rgba(0,0,0,.48);
+  border-radius:18px;
+  padding:14px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  text-align:right;
+}
+.chatMsg{
+  max-width:82%;
+  display:flex;
+  gap:8px;
+  align-items:flex-end;
+}
+.chatMe{align-self:flex-end;flex-direction:row-reverse}
+.chatOther{align-self:flex-start}
+.chatAvatar{
+  width:34px;height:34px;border-radius:50%;
+  display:grid;place-items:center;
+  background:#ffffff22;
+  border:1px solid #ffffff55;
+  font-size:20px;
+}
+.chatBubble{
+  padding:10px 14px;
+  border-radius:18px;
+  font-size:18px;
+  font-weight:800;
+  line-height:1.6;
+  box-shadow:0 6px 16px #0007;
+}
+.chatMe .chatBubble{
+  background:linear-gradient(135deg,#35dd7b,#0fa958);
+  color:#fff;
+  border-bottom-right-radius:4px;
+}
+.chatOther .chatBubble{
+  background:linear-gradient(135deg,#203b6d,#0b1733);
+  color:#fff;
+  border:1px solid #ffffff22;
+  border-bottom-left-radius:4px;
+}
+.chatName{
+  color:#ffd166;
+  font-size:13px;
+  font-weight:900;
+  margin-bottom:3px;
+}
+.sysMsg{
+  align-self:center;
+  background:#ffd16622;
+  color:#ffd166;
+  border:1px solid #ffd16666;
+  border-radius:999px;
+  padding:6px 12px;
+  font-weight:900;
+  font-size:14px;
+}
 
 /* ===== FINAL RESULTS ===== */
 .finalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;place-items:center;z-index:2000;padding:16px}
@@ -191,8 +250,30 @@ function renderFinalResults(){
   document.getElementById("finalRows").innerHTML=rows;
   overlay.classList.add("show");
 }
-function render(){if(!state)return;document.getElementById("turn").innerHTML="🔥 الدور: "+state.players[state.turn].name;const colorMap={red:"#ff4b4b",yellow:"#ffd84d",greenc:"#35d66b",bluec:"#4da3ff",black:"#ffffff"};document.getElementById("need").innerHTML="اللون: <span style='color:"+(colorMap[state.color]||"#fff")+"'>"+state.color+"</span>";let penalty="";if(state.pendingDraw4>0)penalty="عقوبة +4: "+state.pendingDraw4+" — رد بنفس اللون أو اسحب";else if(state.pendingDraw2>0)penalty="عكس/تخطي: رد بنفس اللون أو اسحب كرتين";document.getElementById("penaltyLine").innerHTML=penalty;document.getElementById("top").innerHTML=state.top?tableCardHtml(state.top):"";document.getElementById("hand").innerHTML=sortedHandWithIndex(state.myHand).map(c=>cardHtml(c)).join("");document.getElementById("log").innerHTML=(state.log||[]).join("<br>");const percent=state.timeLimit?Math.max(0,Math.min(100,(state.timeLeft/state.timeLimit)*100)):0;document.getElementById("timerBar").style.width=percent+"%";document.getElementById("timeText").innerHTML=state.started?("⏱️ الوقت المتبقي: "+state.timeLeft+" ثانية"):("⏱️ وقت اللاعب: "+state.timeLimit+" ثانية");renderSeats();renderFinalResults()}
+function render(){if(!state)return;document.getElementById("turn").innerHTML="🔥 الدور: "+state.players[state.turn].name;const colorMap={red:"#ff4b4b",yellow:"#ffd84d",greenc:"#35d66b",bluec:"#4da3ff",black:"#ffffff"};document.getElementById("need").innerHTML="اللون: <span style='color:"+(colorMap[state.color]||"#fff")+"'>"+state.color+"</span>";let penalty="";if(state.pendingDraw4>0)penalty="عقوبة +4: "+state.pendingDraw4+" — رد بنفس اللون أو اسحب";else if(state.pendingDraw2>0)penalty="عكس/تخطي: رد بنفس اللون أو اسحب كرتين";document.getElementById("penaltyLine").innerHTML=penalty;document.getElementById("top").innerHTML=state.top?tableCardHtml(state.top):"";document.getElementById("hand").innerHTML=sortedHandWithIndex(state.myHand).map(c=>cardHtml(c)).join("");const logEl = document.getElementById("log");
+
+logEl.innerHTML = (state.log || []).map(msg => {
+  if (typeof msg === "object" && msg.type === "chat") {
+    const mine = msg.id === myId;
+
+    return `
+      <div class="chatMsg ${mine ? "chatMe" : "chatOther"}">
+        <div class="chatAvatar">${msg.avatar && msg.avatar !== "auto" ? msg.avatar : "💬"}</div>
+        <div class="chatBubble">
+          <div class="chatName">${msg.name || "لاعب"}</div>
+          <div>${msg.text || ""}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  return `<div class="sysMsg">${msg}</div>`;
+}).join("");
+
+logEl.scrollTop = logEl.scrollHeight;;const percent=state.timeLimit?Math.max(0,Math.min(100,(state.timeLeft/state.timeLimit)*100)):0;document.getElementById("timerBar").style.width=percent+"%";document.getElementById("timeText").innerHTML=state.started?("⏱️ الوقت المتبقي: "+state.timeLeft+" ثانية"):("⏱️ وقت اللاعب: "+state.timeLimit+" ثانية");renderSeats();renderFinalResults()}
 function renderSeats(){if(!state||!state.players)return;const players=state.players;const meIndex=players.findIndex(p=>p.id===myId);for(let i=0;i<6;i++){const seat=document.getElementById("seat"+i);if(!seat)continue;seat.classList.toggle("active",false);if(i===0){const me=players[meIndex]||players[0];seat.classList.toggle("empty",!me);if(me){const hand=document.getElementById("hand");seat.querySelectorAll(".avatarBadge,.playerName,.playerMeta,.playerScore").forEach(x=>x.remove());seat.insertAdjacentHTML("afterbegin",`${avatarHtml(me)}<div class="playerName">${me.name}</div><div class="playerMeta"><span class="playerCards">${(state.myHand||[]).length}</span> كرت${scoreHtml(me)}</div>`);if(players[state.turn]&&players[state.turn].id===me.id)seat.classList.add("active");if(hand&&hand.parentElement!==seat)seat.appendChild(hand)}continue}const idx=meIndex>=0?(meIndex+i)%players.length:i;const p=players[idx];if(!p||idx===meIndex||i>=players.length){seat.classList.add("empty");seat.innerHTML="";continue}seat.classList.remove("empty");const teamTxt=p.team?` — ${p.team}`:"";const kickBtn=state.host===myId&&p.id!==myId?`<button class="redBtn" onclick="kickPlayer('${p.id}')">طرد</button>`:"";seat.innerHTML=`${avatarHtml(p)}<div class="playerName">${p.name}</div><div class="playerMeta"><span class="playerCards">${p.count??p.cards??0}</span> كرت${teamTxt}${scoreHtml(p)}</div>${kickBtn}`;if(players[state.turn]&&players[state.turn].id===p.id)seat.classList.add("active")}}
+// باقي كودك...
+
 socket.on("connect", () => {
   console.log("✅ socket connected", socket.id);
 });
@@ -201,6 +282,12 @@ socket.on("connect_error", (err) => {
   console.log("❌ socket error", err.message);
 });
 
+// 👇 هنا تضيفه
+document.getElementById("chatInput").addEventListener("keydown", function(e){
+  if(e.key === "Enter"){
+    sendChat();
+  }
+});
 </script>
 </main>
 </body>
