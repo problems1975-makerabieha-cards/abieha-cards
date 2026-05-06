@@ -188,6 +188,49 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
   min-width:74px;
   padding:11px 14px;
 }
+
+/* ===== COLOR PICKER FOR BLACK CARDS ===== */
+#colorPicker{
+  position:fixed;
+  inset:0;
+  display:none;
+  place-items:center;
+  background:rgba(0,0,0,.72);
+  z-index:3000;
+  padding:18px;
+}
+#colorPicker.show{display:grid}
+.pickerBox{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(96px, 130px));
+  gap:16px;
+  padding:22px;
+  border-radius:26px;
+  background:linear-gradient(135deg,rgba(22,53,105,.98),rgba(5,10,24,.98));
+  border:2px solid var(--gold);
+  box-shadow:0 0 45px rgba(255,209,102,.35),0 25px 80px #000;
+}
+.pickerBox::before{
+  content:"اختر اللون";
+  grid-column:1/-1;
+  color:var(--gold);
+  font-weight:900;
+  font-size:22px;
+  margin-bottom:4px;
+}
+.pickerBox button{
+  width:100%;
+  height:86px;
+  border:4px solid rgba(255,255,255,.9);
+  border-radius:22px;
+  box-shadow:0 9px 0 rgba(0,0,0,.35),0 16px 28px #0009;
+}
+.pickerBox button:active{transform:translateY(4px)}
+@media(max-width:520px){
+  .pickerBox{grid-template-columns:repeat(2, minmax(82px, 1fr));gap:12px;width:min(92vw,330px);padding:18px}
+  .pickerBox button{height:74px}
+}
+
 /* ===== FINAL RESULTS ===== */
 .finalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;place-items:center;z-index:2000;padding:16px}
 .finalOverlay.show{display:grid}
@@ -278,8 +321,36 @@ socket.on("joined",data=>{myId=data.playerId;roomCode=data.room;document.getElem
 socket.on("error_msg",msg=>alert(msg));
 function startGame(){const timeLimit=parseInt(document.getElementById("timeLimitInput")?.value||"30",10);const scoreLimit=parseInt(document.getElementById("scoreLimitInput")?.value||"500",10);socket.emit("start",{room:roomCode,playerId:myId,timeLimit,scoreLimit})}
 function drawCard(){socket.emit("draw",{room:roomCode,playerId:myId})}function lastCard(){socket.emit("last_card",{room:roomCode,playerId:myId})}function endGame(){socket.emit("end_game",{room:roomCode,playerId:myId})}function leaveGame(){socket.emit("leave_room",{room:roomCode,playerId:myId})}socket.on("left_room",()=>{location.reload()});
-function playCard(i){const card=state.myHand[i];if(card.c==="black"){selectedIndex=i;document.getElementById("colorPicker").classList.add("show")}else{socket.emit("play",{room:roomCode,playerId:myId,index:i})}}
-function chooseColor(color){socket.emit("play",{room:roomCode,playerId:myId,index:selectedIndex,color});document.getElementById("colorPicker").classList.remove("show")}
+function isBlackCard(card){
+  return card && (card.c === "black" || card.n === "+4" || card.n === "لون");
+}
+function playCard(i){
+  if(!state || !state.myHand) return;
+  const card = state.myHand[i];
+  if(!card) return;
+
+  if(isBlackCard(card)){
+    selectedIndex = i;
+    const picker = document.getElementById("colorPicker");
+    if(picker) picker.classList.add("show");
+    return;
+  }
+
+  socket.emit("play", {room:roomCode, playerId:myId, index:i});
+}
+function chooseColor(color){
+  if(selectedIndex === null || selectedIndex === undefined) return;
+  socket.emit("play", {room:roomCode, playerId:myId, index:selectedIndex, color:color});
+  selectedIndex = null;
+  const picker = document.getElementById("colorPicker");
+  if(picker) picker.classList.remove("show");
+}
+document.getElementById("colorPicker")?.addEventListener("click", function(e){
+  if(e.target === this){
+    this.classList.remove("show");
+    selectedIndex = null;
+  }
+});
 socket.on("state", data => {
   console.log("✅ state received", data);
 
