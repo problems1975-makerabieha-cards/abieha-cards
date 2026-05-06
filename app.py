@@ -189,13 +189,12 @@ def is_allowed(r, card):
             )
         )
 
-         return (
-           card["c"] == "black" or
-           card["c"] == r["color"] or
-           card["n"] == top["n"] or
-           card["n"] == "تبديل"
-        )
-
+    return (
+        card["c"] == "black" or
+        card["c"] == r["color"] or
+        card["n"] == top["n"] or
+        card["n"] == "تبديل"
+    )
 def swap_random_two_hands(r):
     if len(r["players"]) < 2:
         return
