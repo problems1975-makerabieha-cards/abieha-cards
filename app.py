@@ -153,21 +153,21 @@ def assign_auto_team(r):
 def is_allowed(r, card):
     top = r["discard"][-1]
 
-    # إذا فيه عقوبة +4: لازم ترد +4 أو عكس/تخطي بنفس اللون فقط
+    # 🔴 إذا فيه عقوبة +4
     if r.get("pendingDraw4", 0) > 0:
-        return card["n"] == "+4" or (
-            card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"]
-        )
+        return card["n"] == "+4"
 
-    # إذا فيه عقوبة +2: لازم ترد +2/+4 أو عكس/تخطي بنفس اللون
+    # 🟠 إذا فيه عقوبة +2
     if r.get("pendingDraw2", 0) > 0:
-        return (
-            card["n"] in ["+2", "+4"] or
-            (
-                card["n"] in ["عكس", "تخطي"] and
-                card["c"] == r["color"]
-            )
-        )
+        return card["n"] in ["+2", "+4"]
+
+    # 🟢 اللعب العادي
+    # 👇 هنا التعديل المهم
+    return (
+        card["c"] == "black" or              # كرت خاص
+        card["c"] == r["color"] or           # نفس اللون
+        card["n"] == top["n"]                # نفس النوع (تخطي/عكس/رقم)
+    )
 
     # اللعب العادي:
     # فوق سكب/عكس تقدر تلعب رقم إذا نفس اللون
