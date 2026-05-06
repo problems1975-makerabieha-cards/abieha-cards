@@ -419,47 +419,31 @@ def on_join(data):
 
     r = rooms[room]
 
-    if r["started"]:
-        emit("error_msg", "اللعبة بدأت، انتظر الجولة القادمة")
-        return
-
-    if len(r["players"]) >= 6:
-        emit("error_msg", "الغرفة ممتلئة، الحد 6 لاعبين")
-        return
-
-    pid = str(uuid.uuid4())
-
-    if len(r["players"]) == 0:
-        r["mode"] = mode
-        r["teamMode"] = team_mode
-        r["teamCount"] = team_count
-        r["host"] = pid
-
-    team = None
-    if r.get("mode") == "teams":
-        if r.get("teamMode") == "manual":
-            allowed = TEAM_ORDER[:r.get("teamCount", 2)]
-            team = selected_team if selected_team in allowed else allowed[0]
-        else:
-            team = assign_auto_team(r)
-
     join_room(room)
-    r["players"].append({
-        "id": pid,
-        "sid": request.sid,
-        "name": name,
-        "team": team,
-        "avatar": avatar,
-        "hand": [],
-        "last": False,
-        "wins": 0,
-        "score": 0,
-    })
 
-    r["log"].insert(0, f"{name} دخل الغرفة" + (f" - {TEAM_NAMES.get(team, team)}" if team else ""))
-    emit("joined", {"room": room, "playerId": pid})
+    if r["host"] is None:
+        r["host"] = request.sid
+
+    old_player = next((p for p in r["players"] if p.get("name") == name), None)
+
+    if old_player:
+        old_player["sid"] = request.sid
+        old_player["connected"] = True
+        old_player["avatar"] = avatar
+        r["log"].insert(0, f"{name} رجع للغرفة")
+    else:
+        r["players"].append({
+            "sid": request.sid,
+            "name": name,
+            "hand": [],
+            "score": 0,
+            "team": selected_team,
+            "avatar": avatar,
+            "connected": True,
+        })
+        r["log"].insert(0, f"{name} دخل الغرفة")
+
     send_state(room)
-
 
 @socketio.on("chat")
 def on_chat(data):
@@ -764,19 +748,16 @@ def on_end_game(data):
 @socketio.on("disconnect")
 def on_disconnect():
     for room, r in list(rooms.items()):
-        before = len(r["players"])
-        r["players"] = [p for p in r["players"] if p["sid"] != request.sid]
-        if len(r["players"]) != before:
-            if not r["players"]:
-                cancel_timer(r)
-                del rooms[room]
-            else:
-                if r["turn"] >= len(r["players"]):
-                    r["turn"] = 0
-                r["log"].insert(0, "لاعب خرج من الغرفة")
-                send_state(room)
-            break
+        player = next((p for p in r["players"] if p.get("sid") == request.sid), None)
 
+        if player:
+            player["connected"] = False
+            player["sid"] = None
+
+            r["log"].insert(0, f"{player['name']} انقطع اتصاله")
+
+            send_state(room)
+            break
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
