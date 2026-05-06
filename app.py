@@ -145,7 +145,7 @@ def find_player(room, player_id):
     if room not in rooms:
         return -1
     for i, p in enumerate(rooms[room].get("players", [])):
-        if p["id"] == player_id:
+    if (p.get("id") or p.get("sid")) == player_id:
             return i
     return -1
 
@@ -461,9 +461,6 @@ def on_join(data):
 
     send_state(room)
 
-    except Exception as e:
-        print("JOIN ERROR:", repr(e))
-        emit("error_msg", {"message": "حدث خطأ أثناء الدخول"})
 @socketio.on("change_team")
 def on_change_team(data):
     room = data.get("room")
