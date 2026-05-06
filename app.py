@@ -742,12 +742,9 @@ def on_disconnect():
         if player:
             player["connected"] = False
             player["sid"] = None
-
             r["log"].insert(0, f"{player['name']} انقطع اتصاله")
-
             send_state(room)
             break
-
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
