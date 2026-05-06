@@ -209,9 +209,9 @@ def apply_effect(r, card):
                 r["direction"] *= -1
 
             if len(r["players"]) == 2:
-                 r["log"].insert(0, "العكس/التخطي أثناء العقوبة: انتقلت العقوبة للاعب الآخر")
-                 r["turn"] = next_index(r)
+               r["log"].insert(0, "العكس/التخطي أثناء العقوبة: نفس اللاعب يلعب مرة ثانية أو يسحب")
             return
+            
             r["turn"] = next_index(r)
             return
 
