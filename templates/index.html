@@ -67,14 +67,16 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 
 /* ===== CHAT ===== */
 .log{
-  height:190px;
+  height:220px;           /* 👈 كان 180 → كبرناه */
   overflow:auto;
   background:rgba(0,0,0,.48);
   border-radius:18px;
-  padding:14px;
+  padding:12px;
+
   display:flex;
   flex-direction:column;
   gap:10px;
+
   text-align:right;
 }
 .chatMsg{
@@ -83,39 +85,44 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
   gap:8px;
   align-items:flex-end;
 }
-.chatMe{align-self:flex-end;flex-direction:row-reverse}
-.chatOther{align-self:flex-start}
+
+.chatMe{
+  align-self:flex-end;
+  flex-direction:row-reverse;
+}
+
+.chatOther{
+  align-self:flex-start;
+}
+
 .chatAvatar{
-  width:34px;height:34px;border-radius:50%;
-  display:grid;place-items:center;
+  width:30px;
+  height:30px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
   background:#ffffff22;
   border:1px solid #ffffff55;
-  font-size:20px;
-}
-.chatBubble{
-  padding:10px 14px;
-  border-radius:18px;
   font-size:18px;
-  font-weight:800;
-  line-height:1.6;
-  box-shadow:0 6px 16px #0007;
 }
-.chatMe .chatBubble{
-  background:linear-gradient(135deg,#35dd7b,#0fa958);
-  color:#fff;
-  border-bottom-right-radius:4px;
+
+/* 👇 صغر الخط */
+.chatBubble{
+  padding:8px 12px;
+  border-radius:16px;
+  font-size:15px;     /* 👈 أصغر */
+  font-weight:700;
+  line-height:1.5;
+  box-shadow:0 4px 12px #0007;
 }
-.chatOther .chatBubble{
-  background:linear-gradient(135deg,#203b6d,#0b1733);
-  color:#fff;
-  border:1px solid #ffffff22;
-  border-bottom-left-radius:4px;
-}
+
+/* 👇 اسم اللاعب يمين */
 .chatName{
+  text-align:right;
   color:#ffd166;
-  font-size:13px;
+  font-size:12px;
   font-weight:900;
-  margin-bottom:3px;
+  margin-bottom:2px;
 }
 .sysMsg{
   align-self:center;
