@@ -153,37 +153,31 @@ def assign_auto_team(r):
 def is_allowed(r, card):
     top = r["discard"][-1]
 
-    # إذا فيه عقوبة +4:
-    # يسمح برد +4 أو عكس/تخطي بنفس اللون لتمرير العقوبة
     if r.get("pendingDraw4", 0) > 0:
-    return (
-        card["n"] == "+4" or
-        card["n"] == top["n"] or
-        (
-            card["n"] in ["عكس", "تخطي"] and
-            card["c"] == r["color"]
+        return (
+            card["n"] == "+4" or
+            card["n"] == top["n"] or
+            (
+                card["n"] in ["عكس", "تخطي"] and
+                card["c"] == r["color"]
+            )
         )
-    )
-    # إذا فيه عقوبة +2:
-    # يسمح برد +2 أو عكس/تخطي بنفس اللون لتمرير العقوبة
-    if r.get("pendingDraw2", 0) > 0:
-    return (
-        card["n"] == "+4" or
-        card["n"] == top["n"] or
-        (
-            card["n"] in ["+2", "عكس", "تخطي"] and
-            card["c"] == r["color"]
-        )
-    )
 
-    # اللعب العادي:
-    # يمكن لعب رقم فوق عكس/تخطي إذا نفس اللون
+    if r.get("pendingDraw2", 0) > 0:
+        return (
+            card["n"] == "+4" or
+            card["n"] == top["n"] or
+            (
+                card["n"] in ["+2", "عكس", "تخطي"] and
+                card["c"] == r["color"]
+            )
+        )
+
     return (
         card["c"] == "black" or
         card["c"] == r["color"] or
         card["n"] == top["n"]
     )
-
 
 def apply_effect(r, card):
     # +2: تتراكم العقوبة وتنتقل للاعب التالي
