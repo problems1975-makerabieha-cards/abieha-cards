@@ -440,29 +440,41 @@ function render(){
   document.getElementById("hand").innerHTML =
     sortedHandWithIndex(state.myHand || []).map(c => cardHtml(c)).join("");
 
-  const logEl = document.getElementById("log");
-  logEl.innerHTML = (state.log || []).map(msg => {
-    if(typeof msg === "object" && msg.type === "chat"){
-      const mine = msg.id === myId;
-      const p = playerById(msg.id);
-      const name = msg.name || p?.name || "لاعب";
-      const color = chatColorForKey(msg.id || name);
-      const emoji = chatAvatarForMsg(msg);
-      return `
-        <div class="chatMsg ${mine ? "chatMe" : "chatOther"}" style="--playerColor:${color}">
-          <div class="chatAvatar">${emoji}</div>
-          <div class="chatBubble">
-            <span class="chatName">${name}:</span>
-            <span class="chatText">${msg.text || ""}</span>
-          </div>
+const logEl = document.getElementById("log");
+
+const visibleLog = (state.log || []).filter(msg => {
+  if(typeof msg === "object" && msg.type === "chat") return true;
+
+  const text = String(msg || "");
+
+  return (
+    text.includes("دخل") ||
+    text.includes("انضم") ||
+    text.includes("خرج") ||
+    text.includes("غادر") ||
+    text.includes("لاعب خرج")
+  );
+});
+
+logEl.innerHTML = visibleLog.map(msg => {
+  if(typeof msg === "object" && msg.type === "chat"){
+    const mine = msg.id === myId;
+
+    return `
+      <div class="chatMsg ${mine ? "chatMe" : "chatOther"}">
+        <div class="chatBubble">
+          <span class="chatEmoji">${msg.avatar && msg.avatar !== "auto" ? msg.avatar : "💬"}</span>
+          <span class="chatName">${msg.name || "لاعب"}:</span>
+          <span class="chatText">${msg.text || ""}</span>
         </div>
-      `;
-    }
+      </div>
+    `;
+  }
 
-    return `<div class="sysMsg">${msg}</div>`;
-  }).join("");
+  return `<div class="sysMsg">${msg}</div>`;
+}).join("");
 
-  logEl.scrollTop = logEl.scrollHeight;
+logEl.scrollTop = logEl.scrollHeight;
 
   const percent = state.timeLimit
     ? Math.max(0, Math.min(100, (Number(state.timeLeft || 0) / Number(state.timeLimit || 1)) * 100))
