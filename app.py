@@ -144,11 +144,12 @@ def send_state(room):
 def find_player(room, player_id):
     if room not in rooms:
         return -1
-    for i, p in enumerate(rooms[room].get("players", [])):
-    if (p.get("id") or p.get("sid")) == player_id:
-            return i
-    return -1
 
+    for i, p in enumerate(rooms[room].get("players", [])):
+        if (p.get("id") or p.get("sid")) == player_id:
+            return i
+
+    return -1
 
 def assign_auto_team(r):
     count = max(2, min(3, int(r.get("teamCount", 2) or 2)))
