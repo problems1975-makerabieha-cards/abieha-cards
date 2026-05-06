@@ -144,7 +144,20 @@ function startGame(){const timeLimit=parseInt(document.getElementById("timeLimit
 function drawCard(){socket.emit("draw",{room:roomCode,playerId:myId})}function lastCard(){socket.emit("last_card",{room:roomCode,playerId:myId})}function endGame(){socket.emit("end_game",{room:roomCode,playerId:myId})}function leaveGame(){socket.emit("leave_room",{room:roomCode,playerId:myId})}socket.on("left_room",()=>{location.reload()});
 function playCard(i){const card=state.myHand[i];if(card.c==="black"){selectedIndex=i;document.getElementById("colorPicker").classList.add("show")}else{socket.emit("play",{room:roomCode,playerId:myId,index:i})}}
 function chooseColor(color){socket.emit("play",{room:roomCode,playerId:myId,index:selectedIndex,color});document.getElementById("colorPicker").classList.remove("show")}
-socket.on("state",data=>{state=data;render()});
+socket.on("state", data => {
+  console.log("✅ state received", data);
+
+  state = data;
+  myId = data.myId;
+  roomCode = data.room;
+
+  document.getElementById("joinBox").classList.add("hidden");
+  document.getElementById("controls").classList.remove("hidden");
+  document.getElementById("arena").classList.remove("hidden");
+  document.getElementById("logBox").classList.remove("hidden");
+
+  render();
+});
 function cardSymbol(n){if(n==="عكس")return"↺";if(n==="تخطي")return"⊘";return n}
 function cardValueOrder(n){const v=parseInt(n,10);if(!Number.isNaN(v))return v;if(n==="تخطي")return 10;if(n==="عكس")return 11;if(n==="+2")return 12;if(n==="+4")return 13;if(n==="لون")return 14;return 99}
 function colorOrder(c){return({bluec:1,yellow:2,red:3,greenc:4,black:5})[c]||99}
@@ -183,9 +196,6 @@ socket.on("connect_error", (err) => {
   console.log("❌ socket error", err.message);
 });
 
-socket.on("state", (s) => {
-  console.log("✅ state received", s);
-});
 </script>
 </main>
 </body>
