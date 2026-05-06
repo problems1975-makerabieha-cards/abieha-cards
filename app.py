@@ -141,7 +141,7 @@ def send_state(room):
         payload["myId"] = p.get("id")
         payload["myHand"] = p.get("hand", [])
 
-        socketio.emit("state", payload, to=sid)
+        socketio.emit("state", payload, room=sid)
 
 def find_player(room, player_id):
     if room not in rooms:
@@ -394,6 +394,7 @@ def on_kick_player(data):
 
 @socketio.on("join")
 def on_join(data):
+    print("✅ JOIN CLICKED:", data)
     try:
         data = data or {}
 
