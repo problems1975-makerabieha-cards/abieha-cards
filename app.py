@@ -209,9 +209,9 @@ def apply_effect(r, card):
                 r["direction"] *= -1
 
             if len(r["players"]) == 2:
-                r["log"].insert(0, "العكس/التخطي أثناء العقوبة: نفس اللاعب يلعب مرة ثانية أو يسحب")
-                return
-
+                 r["log"].insert(0, "العكس/التخطي أثناء العقوبة: انتقلت العقوبة للاعب الآخر")
+                 r["turn"] = next_index(r)
+            return
             r["turn"] = next_index(r)
             return
 
@@ -665,39 +665,49 @@ def on_play(data):
 def on_draw(data):
     room = data.get("room")
     player_id = data.get("playerId")
+
     if room not in rooms:
         return
+
     r = rooms[room]
     idx = find_player(room, player_id)
 
     if idx < 0:
         emit("error_msg", "اللاعب غير موجود")
         return
+
     if not r["started"]:
         emit("error_msg", "اللعبة لم تبدأ")
         return
+
     if idx != r["turn"]:
         emit("error_msg", "مو دورك")
         return
 
     amount4 = int(r.get("pendingDraw4", 0) or 0)
     amount2 = int(r.get("pendingDraw2", 0) or 0)
+
     if amount4 > 0:
         draw_to(r, idx, amount4)
         r["log"].insert(0, f"{r['players'][idx]['name']} سحب عقوبة {amount4}")
         r["pendingDraw4"] = 0
+        r["pendingDraw2"] = 0
+
     elif amount2 > 0:
         draw_to(r, idx, amount2)
-        r["log"].insert(0, f"{r['players'][idx]['name']} سحب عقوبة +2 عدد {amount2}")
+        r["log"].insert(0, f"{r['players'][idx]['name']} سحب عقوبة {amount2}")
         r["pendingDraw2"] = 0
+        r["pendingDraw4"] = 0
+
     else:
         draw_to(r, idx, 1)
         r["log"].insert(0, f"{r['players'][idx]['name']} سحب كرت")
 
+    # بعد السحب ينتقل الدور للطرف الثاني/التالي
     r["turn"] = next_index(r)
+
     start_timer(room)
     send_state(room)
-
 
 @socketio.on("last_card")
 def on_last_card(data):
