@@ -209,33 +209,39 @@ def apply_effect(r, card):
                 r["direction"] *= -1
 
             if len(r["players"]) == 2:
-               r["log"].insert(0, "العكس/التخطي أثناء العقوبة: نفس اللاعب يلعب مرة ثانية أو يسحب")
-            return
-            
+                r["log"].insert(0, "العكس/التخطي أثناء العقوبة: نفس اللاعب يلعب مرة ثانية أو يسحب")
+                return
+
             r["turn"] = next_index(r)
             return
+
+        r["pendingDraw2"] = 0
+        r["pendingDraw4"] = 0
 
         if card["n"] == "عكس":
             r["direction"] *= -1
             r["log"].insert(0, "عكس اتجاه اللعب")
-        else:
-            r["log"].insert(0, "تم تخطي اللاعب التالي")
+
+            if len(r["players"]) == 2:
+                return
+
             r["turn"] = next_index(r)
+            return
 
-        r["pendingDraw2"] = 0
-        r["pendingDraw4"] = 0
-        r["turn"] = next_index(r)
-        return
+        if card["n"] == "تخطي":
+            r["log"].insert(0, "تم تخطي اللاعب التالي")
 
+            if len(r["players"]) == 2:
+                return
+
+            r["turn"] = next_index(r)
+            r["turn"] = next_index(r)
+            return
+
+    # الكروت العادية / الأرقام
     r["pendingDraw2"] = 0
     r["pendingDraw4"] = 0
     r["turn"] = next_index(r)
-    # كرت عادي
-    r["pendingDraw2"] = 0
-    r["pendingDraw4"] = 0
-    r["turn"] = next_index(r)
-
-
 def cancel_timer(r):
     t = r.get("timer")
     if t:
