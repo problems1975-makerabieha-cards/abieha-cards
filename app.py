@@ -204,16 +204,16 @@ def apply_effect(r, card):
 
     # عكس / تخطي
     if card["n"] in ["عكس", "تخطي"]:
-        # إذا كانت هناك عقوبة +2، عكس/تخطي بنفس اللون يمرر العقوبة
-        if r.get("pendingDraw2", 0) > 0:
-            if card["n"] == "عكس":
-                r["direction"] *= -1
-                r["log"].insert(0, f"تم عكس عقوبة +2 — التالي يرد أو يسحب {r['pendingDraw2']}")
-            else:
-                r["log"].insert(0, f"تم تخطي عقوبة +2 — التالي يرد أو يسحب {r['pendingDraw2']}")
+    if r.get("pendingDraw2", 0) > 0 or r.get("pendingDraw4", 0) > 0:
+        if card["n"] == "عكس":
+            r["direction"] *= -1
 
-            r["turn"] = next_index(r)
+        if len(r["players"]) == 2:
+            r["log"].insert(0, "العكس/التخطي أثناء العقوبة: نفس اللاعب يلعب مرة ثانية أو يسحب")
             return
+
+        r["turn"] = next_index(r)
+        return
 
         # إذا كانت هناك عقوبة +4، عكس/تخطي بنفس اللون يمرر العقوبة
         if r.get("pendingDraw4", 0) > 0:
