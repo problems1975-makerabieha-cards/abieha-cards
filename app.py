@@ -391,87 +391,75 @@ def on_kick_player(data):
 
 @socketio.on("join")
 def on_join(data):
-    try:
-        data = data or {}
+    data = data or {}
 
-        room = (data.get("room") or "ROOM1").strip().upper()
-        name = (data.get("name") or "لاعب").strip()[:18]
-        mode = data.get("mode", "solo")
-        team_mode = data.get("teamMode", "auto")
-        team_count = max(2, min(3, int(data.get("teamCount", 2) or 2)))
-        selected_team = data.get("team", "A")
-        avatar = data.get("avatar", "auto")
+    room = (data.get("room") or "ROOM1").strip().upper()
+    name = (data.get("name") or "لاعب").strip()[:18]
+    mode = data.get("mode", "solo")
+    team_mode = data.get("teamMode", "auto")
+    team_count = max(2, min(3, int(data.get("teamCount", 2) or 2)))
+    selected_team = data.get("team", "A")
+    avatar = data.get("avatar", "auto")
 
-        if not name:
-            name = "لاعب"
+    if not name:
+        name = "لاعب"
 
-        if room not in rooms:
-            rooms[room] = {
-                "players": [],
-                "deck": [],
-                "discard": [],
-                "turn": 0,
-                "direction": 1,
-                "color": None,
-                "started": False,
-                "log": [],
-                "mode": mode,
-                "teamMode": team_mode,
-                "teamCount": team_count,
-                "pendingDraw4": 0,
-                "pendingDraw2": 0,
-                "timeLimit": 30,
-                "timeLeft": 0,
-                "scoreLimit": 500,
-                "gameOver": False,
-                "finalResults": None,
-                "timer": None,
-                "host": None,
-            }
+    if room not in rooms:
+        rooms[room] = {
+            "players": [],
+            "deck": [],
+            "discard": [],
+            "turn": 0,
+            "direction": 1,
+            "color": None,
+            "started": False,
+            "log": [],
+            "mode": mode,
+            "teamMode": team_mode,
+            "teamCount": team_count,
+            "pendingDraw4": 0,
+            "pendingDraw2": 0,
+            "timeLimit": 30,
+            "timeLeft": 0,
+            "scoreLimit": 500,
+            "gameOver": False,
+            "finalResults": None,
+            "timer": None,
+            "host": None,
+        }
 
-        r = rooms[room]
+    r = rooms[room]
+    join_room(room)
 
-        join_room(room)
+    old_player = next((p for p in r["players"] if p.get("name") == name), None)
 
-        old_player = next(
-            (p for p in r["players"] if p.get("name") == name),
-            None
-        )
+    if old_player:
+        old_player["id"] = old_player.get("id") or request.sid
+        old_player["sid"] = request.sid
+        old_player["connected"] = True
+        old_player["avatar"] = avatar
+        r["log"].insert(0, f"{name} رجع للغرفة")
+    else:
+        player_id = request.sid
+        r["players"].append({
+            "id": player_id,
+            "sid": request.sid,
+            "name": name,
+            "hand": [],
+            "score": 0,
+            "wins": 0,
+            "last": False,
+            "team": selected_team,
+            "avatar": avatar,
+            "connected": True,
+        })
 
-                if old_player:
-            old_player["sid"] = request.sid
-            old_player["connected"] = True
-            old_player["avatar"] = avatar
+        if r.get("host") is None:
+            r["host"] = player_id
 
-            if not old_player.get("id"):
-                old_player["id"] = request.sid
+        r["log"].insert(0, f"{name} دخل الغرفة")
 
-            if r.get("host") is None:
-                r["host"] = old_player["id"]
-
-            r["log"].insert(0, f"{name} رجع للغرفة")
-        else:
-            player_id = request.sid
-
-            r["players"].append({
-                "id": player_id,
-                "sid": request.sid,
-                "name": name,
-                "hand": [],
-                "score": 0,
-                "wins": 0,
-                "last": False,
-                "team": selected_team,
-                "avatar": avatar,
-                "connected": True,
-            })
-
-            if r.get("host") is None:
-                r["host"] = player_id
-
-            r["log"].insert(0, f"{name} دخل الغرفة")
-
-        send_state(room)
+    send_state(room)
 
     except Exception as e:
         print("JOIN ERROR:", repr(e))
