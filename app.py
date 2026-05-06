@@ -98,7 +98,7 @@ def public_state(room):
         "host": r.get("host"),
         "players": [
             {
-                "id": p["id"],
+                "id": p.get("id") or p.get("sid"),
                 "name": p["name"],
                 "team": p.get("team"),
                 "avatar": p.get("avatar", "auto"),
@@ -133,8 +133,11 @@ def send_state(room):
         if not p.get("sid"):
             continue
 
+        if not p.get("id"):
+            p["id"] = p["sid"]
+
         payload = public_state(room)
-        payload["myId"] = p["id"]
+        payload["myId"] = p.get("id")
         payload["myHand"] = p.get("hand", [])
         socketio.emit("state", payload, room=p["sid"])
 
@@ -435,10 +438,17 @@ def on_join(data):
             None
         )
 
-        if old_player:
+                if old_player:
             old_player["sid"] = request.sid
             old_player["connected"] = True
             old_player["avatar"] = avatar
+
+            if not old_player.get("id"):
+                old_player["id"] = request.sid
+
+            if r.get("host") is None:
+                r["host"] = old_player["id"]
+
             r["log"].insert(0, f"{name} رجع للغرفة")
         else:
             player_id = request.sid
