@@ -158,7 +158,12 @@ socket.on("state", data => {
 
   render();
 });
-function cardSymbol(n){if(n==="عكس")return"↺";if(n==="تخطي")return"⊘";return n}
+function cardSymbol(n){
+  if(n==="عكس") return "↺";
+  if(n==="تخطي") return "⊘";
+  if(n==="تبديل") return "⇄";  // 👈 الرمز الجديد
+  return n;
+}
 function cardValueOrder(n){const v=parseInt(n,10);if(!Number.isNaN(v))return v;if(n==="تخطي")return 10;if(n==="عكس")return 11;if(n==="+2")return 12;if(n==="+4")return 13;if(n==="لون")return 14;return 99}
 function colorOrder(c){return({bluec:1,yellow:2,red:3,greenc:4,black:5})[c]||99}
 function sortedHandWithIndex(hand){return(hand||[]).map((c,i)=>({...c,realIndex:i})).sort((a,b)=>{const ca=colorOrder(a.c),cb=colorOrder(b.c);if(ca!==cb)return ca-cb;return cardValueOrder(a.n)-cardValueOrder(b.n)})}
