@@ -128,12 +128,15 @@ def public_state(room):
 def send_state(room):
     if room not in rooms:
         return
+
     for p in rooms[room].get("players", []):
+        if not p.get("sid"):
+            continue
+
         payload = public_state(room)
         payload["myId"] = p["id"]
         payload["myHand"] = p.get("hand", [])
         socketio.emit("state", payload, room=p["sid"])
-
 
 def find_player(room, player_id):
     if room not in rooms:
@@ -425,26 +428,32 @@ def on_join(data):
 
         join_room(room)
 
-        if r.get("host") is None:
-            r["host"] = request.sid
-
         old_player = next((p for p in r["players"] if p.get("name") == name), None)
 
-        if old_player:
+                if old_player:
             old_player["sid"] = request.sid
             old_player["connected"] = True
             old_player["avatar"] = avatar
             r["log"].insert(0, f"{name} رجع للغرفة")
         else:
+            player_id = request.sid
+
             r["players"].append({
+                "id": player_id,
                 "sid": request.sid,
                 "name": name,
                 "hand": [],
                 "score": 0,
+                "wins": 0,
+                "last": False,
                 "team": selected_team,
                 "avatar": avatar,
                 "connected": True,
             })
+
+            if r.get("host") is None:
+                r["host"] = player_id
+
             r["log"].insert(0, f"{name} دخل الغرفة")
 
         send_state(room)
