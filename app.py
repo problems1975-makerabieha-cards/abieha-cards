@@ -156,24 +156,25 @@ def is_allowed(r, card):
     # إذا فيه عقوبة +4:
     # يسمح برد +4 أو عكس/تخطي بنفس اللون لتمرير العقوبة
     if r.get("pendingDraw4", 0) > 0:
-        return (
-            card["n"] == "+4" or
-            (
-                card["n"] in ["عكس", "تخطي"] and
-                card["c"] == r["color"]
-            )
+    return (
+        card["n"] == "+4" or
+        card["n"] == top["n"] or
+        (
+            card["n"] in ["عكس", "تخطي"] and
+            card["c"] == r["color"]
         )
-
+    )
     # إذا فيه عقوبة +2:
     # يسمح برد +2 أو عكس/تخطي بنفس اللون لتمرير العقوبة
     if r.get("pendingDraw2", 0) > 0:
-        return (
-            card["n"] == "+2" or
-            (
-                card["n"] in ["عكس", "تخطي"] and
-                card["c"] == r["color"]
-            )
+    return (
+        card["n"] == "+4" or
+        card["n"] == top["n"] or
+        (
+            card["n"] in ["+2", "عكس", "تخطي"] and
+            card["c"] == r["color"]
         )
+    )
 
     # اللعب العادي:
     # يمكن لعب رقم فوق عكس/تخطي إذا نفس اللون
