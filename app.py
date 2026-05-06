@@ -153,20 +153,16 @@ def assign_auto_team(r):
 def is_allowed(r, card):
     top = r["discard"][-1]
 
-    # 🔴 إذا فيه عقوبة +4
     if r.get("pendingDraw4", 0) > 0:
         return card["n"] == "+4"
 
-    # 🟠 إذا فيه عقوبة +2
     if r.get("pendingDraw2", 0) > 0:
         return card["n"] in ["+2", "+4"]
 
-    # 🟢 اللعب العادي
-    # 👇 هنا التعديل المهم
     return (
-        card["c"] == "black" or              # كرت خاص
-        card["c"] == r["color"] or           # نفس اللون
-        card["n"] == top["n"]                # نفس النوع (تخطي/عكس/رقم)
+        card["c"] == "black" or
+        card["c"] == r["color"] or
+        card["n"] == top["n"]
     )
 
     # اللعب العادي:
@@ -205,16 +201,20 @@ def apply_effect(r, card):
         r["turn"] = next_index(r)
         return
 
+        # عكس / تخطي في اللعب العادي
     if card["n"] in ["عكس", "تخطي"]:
-        if len(r["players"]) == 2:
-            current = r["turn"]
-            if card["n"] == "عكس":
-                r["direction"] *= -1
-                r["log"].insert(0, "عكس: نفس اللاعب يلعب")
-            else:
-                r["log"].insert(0, "تخطي: نفس اللاعب يلعب")
-            r["turn"] = current
-            return
+        if card["n"] == "عكس":
+            r["direction"] *= -1
+            r["log"].insert(0, "عكس اتجاه اللعب")
+
+        if card["n"] == "تخطي":
+            r["log"].insert(0, "تم تخطي اللاعب التالي")
+            r["turn"] = next_index(r)
+
+        r["pendingDraw2"] = 0
+        r["pendingDraw4"] = 0
+        r["turn"] = next_index(r)
+        return
 
         if card["n"] == "عكس":
             r["direction"] *= -1
