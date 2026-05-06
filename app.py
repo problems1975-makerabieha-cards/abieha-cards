@@ -26,9 +26,16 @@ def build_deck():
         for n in ["+2", "عكس", "تخطي"]:
             deck.append({"c": c, "n": n})
             deck.append({"c": c, "n": n})
+
+    # الكروت السوداء الأصلية
     for _ in range(4):
         deck.append({"c": "black", "n": "لون"})
         deck.append({"c": "black", "n": "+4"})
+
+    # 👇 هنا بالضبط تحطه
+    for _ in range(2):
+        deck.append({"c": "black", "n": "تبديل"})
+
     random.shuffle(deck)
     return deck
 
@@ -182,13 +189,35 @@ def is_allowed(r, card):
             )
         )
 
-    return (
-        card["c"] == "black" or
-        card["c"] == r["color"] or
-        card["n"] == top["n"]
-    )
+         return (
+           card["c"] == "black" or
+           card["c"] == r["color"] or
+           card["n"] == top["n"] or
+           card["n"] == "تبديل"
+        )
 
+def swap_random_two_hands(r):
+    if len(r["players"]) < 2:
+        return
+
+    p1, p2 = random.sample(r["players"], 2)
+
+    p1["hand"], p2["hand"] = p2["hand"], p1["hand"]
+
+    r["log"].insert(0, f"🔀 تبديل: {p1['name']} ↔ {p2['name']}")
+    
 def apply_effect(r, card):
+
+    # 👇 كرت التبديل (أول شيء)
+    if card["n"] == "تبديل":
+        if int(r.get("pendingDraw2", 0)) == 0 and int(r.get("pendingDraw4", 0)) == 0:
+            swap_random_two_hands(r)
+
+        r["pendingDraw2"] = 0
+        r["pendingDraw4"] = 0
+        r["turn"] = next_index(r)
+        return
+
     if card["n"] == "+2":
         r["pendingDraw2"] = int(r.get("pendingDraw2", 0)) + 2
         r["pendingDraw4"] = 0
