@@ -389,6 +389,8 @@ def on_kick_player(data):
 @socketio.on("join")
 def on_join(data):
     try:
+        data = data or {}
+
         room = (data.get("room") or "ROOM1").strip().upper()
         name = (data.get("name") or "لاعب").strip()[:18]
         mode = data.get("mode", "solo")
@@ -428,9 +430,12 @@ def on_join(data):
 
         join_room(room)
 
-        old_player = next((p for p in r["players"] if p.get("name") == name), None)
+        old_player = next(
+            (p for p in r["players"] if p.get("name") == name),
+            None
+        )
 
-                if old_player:
+        if old_player:
             old_player["sid"] = request.sid
             old_player["connected"] = True
             old_player["avatar"] = avatar
@@ -459,9 +464,8 @@ def on_join(data):
         send_state(room)
 
     except Exception as e:
-        print("JOIN ERROR:", e)
+        print("JOIN ERROR:", repr(e))
         emit("error_msg", {"message": "حدث خطأ أثناء الدخول"})
-
 @socketio.on("change_team")
 def on_change_team(data):
     room = data.get("room")
