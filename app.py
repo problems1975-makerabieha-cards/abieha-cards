@@ -116,19 +116,7 @@ def public_state(room):
             }
             for p in r.get("players", [])
         ],
-        "log": [
-            x for x in r.get("log", [])[:80]
-            if (
-                "دخل الغرفة" in x or
-                "خرج من الغرفة" in x or
-                x.startswith("💬") or
-                x.startswith("🏆") or
-                x.startswith("💀") or
-                x.startswith("📊") or
-                "بدأت اللعبة" in x or
-                "انتهى وقته" in x
-            )
-        ],
+        "log": r.get("log", [])[-80:],
     }
 
 
@@ -804,7 +792,35 @@ def on_end_game(data):
     r["log"].insert(0, "تم إنهاء اللعبة بواسطة صاحب الغرفة")
     send_state(room)
 
+@socketio.on("chat")
+def on_chat(data):
+    room = data.get("room")
+    player_id = data.get("playerId")
+    text = (data.get("text") or "").strip()
 
+    if room not in rooms or not text:
+        return
+
+    r = rooms[room]
+    idx = find_player(room, player_id)
+
+    if idx < 0:
+        return
+
+    p = r["players"][idx]
+    name = p.get("name", "لاعب")
+    avatar = p.get("avatar", "💬")
+
+    r["log"].append({
+        "type": "chat",
+        "id": player_id,
+        "name": name,
+        "avatar": avatar,
+        "text": text
+    })
+
+    send_state(room)
+    
 @socketio.on("disconnect")
 def on_disconnect():
     for room, r in list(rooms.items()):
