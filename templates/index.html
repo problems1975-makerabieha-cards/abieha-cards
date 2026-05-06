@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>UNO أبيها - </title>
+<title>UNO أبيها - النهائي</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
 *{box-sizing:border-box}
@@ -66,29 +66,37 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .seat.s0.me .hand{width:100%;max-width:100%;min-height:205px;display:flex;align-items:flex-end;justify-content:flex-start;overflow-x:auto;overflow-y:visible;background:transparent;border:0;padding:30px 18px 35px;gap:0;transform:none;scrollbar-width:thin;white-space:nowrap}.seat.s0.me .hand .card{flex:0 0 auto;width:78px;height:116px;margin-left:-12px;transform-origin:bottom center;transition:transform .18s ease,filter .18s ease}.seat.s0.me .hand .card:first-child{margin-left:0}.seat.s0.me .hand .card:nth-child(odd){transform:rotate(-7deg) translateY(6px)}.seat.s0.me .hand .card:nth-child(even){transform:rotate(7deg) translateY(6px)}.seat.s0.me .hand .card:hover{transform:translateY(-22px) scale(1.08)!important;z-index:99;filter:brightness(1.12)}
 
 /* ===== CHAT ===== */
-.log{
-  height:240px;
-  overflow:auto;
-  background:rgba(0,0,0,.50);
-  border-radius:20px;
+.logBox{
+  margin-top:16px;
   padding:14px;
+}
+
+.log{
+  height:clamp(260px,32vh,390px);
+  overflow:auto;
+  background:rgba(0,0,0,.56);
+  border-radius:24px;
+  padding:18px;
   display:flex;
   flex-direction:column;
-  gap:10px;
+  gap:8px;
   text-align:right;
+  border:1px solid rgba(120,190,255,.18);
+  box-shadow:inset 0 0 38px rgba(0,0,0,.35);
 }
 
 .chatMsg{
-  max-width:88%;
+  width:fit-content;
+  max-width:min(86%,720px);
   display:flex;
-  gap:8px;
-  align-items:flex-end;
-  animation:chatPop .18s ease-out;
+  gap:7px;
+  align-items:center;
+  animation:chatPop .16s ease-out;
 }
 
 @keyframes chatPop{
-  from{opacity:0;transform:translateY(8px) scale(.98)}
-  to{opacity:1;transform:translateY(0) scale(1)}
+  from{opacity:0;transform:translateY(5px)}
+  to{opacity:1;transform:translateY(0)}
 }
 
 .chatMe{
@@ -100,62 +108,85 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
   align-self:flex-start;
 }
 
+/* بدل فقاعة الرسائل: إيموجي اللاعب فقط */
 .chatAvatar{
-  width:32px;
-  height:32px;
-  border-radius:50%;
-  display:grid;
+  width:auto;
+  height:auto;
+  min-width:24px;
+  display:inline-grid;
   place-items:center;
-  background:radial-gradient(circle at 35% 25%,#ffffff55,#ffffff16);
-  border:1px solid #ffffff66;
-  font-size:19px;
-  box-shadow:0 4px 12px #0008;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  font-size:22px;
+  line-height:1;
   flex:0 0 auto;
+  filter:drop-shadow(0 3px 6px #000);
 }
 
 .chatBubble{
-  padding:9px 13px;
-  border-radius:18px;
-  font-size:15px;
+  padding:6px 10px;
+  border-radius:10px;
+  font-size:13px;
   font-weight:700;
-  line-height:1.6;
-  box-shadow:0 6px 18px #0008;
+  line-height:1.45;
   word-break:break-word;
-}
-
-.chatMe .chatBubble{
-  background:linear-gradient(135deg,#1ecb72,#0b8f4c);
+  box-shadow:none;
+  background:rgba(5,13,30,.52);
   color:white;
-  border-bottom-right-radius:5px;
+  border:1px solid rgba(255,255,255,.08);
+  border-inline-start:4px solid var(--playerColor,#ffd166);
 }
 
+.chatMe .chatBubble,
 .chatOther .chatBubble{
-  background:linear-gradient(135deg,#1b315c,#08172f);
+  background:rgba(5,13,30,.52);
   color:white;
-  border:1px solid rgba(255,255,255,.12);
-  border-bottom-left-radius:5px;
+  border-bottom-left-radius:10px;
+  border-bottom-right-radius:10px;
 }
 
 .chatName{
-  color:#ffd166;
+  color:var(--playerColor,#ffd166);
   font-weight:900;
-  margin-left:6px;
-  text-shadow:0 2px 6px #000;
+  margin-left:5px;
+  text-shadow:0 2px 5px #000;
+  white-space:nowrap;
 }
 
 .chatText{
   color:#fff;
+  font-weight:600;
 }
 
 .sysMsg{
   align-self:center;
-  background:rgba(255,209,102,.13);
+  background:rgba(255,209,102,.10);
   color:#ffd166;
-  border:1px solid rgba(255,209,102,.45);
+  border:1px solid rgba(255,209,102,.32);
   border-radius:999px;
-  padding:6px 12px;
+  padding:5px 10px;
   font-weight:900;
-  font-size:13px;
+  font-size:12px;
+}
+
+.chatInputRow{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+  align-items:center;
+}
+
+#chatInput{
+  flex:1;
+  min-width:0;
+  font-size:14px;
+  padding:12px 14px;
+}
+
+.chatSendBtn{
+  min-width:74px;
+  padding:11px 14px;
 }
 /* ===== FINAL RESULTS ===== */
 .finalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;place-items:center;z-index:2000;padding:16px}
@@ -170,8 +201,8 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 
 /* ===== RESPONSIVE ===== */
 @media(max-width:900px){.arena{min-height:730px;padding-bottom:245px}.table{width:92vw;height:440px}.seat.s0.me .hand .card{width:70px;height:104px;margin-left:-10px}.drawOutsideBtn{right:-92px;width:88px;height:60px;font-size:17px}.ovalInfo{left:-118px;width:138px;font-size:13px}}
-@media(max-width:760px){input,select{min-width:128px;font-size:14px;padding:10px}button{padding:10px 12px;margin:4px;border-radius:13px}.join,.controls,.logBox{border-radius:18px;padding:8px}.arena{min-height:690px;padding-bottom:225px}.table{top:38%;width:96vw;height:370px}.centerPlayArea{width:220px;height:210px}#top .card{width:95px;height:142px}.drawOutsideBtn{right:-66px;width:66px;height:48px;font-size:14px}.ovalInfo{left:-82px;width:110px;min-height:60px;font-size:11px}.seat:not(.me){width:88px;min-height:58px;font-size:11px}.s1{right:2%;top:50%}.s2{right:4%;top:13%}.s3{top:1%}.s4{left:4%;top:13%}.s5{left:2%;top:50%}.seat.s0.me{bottom:-15px;min-height:230px}.seat.s0.me .hand{padding-inline:12px}.seat.s0.me .hand .card{width:62px;height:94px;margin-left:-8px}.avatarBadge{width:34px;height:34px;font-size:21px}.seat.s0.me .avatarBadge{width:30px;height:30px;font-size:20px}.log{height:90px;font-size:12px}}
-@media(max-width:480px){.arena{min-height:650px;padding-bottom:205px}.table{width:96vw;height:350px}.centerPlayArea{width:190px;height:190px}#top .card{width:86px;height:128px}.seat:not(.me){width:76px;min-height:52px}.seat.s0.me .hand .card{width:58px;height:88px;margin-left:-8px}#avatarInput{min-width:76px;font-size:20px}}
+@media(max-width:760px){input,select{min-width:128px;font-size:14px;padding:10px}button{padding:10px 12px;margin:4px;border-radius:13px}.join,.controls,.logBox{border-radius:18px;padding:8px}.arena{min-height:690px;padding-bottom:225px}.table{top:38%;width:96vw;height:370px}.centerPlayArea{width:220px;height:210px}#top .card{width:95px;height:142px}.drawOutsideBtn{right:-66px;width:66px;height:48px;font-size:14px}.ovalInfo{left:-82px;width:110px;min-height:60px;font-size:11px}.seat:not(.me){width:88px;min-height:58px;font-size:11px}.s1{right:2%;top:50%}.s2{right:4%;top:13%}.s3{top:1%}.s4{left:4%;top:13%}.s5{left:2%;top:50%}.seat.s0.me{bottom:-15px;min-height:230px}.seat.s0.me .hand{padding-inline:12px}.seat.s0.me .hand .card{width:62px;height:94px;margin-left:-8px}.avatarBadge{width:34px;height:34px;font-size:21px}.seat.s0.me .avatarBadge{width:30px;height:30px;font-size:20px}.log{height:250px}.chatBubble{font-size:12px;padding:5px 9px}.chatAvatar{font-size:20px}#chatInput{font-size:13px;padding:10px 12px}.chatSendBtn{min-width:66px;padding:10px 11px}}
+@media(max-width:480px){.arena{min-height:650px;padding-bottom:205px}.table{width:96vw;height:350px}.centerPlayArea{width:190px;height:190px}#top .card{width:86px;height:128px}.seat:not(.me){width:76px;min-height:52px}.seat.s0.me .hand .card{width:58px;height:88px;margin-left:-8px}#avatarInput{min-width:76px;font-size:20px}.log{height:220px;padding:12px}.chatMsg{max-width:94%}.chatBubble{font-size:11.8px;line-height:1.4}.chatInputRow{gap:5px}.chatSendBtn{min-width:58px;font-size:12px;padding:9px}}
 </style>
 </head>
 <body>
@@ -204,7 +235,13 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
   <div class="seat s1" id="seat1"></div><div class="seat s2" id="seat2"></div><div class="seat s3" id="seat3"></div><div class="seat s4" id="seat4"></div><div class="seat s5" id="seat5"></div>
 </section>
 
-<section class="logBox hidden" id="logBox"><div id="log" class="log"></div><div style="display:flex;gap:6px;margin-top:8px"><input id="chatInput" placeholder="اكتب رسالة..." style="flex:1;min-width:0"><button onclick="sendChat()">إرسال</button></div></section>
+<section class="logBox hidden" id="logBox">
+  <div id="log" class="log"></div>
+  <div class="chatInputRow">
+    <input id="chatInput" placeholder="اكتب رسالة...">
+    <button class="chatSendBtn" onclick="sendChat()">إرسال</button>
+  </div>
+</section>
 
 <div id="colorPicker"><div class="pickerBox"><button style="background:red" onclick="chooseColor('red')"></button><button style="background:blue" onclick="chooseColor('bluec')"></button><button style="background:green" onclick="chooseColor('greenc')"></button><button style="background:gold" onclick="chooseColor('yellow')"></button></div></div>
 
@@ -221,6 +258,17 @@ const COMEDY_AVATARS = ["🤡","😂","😈","🤖","👽","🐸","🐵","🐔",
 function simpleHash(str){let h=0;str=String(str||"");for(let i=0;i<str.length;i++)h=((h<<5)-h+str.charCodeAt(i))|0;return Math.abs(h)}
 function avatarForPlayer(p){if(!p)return"🤡";if(p.avatar&&p.avatar!=="auto")return p.avatar;if(p.id===myId&&selectedAvatar&&selectedAvatar!=="auto")return selectedAvatar;return COMEDY_AVATARS[simpleHash((p.id||"")+(p.name||""))%COMEDY_AVATARS.length]}
 function avatarHtml(p){return `<div class="avatarBadge" title="شخصية اللاعب">${avatarForPlayer(p)}</div>`}
+function playerById(id){return (state?.players||[]).find(p=>p.id===id)}
+function chatColorForKey(key){
+  const colors=["#ffd166","#4da3ff","#35d66b","#ff6b83","#b084ff","#ff9f43","#55efc4","#ff77e9","#a3e635","#f97316"];
+  return colors[simpleHash(key||"player")%colors.length];
+}
+function chatAvatarForMsg(msg){
+  const p=playerById(msg.id);
+  if(msg.avatar&&msg.avatar!=="auto")return msg.avatar;
+  if(p)return avatarForPlayer(p);
+  return "🎭";
+}
 function sendChat(){const input=document.getElementById("chatInput");const text=input.value.trim();if(!text)return;socket.emit("chat",{room:roomCode,playerId:myId,text});input.value=""}
 function toggleTeamOptions(){const mode=document.getElementById("modeInput").value;const teamMode=document.getElementById("teamModeInput").value;document.querySelectorAll(".teamOnly").forEach(x=>x.classList.toggle("hidden",mode!=="teams"));document.querySelectorAll(".manualOnly").forEach(x=>x.classList.toggle("hidden",!(mode==="teams"&&teamMode==="manual")))}
 function kickPlayer(targetId){if(!confirm("تأكيد طرد اللاعب؟"))return;socket.emit("kick_player",{room:roomCode,hostId:myId,targetId})}
@@ -325,11 +373,15 @@ function render(){
   logEl.innerHTML = (state.log || []).map(msg => {
     if(typeof msg === "object" && msg.type === "chat"){
       const mine = msg.id === myId;
+      const p = playerById(msg.id);
+      const name = msg.name || p?.name || "لاعب";
+      const color = chatColorForKey(msg.id || name);
+      const emoji = chatAvatarForMsg(msg);
       return `
-        <div class="chatMsg ${mine ? "chatMe" : "chatOther"}">
-          <div class="chatAvatar">${msg.avatar && msg.avatar !== "auto" ? msg.avatar : "💬"}</div>
+        <div class="chatMsg ${mine ? "chatMe" : "chatOther"}" style="--playerColor:${color}">
+          <div class="chatAvatar">${emoji}</div>
           <div class="chatBubble">
-            <span class="chatName">${msg.name || "لاعب"}:</span>
+            <span class="chatName">${name}:</span>
             <span class="chatText">${msg.text || ""}</span>
           </div>
         </div>
