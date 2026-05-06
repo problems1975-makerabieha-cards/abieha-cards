@@ -154,22 +154,28 @@ def is_allowed(r, card):
     top = r["discard"][-1]
 
     if r.get("pendingDraw4", 0) > 0:
-        return card["n"] == "+4"
-
-        if r.get("pendingDraw2", 0) > 0:
-            return (
-                card["n"] in ["+2", "+4"] or
-                (
-                    card["n"] in ["عكس", "تخطي"] and
-                    card["c"] == r["color"]
+        return (
+            card["n"] == "+4" or
+            (
+                card["n"] in ["عكس", "تخطي"] and
+                card["c"] == r["color"]
             )
         )
+
+    if r.get("pendingDraw2", 0) > 0:
+        return (
+            card["n"] == "+2" or
+            (
+                card["n"] in ["عكس", "تخطي"] and
+                card["c"] == r["color"]
+            )
+        )
+
     return (
         card["c"] == "black" or
         card["c"] == r["color"] or
         card["n"] == top["n"]
     )
-
     # اللعب العادي:
     # فوق سكب/عكس تقدر تلعب رقم إذا نفس اللون
     return (
@@ -182,50 +188,28 @@ def is_allowed(r, card):
 
 
 def apply_effect(r, card):
-    if card["n"] == "+2":
+        if card["n"] == "+2":
         r["pendingDraw2"] = int(r.get("pendingDraw2", 0)) + 2
-        r["log"].insert(0, f"العقوبة الآن: {r['pendingDraw2']}")
+        r["pendingDraw4"] = 0
+        r["log"].insert(0, f"العقوبة الآن: اسحب {r['pendingDraw2']} أو رد +2 / عكس / تخطي بنفس اللون")
         r["turn"] = next_index(r)
         return
 
-    if card["n"] == "+4":
-        r["pendingDraw4"] = int(r.get("pendingDraw4", 0)) + 4
-        r["pendingDraw2"] = 0
-        r["log"].insert(0, f"العقوبة الآن: اسحب {r['pendingDraw4']} أو رد +4 / تخطي / عكس بنفس اللون")
-        r["turn"] = next_index(r)
-        return
-
-    if r.get("pendingDraw4", 0) > 0 and card["n"] == "عكس":
-        r["direction"] *= -1
-        r["log"].insert(0, "تم عكس عقوبة +4")
-        r["turn"] = next_index(r)
-        return
-
-    if r.get("pendingDraw4", 0) > 0 and card["n"] == "تخطي":
-        r["log"].insert(0, "تم تمرير عقوبة +4")
-        r["turn"] = next_index(r)
-        return
-
-           # عكس / تخطي
     if card["n"] in ["عكس", "تخطي"]:
-
-        # إذا فيه عقوبة +2، عكس/تخطي بنفس اللون يمرر العقوبة للشخص التالي
         if r.get("pendingDraw2", 0) > 0:
             if card["n"] == "عكس":
                 r["direction"] *= -1
-                r["log"].insert(0, f"تم عكس عقوبة +2 — اللاعب التالي يسحب {r['pendingDraw2']}")
+                r["log"].insert(0, f"تم عكس عقوبة +2 — التالي يرد أو يسحب {r['pendingDraw2']}")
             else:
-                r["log"].insert(0, f"تم تخطي عقوبة +2 — اللاعب التالي يسحب {r['pendingDraw2']}")
+                r["log"].insert(0, f"تم تخطي عقوبة +2 — التالي يرد أو يسحب {r['pendingDraw2']}")
 
             r["turn"] = next_index(r)
             return
 
-        # اللعب العادي
         if card["n"] == "عكس":
             r["direction"] *= -1
             r["log"].insert(0, "عكس اتجاه اللعب")
-
-        if card["n"] == "تخطي":
+        else:
             r["log"].insert(0, "تم تخطي اللاعب التالي")
             r["turn"] = next_index(r)
 
