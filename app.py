@@ -157,8 +157,10 @@ def is_allowed(r, card):
         return card["n"] == "+4"
 
     if r.get("pendingDraw2", 0) > 0:
-        return card["n"] in ["+2", "+4"]
-
+    return (
+        card["n"] in ["+2", "+4"] or
+        (card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"])
+    )
     return (
         card["c"] == "black" or
         card["c"] == r["color"] or
@@ -201,8 +203,21 @@ def apply_effect(r, card):
         r["turn"] = next_index(r)
         return
 
-        # عكس / تخطي في اللعب العادي
+           # عكس / تخطي
     if card["n"] in ["عكس", "تخطي"]:
+
+        # إذا فيه عقوبة +2، عكس/تخطي بنفس اللون يمرر العقوبة للشخص التالي
+        if r.get("pendingDraw2", 0) > 0:
+            if card["n"] == "عكس":
+                r["direction"] *= -1
+                r["log"].insert(0, f"تم عكس عقوبة +2 — اللاعب التالي يسحب {r['pendingDraw2']}")
+            else:
+                r["log"].insert(0, f"تم تخطي عقوبة +2 — اللاعب التالي يسحب {r['pendingDraw2']}")
+
+            r["turn"] = next_index(r)
+            return
+
+        # اللعب العادي
         if card["n"] == "عكس":
             r["direction"] *= -1
             r["log"].insert(0, "عكس اتجاه اللعب")
