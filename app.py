@@ -157,11 +157,11 @@ def is_allowed(r, card):
         return card["n"] == "+4"
 
         if r.get("pendingDraw2", 0) > 0:
-        return (
-            card["n"] in ["+2", "+4"] or
-            (
-                card["n"] in ["عكس", "تخطي"] and
-                card["c"] == r["color"]
+            return (
+                card["n"] in ["+2", "+4"] or
+                (
+                    card["n"] in ["عكس", "تخطي"] and
+                    card["c"] == r["color"]
             )
         )
     return (
