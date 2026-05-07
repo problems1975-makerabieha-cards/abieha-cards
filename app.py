@@ -1,9 +1,9 @@
-from flask import Flask, render_template, request, send_file
+from flask import Flask, request, send_file
 from flask_socketio import SocketIO, join_room, emit
 import random, os, threading
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "secret"
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "abieha-final-secret")
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 rooms = {}
@@ -13,11 +13,12 @@ def index():
     return send_file("templates/index.html")
 
 # ==============================
-# 🔥 نقل القيادة الذكي
+# 👑 نقل القيادة
 # ==============================
 def transfer_host(room, r):
     trusted = r.get("trustedHosts", [])
 
+    # نائب أول
     for tid in trusted:
         for p in r["players"]:
             if p["id"] == tid:
@@ -25,6 +26,7 @@ def transfer_host(room, r):
                 r["log"].insert(0, f"👑 القائد الجديد (نائب): {p['name']}")
                 return
 
+    # fallback
     if r["players"]:
         r["host"] = r["players"][0]["id"]
         r["log"].insert(0, f"👑 القائد الجديد: {r['players'][0]['name']}")
@@ -32,12 +34,32 @@ def transfer_host(room, r):
         r["host"] = None
 
 # ==============================
+# 🧠 STATE
+# ==============================
+def public_state(room):
+    r = rooms[room]
+    return {
+        "room": room,
+        "hostId": r.get("host"),
+        "trustedHosts": r.get("trustedHosts", []),
+        "players": r.get("players", []),
+        "spectators": r.get("spectators", []),
+        "log": r.get("log", [])
+    }
+
+def send_state(room):
+    r = rooms[room]
+    for p in r["players"] + r["spectators"]:
+        if p.get("sid"):
+            socketio.emit("state", public_state(room), room=p["sid"])
+
+# ==============================
 # 🔥 JOIN
 # ==============================
 @socketio.on("join")
 def on_join(data):
-    room = data.get("room", "ROOM1")
-    name = data.get("name", "لاعب")
+    room = (data.get("room") or "ROOM1").upper()
+    name = data.get("name") or "لاعب"
 
     if room not in rooms:
         rooms[room] = {
@@ -59,47 +81,70 @@ def on_join(data):
         "name": name
     })
 
+    # 👑 أول شخص = القائد
     if r["host"] is None:
         r["host"] = player_id
+
+    r["log"].insert(0, f"{name} دخل 👀")
 
     emit("joined", {"playerId": player_id, "room": room})
     send_state(room)
 
 # ==============================
-# 🔥 STATE
+# 🪑 الجلوس
 # ==============================
-def public_state(room):
+@socketio.on("sit_seat")
+def sit(data):
+    room = data.get("room")
+    pid = data.get("playerId")
+    seat = int(data.get("seat", 0))
+
+    if room not in rooms:
+        return
+
     r = rooms[room]
-    return {
-        "room": room,
-        "hostId": r.get("host"),
-        "trustedHosts": r.get("trustedHosts", []),
-        "players": r["players"],
-        "spectators": r["spectators"],
-        "log": r["log"]
-    }
 
-def send_state(room):
-    for p in rooms[room]["players"] + rooms[room]["spectators"]:
-        socketio.emit("state", public_state(room), room=p["sid"])
+    # تحقق من المقعد
+    if any(p.get("seat") == seat for p in r["players"]):
+        emit("error_msg", "المقعد محجوز")
+        return
+
+    # تحويل من مشاهد إلى لاعب
+    for i, s in enumerate(r["spectators"]):
+        if s["id"] == pid:
+            spectator = r["spectators"].pop(i)
+
+            r["players"].append({
+                "id": spectator["id"],
+                "sid": spectator["sid"],
+                "name": spectator["name"],
+                "seat": seat
+            })
+
+            r["log"].insert(0, f"{spectator['name']} جلس على المقعد {seat+1}")
+
+            send_state(room)
+            return
 
 # ==============================
-# 🔥 طرد لاعب / مشاهد
+# 🚫 طرد
 # ==============================
 @socketio.on("kick_player")
 def kick(data):
     room = data.get("room")
-    host = data.get("hostId")
+    host_id = data.get("hostId")
     target = data.get("targetId")
 
-    if room not in rooms: return
+    if room not in rooms:
+        return
+
     r = rooms[room]
 
-    if r["host"] != host:
+    if r["host"] != host_id:
         emit("error_msg", "فقط القائد")
         return
 
-    if target == host:
+    if target == host_id:
         emit("error_msg", "ما تقدر تطرد نفسك")
         return
 
@@ -110,7 +155,8 @@ def kick(data):
             name = p["name"]
             r["players"].pop(i)
             r["log"].insert(0, f"🚫 تم طرد {name}")
-            socketio.emit("kicked", room=sid)
+            if sid:
+                emit("kicked", room=sid)
             send_state(room)
             return
 
@@ -121,57 +167,21 @@ def kick(data):
             name = s["name"]
             r["spectators"].pop(i)
             r["log"].insert(0, f"🚫 تم طرد {name}")
-            socketio.emit("kicked", room=sid)
+            if sid:
+                emit("kicked", room=sid)
             send_state(room)
 
 # ==============================
-# 🔥 نائب قائد
-# ==============================
-@socketio.on("toggle_trusted_host")
-def toggle_trusted(data):
-    room = data.get("room")
-    host = data.get("hostId")
-    target = data.get("targetId")
-
-    if room not in rooms: return
-    r = rooms[room]
-
-    if r["host"] != host: return
-
-    if target in r["trustedHosts"]:
-        r["trustedHosts"].remove(target)
-    else:
-        r["trustedHosts"].append(target)
-
-    send_state(room)
-
-# ==============================
-# 🔥 نقل القيادة يدوي
-# ==============================
-@socketio.on("make_host")
-def make_host(data):
-    room = data.get("room")
-    host = data.get("hostId")
-    target = data.get("targetId")
-
-    if room not in rooms: return
-    r = rooms[room]
-
-    if r["host"] != host: return
-
-    r["host"] = target
-    r["log"].insert(0, "👑 تم تغيير القائد")
-    send_state(room)
-
-# ==============================
-# 🔥 خروج
+# 🔄 خروج
 # ==============================
 @socketio.on("leave_room")
 def leave(data):
     room = data.get("room")
     pid = data.get("playerId")
 
-    if room not in rooms: return
+    if room not in rooms:
+        return
+
     r = rooms[room]
 
     for arr in ["players","spectators"]:
@@ -186,15 +196,15 @@ def leave(data):
     send_state(room)
 
 # ==============================
-# 🔥 disconnect
+# ❌ disconnect
 # ==============================
 @socketio.on("disconnect")
 def disc():
-    for room,r in rooms.items():
+    for room, r in rooms.items():
         for p in r["players"]:
             if p["sid"] == request.sid:
                 if r["host"] == p["id"]:
-                    transfer_host(room,r)
+                    transfer_host(room, r)
                 return
 
 # ==============================
