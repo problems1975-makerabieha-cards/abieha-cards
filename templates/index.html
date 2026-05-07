@@ -887,7 +887,16 @@ function renderSeats(){
       continue;
     }
 
-    const p = players.find(pp => Number(pp.seat) === i);
+    const p = players.find(pp => {
+      const realSeat = Number(pp.seat);
+
+      // صاحب مقعد 1 الحقيقي seat=0 يظهر للآخرين في seat1
+      if(realSeat === 0 && pp.id !== myId && i === 1){
+        return true;
+      }
+
+      return realSeat === i;
+    });
 
     if(!p){
       seat.classList.add("empty");
@@ -923,7 +932,6 @@ function renderSeats(){
     }
   }
 }
-
 function render(){
   if(!state) return;
 
