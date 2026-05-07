@@ -372,7 +372,13 @@ function joinGame(){
 socket.on("joined",data=>{myId=data.playerId;roomCode=data.room;document.getElementById("joinBox").classList.add("hidden");document.getElementById("controls").classList.remove("hidden");document.getElementById("arena").classList.remove("hidden");document.getElementById("logBox").classList.remove("hidden")});
 socket.on("error_msg",msg=>alert(msg));
 function startGame(){if(isSpectator())return alert("المشاهد لا يبدأ اللعبة");const timeLimit=parseInt(document.getElementById("timeLimitInput")?.value||"30",10);const scoreLimit=parseInt(document.getElementById("scoreLimitInput")?.value||"500",10);socket.emit("start",{room:roomCode,playerId:myId,timeLimit,scoreLimit})}
-function drawCard(){if(isSpectator())return alert("أنت مشاهد: تقدر تدردش فقط");socket.emit("draw",{room:roomCode,playerId:myId})}
+function drawCard(){
+  if(state?.role === "spectator"){
+    alert("أنت مشاهد فقط");
+    return;
+  }
+  socket.emit("draw",{room:roomCode,playerId:myId});
+}
 function lastCard(){if(isSpectator())return alert("أنت مشاهد: تقدر تدردش فقط");socket.emit("last_card",{room:roomCode,playerId:myId})}
 function endGame(){socket.emit("end_game",{room:roomCode,playerId:myId})}
 function leaveGame(){socket.emit("leave_room",{room:roomCode,playerId:myId})}socket.on("left_room",()=>{location.reload()});
@@ -380,19 +386,23 @@ function isBlackCard(card){
   return card && (card.c === "black" || card.n === "+4" || card.n === "لون");
 }
 function playCard(i){
-  if(isSpectator())return alert("أنت مشاهد: تقدر تدردش فقط");
+  if(state?.role === "spectator"){
+    alert("أنت مشاهد فقط");
+    return;
+  }
+
   if(!state || !state.myHand) return;
+
   const card = state.myHand[i];
   if(!card) return;
 
   if(isBlackCard(card)){
     selectedIndex = i;
-    const picker = document.getElementById("colorPicker");
-    if(picker) picker.classList.add("show");
+    document.getElementById("colorPicker").classList.add("show");
     return;
   }
 
-  socket.emit("play", {room:roomCode, playerId:myId, index:i});
+  socket.emit("play",{room:roomCode,playerId:myId,index:i});
 }
 function chooseColor(color){
   if(selectedIndex === null || selectedIndex === undefined) return;
