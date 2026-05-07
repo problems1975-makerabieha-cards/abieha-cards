@@ -250,20 +250,29 @@ def apply_effect(r, card):
 
     if card["n"] == "عكس":
         r["direction"] *= -1
-        if len(r["players"]) > 2:
-            r["turn"] = next_index(r)
+        r["log"].insert(0, "↺ عكس الاتجاه")
+
+        # إذا لاعبين فقط: نفس اللاعب يلعب مرة ثانية
+        if len(r["players"]) == 2:
+            return
+
+        r["turn"] = next_index(r)
         return
 
     if card["n"] == "تخطي":
+        r["log"].insert(0, "⊘ تخطي اللاعب التالي")
+
+        # إذا لاعبين فقط: نفس اللاعب يلعب مرة ثانية
+        if len(r["players"]) == 2:
+            return
+
         r["turn"] = next_index(r)
-        if len(r["players"]) > 2:
-            r["turn"] = next_index(r)
+        r["turn"] = next_index(r)
         return
 
     r["pendingDraw2"] = 0
     r["pendingDraw4"] = 0
     r["turn"] = next_index(r)
-
 
 def handle_timeout(room):
     r = rooms.get(room)
