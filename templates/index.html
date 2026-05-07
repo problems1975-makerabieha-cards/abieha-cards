@@ -252,6 +252,28 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .spectatorChip button{padding:4px 8px;margin:0;border-radius:999px;font-size:11px;box-shadow:none}
 .spectatorNote{color:#ffd166;font-size:13px;font-weight:900;margin:6px 0}
 
+
+.sitChoices{
+  width:100%;
+  display:flex;
+  flex-wrap:wrap;
+  justify-content:center;
+  align-items:center;
+  gap:8px;
+  padding:10px;
+}
+.sitChoices .spectatorNote{
+  width:100%;
+  color:#ffd166;
+  font-weight:900;
+  margin-bottom:4px;
+}
+.sitChoices button{
+  padding:8px 10px;
+  font-size:12px;
+  border-radius:12px;
+}
+
 /* ===== FINAL RESULTS ===== */
 .finalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.78);display:none;place-items:center;z-index:2000;padding:16px}
 .finalOverlay.show{display:grid}
@@ -320,7 +342,7 @@ let myId = null;
 let state = null;
 let selectedIndex = null;
 let selectedAvatar = "auto";
-let myRole = "player";
+let myRole = "spectator";
 const COMEDY_AVATARS = ["🤡","😂","😈","🤖","👽","🐸","🐵","🐔","💀","🧠","🥸","👻","🦖","🦄"];
 function simpleHash(str){let h=0;str=String(str||"");for(let i=0;i<str.length;i++)h=((h<<5)-h+str.charCodeAt(i))|0;return Math.abs(h)}
 function avatarForPlayer(p){if(!p)return"🤡";if(p.avatar&&p.avatar!=="auto")return p.avatar;if(p.id===myId&&selectedAvatar&&selectedAvatar!=="auto")return selectedAvatar;return COMEDY_AVATARS[simpleHash((p.id||"")+(p.name||""))%COMEDY_AVATARS.length]}
@@ -348,7 +370,9 @@ function toggleRoleOptions(){
   const role=document.getElementById("roleInput")?.value||"player";
   document.querySelectorAll(".playerOnly").forEach(x=>x.classList.toggle("hidden",role!=="player"));
 }
-function isSpectator(){return myRole==="spectator" || state?.myRole==="spectator";}
+function isSpectator(){
+  return (state?.role || myRole) === "spectator";
+}
 function toggleTeamOptions(){const mode=document.getElementById("modeInput").value;const teamMode=document.getElementById("teamModeInput").value;document.querySelectorAll(".teamOnly").forEach(x=>x.classList.toggle("hidden",mode!=="teams"));document.querySelectorAll(".manualOnly").forEach(x=>x.classList.toggle("hidden",!(mode==="teams"&&teamMode==="manual")))}
 function kickPlayer(targetId){if(!confirm("تأكيد طرد اللاعب؟"))return;socket.emit("kick_player",{room:roomCode,hostId:myId,targetId})}
 socket.on("kicked",()=>{alert("تم طردك من الغرفة");location.reload()});
@@ -433,11 +457,11 @@ socket.on("state", data => {
 
   state = data;
   myId = data.myId;
-  myRole = data.myRole || myRole || "player";
+  myRole = data.role || "spectator";
   roomCode = data.room;
 
   document.getElementById("joinBox").classList.add("hidden");
-  document.getElementById("controls").classList.toggle("hidden", myRole === "spectator");
+  document.getElementById("controls").classList.remove("hidden");
   document.getElementById("arena").classList.remove("hidden");
   document.getElementById("logBox").classList.remove("hidden");
 
@@ -575,54 +599,113 @@ function renderSpectators(){
   if(!box || !state) return;
 
   const spectators = state.spectators || [];
+  box.classList.toggle("hidden", spectators.length === 0);
 
-  box.innerHTML = spectators.map(s => {
-    const kickBtn = state.host === myId
-      ? `<button class="redBtn" onclick="kickPlayer('${s.id}')">طرد</button>`
-      : "";
+  box.innerHTML = `
+    <div class="spectatorsTitle">👀 المشاهدين</div>
+    ${spectators.map(s => {
+      const kickBtn = (state.host === myId || state.hostId === myId)
+        ? `<button class="redBtn" onclick="kickPlayer('${s.id}')">طرد</button>`
+        : "";
 
-    return `
-      <div class="spectatorItem">
-        <span>${s.avatar && s.avatar !== "auto" ? s.avatar : "👀"}</span>
-        <span>${s.name}</span>
-        ${kickBtn}
-      </div>
-    `;
-  }).join("");
+      return `
+        <span class="spectatorChip">
+          <span>${s.avatar && s.avatar !== "auto" ? s.avatar : "👀"}</span>
+          <span>${s.name}</span>
+          ${kickBtn}
+        </span>
+      `;
+    }).join("")}
+  `;
 }
 function renderSeats(){
-  if(!state||!state.players)return;
-  const players=state.players||[];
-  const meIndex=players.findIndex(p=>p.id===myId);
-  for(let i=0;i<6;i++){
-    const seat=document.getElementById("seat"+i);
-    if(!seat)continue;
-    seat.classList.toggle("active",false);
+  if(!state) return;
 
-    if(i===0){
-      const me=players[meIndex];
-      seat.classList.toggle("empty",!me && !isSpectator());
-      seat.querySelectorAll(".avatarBadge,.playerName,.playerMeta,.playerScore,.spectatorNote").forEach(x=>x.remove());
+  const players = state.players || [];
+  const me = players.find(p => p.id === myId);
+
+  for(let i = 0; i < 6; i++){
+    const seat = document.getElementById("seat" + i);
+    if(!seat) continue;
+
+    seat.classList.remove("active", "empty");
+
+    if(i === 0){
+      const hand = document.getElementById("hand");
+
+      seat.querySelectorAll(".avatarBadge,.playerName,.playerMeta,.playerScore,.spectatorNote,.sitChoices").forEach(x => x.remove());
+
       if(isSpectator()){
-        seat.insertAdjacentHTML("afterbegin",`<div class="spectatorNote">👀 مشاهد</div>`);
+        seat.insertAdjacentHTML("afterbegin", `
+          <div class="sitChoices">
+            <div class="spectatorNote">👀 أنت مشاهد — اختر مقعد للعب</div>
+            <button class="green" onclick="sitAtSeat(0)">المقعد 1</button>
+            <button class="green" onclick="sitAtSeat(1)">المقعد 2</button>
+            <button class="green" onclick="sitAtSeat(2)">المقعد 3</button>
+            <button class="green" onclick="sitAtSeat(3)">المقعد 4</button>
+            <button class="green" onclick="sitAtSeat(4)">المقعد 5</button>
+            <button class="green" onclick="sitAtSeat(5)">المقعد 6</button>
+          </div>
+        `);
+        if(hand) hand.innerHTML = "";
         continue;
       }
+
       if(me){
-        const hand=document.getElementById("hand");
-        seat.insertAdjacentHTML("afterbegin",`${avatarHtml(me)}<div class="playerName">${me.name}</div><div class="playerMeta"><span class="playerCards">${(state.myHand||[]).length}</span> كرت${scoreHtml(me)}</div>`);
-        if(players[state.turn]&&players[state.turn].id===me.id)seat.classList.add("active");
-        if(hand&&hand.parentElement!==seat)seat.appendChild(hand);
+        seat.insertAdjacentHTML("afterbegin", `
+          ${avatarHtml(me)}
+          <div class="playerName">${me.name}</div>
+          <div class="playerMeta">
+            <span class="playerCards">${(state.myHand || []).length}</span> كرت
+            ${scoreHtml(me)}
+          </div>
+        `);
+
+        if(players[state.turn] && players[state.turn].id === me.id){
+          seat.classList.add("active");
+        }
+
+        if(hand && hand.parentElement !== seat){
+          seat.appendChild(hand);
+        }
       }
+
       continue;
     }
 
-    const p=players.find(pp=>Number(pp.seat)===i) || players.filter(pp=>pp.id!==myId)[i-1];
-    if(!p || p.id===myId){seat.classList.add("empty");seat.innerHTML="";continue}
-    seat.classList.remove("empty");
-    const teamTxt=p.team?` — ${p.team}`:"";
-    const kickBtn=(state.host===myId||state.hostId===myId)&&p.id!==myId?`<button class="redBtn" onclick="kickPlayer('${p.id}')">طرد</button>`:"";
-    seat.innerHTML=`${avatarHtml(p)}<div class="playerName">${p.name}</div><div class="playerMeta"><span class="playerCards">${p.count??p.cards??0}</span> كرت${teamTxt}${scoreHtml(p)}</div>${kickBtn}`;
-    if(players[state.turn]&&players[state.turn].id===p.id)seat.classList.add("active");
+    const p = players.find(pp => Number(pp.seat) === i);
+
+    if(!p){
+      seat.classList.add("empty");
+      seat.innerHTML = !state.started && isSpectator()
+        ? `<button class="green" onclick="sitAtSeat(${i})">اجلس هنا</button>`
+        : "";
+      continue;
+    }
+
+    if(p.id === myId){
+      seat.innerHTML = "";
+      continue;
+    }
+
+    const teamTxt = p.team ? ` — ${p.team}` : "";
+    const kickBtn = (state.host === myId || state.hostId === myId) && p.id !== myId
+      ? `<button class="redBtn" onclick="kickPlayer('${p.id}')">طرد</button>`
+      : "";
+
+    seat.innerHTML = `
+      ${avatarHtml(p)}
+      <div class="playerName">${p.name}</div>
+      <div class="playerMeta">
+        <span class="playerCards">${p.count ?? p.cards ?? 0}</span> كرت${teamTxt}
+        ${scoreHtml(p)}
+      </div>
+      ${kickBtn}
+    `;
+
+    if(players[state.turn] && players[state.turn].id === p.id){
+      seat.classList.add("active");
+    }
   }
 }
 // باقي كودك...
