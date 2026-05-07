@@ -220,14 +220,18 @@ def swap_random_two_hands(r):
 
 
 def apply_effect(r, card):
+
+    # كرت التبديل
     if card["n"] == "تبديل":
         if int(r.get("pendingDraw2", 0)) == 0 and int(r.get("pendingDraw4", 0)) == 0:
             swap_random_two_hands(r)
+
         r["pendingDraw2"] = 0
         r["pendingDraw4"] = 0
         r["turn"] = next_index(r)
         return
 
+    # +2 يتراكم
     if card["n"] == "+2":
         r["pendingDraw2"] = int(r.get("pendingDraw2", 0)) + 2
         r["pendingDraw4"] = 0
@@ -235,6 +239,7 @@ def apply_effect(r, card):
         r["turn"] = next_index(r)
         return
 
+    # +4 يتراكم
     if card["n"] == "+4":
         r["pendingDraw4"] = int(r.get("pendingDraw4", 0)) + 4
         r["pendingDraw2"] = 0
@@ -242,39 +247,59 @@ def apply_effect(r, card):
         r["turn"] = next_index(r)
         return
 
+    # عكس / تخطي أثناء العقوبة: يمرر العقوبة ولا يصفرها
     if card["n"] in ["عكس", "تخطي"]:
+
         if r.get("pendingDraw2", 0) > 0 or r.get("pendingDraw4", 0) > 0:
+
             if card["n"] == "عكس":
                 r["direction"] *= -1
+                r["log"].insert(0, "↺ عكس أثناء العقوبة — العقوبة مستمرة")
+
+            if card["n"] == "تخطي":
+                r["log"].insert(0, "⊘ تخطي أثناء العقوبة — العقوبة مستمرة")
+
+            # إذا لاعبين فقط: ترجع العقوبة على اللاعب الثاني
             if len(r["players"]) == 2:
-                r["log"].insert(0, "العكس/التخطي أثناء العقوبة: نفس اللاعب يلعب مرة ثانية أو يسحب")
                 return
+
+            # أكثر من لاعبين: تنتقل حسب الاتجاه
             r["turn"] = next_index(r)
+
+            # التخطي يتجاوز لاعب إضافي
+            if card["n"] == "تخطي":
+                r["turn"] = next_index(r)
+
             return
 
+        # عكس / تخطي بدون عقوبة
         r["pendingDraw2"] = 0
         r["pendingDraw4"] = 0
 
         if card["n"] == "عكس":
             r["direction"] *= -1
             r["log"].insert(0, "عكس اتجاه اللعب")
+
             if len(r["players"]) == 2:
                 return
+
             r["turn"] = next_index(r)
             return
 
         if card["n"] == "تخطي":
             r["log"].insert(0, "تم تخطي اللاعب التالي")
+
             if len(r["players"]) == 2:
                 return
+
             r["turn"] = next_index(r)
             r["turn"] = next_index(r)
             return
 
+    # الكروت العادية تصفر العقوبة فقط إذا ماكو عقوبة
     r["pendingDraw2"] = 0
     r["pendingDraw4"] = 0
     r["turn"] = next_index(r)
-
 
 def cancel_timer(r):
     t = r.get("timer")
