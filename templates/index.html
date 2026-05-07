@@ -831,6 +831,7 @@ function renderSeats(){
 
   const players = state.players || [];
   const me = players.find(p => p.id === myId);
+  const takenSeats = players.map(p => Number(p.seat));
 
   for(let i=0; i<6; i++){
     const seat = document.getElementById("seat" + i);
@@ -843,17 +844,21 @@ function renderSeats(){
       seat.querySelectorAll(".avatarBadge,.playerName,.playerMeta,.playerScore,.spectatorNote,.sitChoices").forEach(x => x.remove());
 
       if(isSpectator()){
+        let buttons = "";
+
+        for(let s=0; s<6; s++){
+          if(!takenSeats.includes(s)){
+            buttons += `<button class="green" onclick="sitAtSeat(${s})">المقعد ${s + 1}</button>`;
+          }
+        }
+
         seat.insertAdjacentHTML("afterbegin", `
           <div class="sitChoices">
             <div class="spectatorNote">👀 أنت مشاهد — اختر مقعد للعب</div>
-            <button class="green" onclick="sitAtSeat(0)">المقعد 1</button>
-            <button class="green" onclick="sitAtSeat(1)">المقعد 2</button>
-            <button class="green" onclick="sitAtSeat(2)">المقعد 3</button>
-            <button class="green" onclick="sitAtSeat(3)">المقعد 4</button>
-            <button class="green" onclick="sitAtSeat(4)">المقعد 5</button>
-            <button class="green" onclick="sitAtSeat(5)">المقعد 6</button>
+            ${buttons || `<div class="spectatorNote">كل المقاعد محجوزة</div>`}
           </div>
         `);
+
         if(hand) hand.innerHTML = "";
         continue;
       }
@@ -861,22 +866,32 @@ function renderSeats(){
       if(me){
         seat.insertAdjacentHTML("afterbegin", `
           ${avatarHtml(me)}
-          <div class="playerName">${escapeHTML(me.name)}</div>
-          <div class="playerMeta"><span class="playerCards">${(state.myHand || []).length}</span> كرت${scoreHtml(me)}</div>
+          <div class="playerName">
+            ${me.id === state.hostId ? "👑 " : ""}${escapeHTML(me.name)}
+          </div>
+          <div class="playerMeta">
+            <span class="playerCards">${(state.myHand || []).length}</span> كرت
+            ${scoreHtml(me)}
+          </div>
         `);
 
-        if(players[state.turn] && players[state.turn].id === me.id) seat.classList.add("active");
-        if(hand && hand.parentElement !== seat) seat.appendChild(hand);
+        if(players[state.turn] && players[state.turn].id === me.id){
+          seat.classList.add("active");
+        }
+
+        if(hand && hand.parentElement !== seat){
+          seat.appendChild(hand);
+        }
       }
+
       continue;
     }
 
     const p = players.find(pp => Number(pp.seat) === i);
+
     if(!p){
       seat.classList.add("empty");
-      seat.innerHTML = !state.started && isSpectator()
-        ? `<button class="green" onclick="sitAtSeat(${i})">اجلس هنا</button>`
-        : "";
+      seat.innerHTML = "";
       continue;
     }
 
@@ -886,18 +901,26 @@ function renderSeats(){
     }
 
     const teamTxt = p.team ? ` — ${escapeHTML(p.team)}` : "";
+
     const kickBtn = (state.host === myId || state.hostId === myId) && p.id !== myId
       ? `<button class="redBtn" onclick="kickPlayer('${p.id}')">طرد</button>`
       : "";
 
     seat.innerHTML = `
       ${avatarHtml(p)}
-      <div class="playerName">${escapeHTML(p.name)}</div>
-      <div class="playerMeta"><span class="playerCards">${p.count ?? p.cards ?? 0}</span> كرت${teamTxt}${scoreHtml(p)}</div>
+      <div class="playerName">
+        ${p.id === state.hostId ? "👑 " : ""}${escapeHTML(p.name)}
+      </div>
+      <div class="playerMeta">
+        <span class="playerCards">${p.count ?? p.cards ?? 0}</span> كرت${teamTxt}
+        ${scoreHtml(p)}
+      </div>
       ${kickBtn}
     `;
 
-    if(players[state.turn] && players[state.turn].id === p.id) seat.classList.add("active");
+    if(players[state.turn] && players[state.turn].id === p.id){
+      seat.classList.add("active");
+    }
   }
 }
 
