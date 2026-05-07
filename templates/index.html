@@ -313,6 +313,97 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 @media(max-width:900px){.arena{min-height:730px;padding-bottom:245px}.table{width:92vw;height:440px}.seat.s0.me .hand .card{width:70px;height:104px;margin-left:-10px}.drawOutsideBtn{right:-92px;width:88px;height:60px;font-size:17px}.ovalInfo{left:-118px;width:138px;font-size:13px}}
 @media(max-width:760px){input,select{min-width:128px;font-size:14px;padding:10px}button{padding:10px 12px;margin:4px;border-radius:13px}.join,.controls,.logBox{border-radius:18px;padding:8px}.arena{min-height:690px;padding-bottom:225px}.table{top:38%;width:96vw;height:370px}.centerPlayArea{width:220px;height:210px}#top .card{width:95px;height:142px}.drawOutsideBtn{right:-66px;width:66px;height:48px;font-size:14px}.ovalInfo{left:-82px;width:110px;min-height:60px;font-size:11px}.seat:not(.me){width:88px;min-height:58px;font-size:11px}.s1{right:2%;top:50%}.s2{right:4%;top:13%}.s3{top:1%}.s4{left:4%;top:13%}.s5{left:2%;top:50%}.seat.s0.me{bottom:-15px;min-height:230px}.seat.s0.me .hand{padding-inline:12px}.seat.s0.me .hand .card{width:62px;height:94px;margin-left:-8px}.avatarBadge{width:34px;height:34px;font-size:21px}.seat.s0.me .avatarBadge{width:30px;height:30px;font-size:20px}.log{height:250px}.chatBubble{font-size:12px;padding:5px 9px}.chatAvatar{font-size:20px}#chatInput{font-size:13px;padding:10px 12px}.chatSendBtn{min-width:66px;padding:10px 11px}}
 @media(max-width:480px){.arena{min-height:650px;padding-bottom:205px}.table{width:96vw;height:350px}.centerPlayArea{width:190px;height:190px}#top .card{width:86px;height:128px}.seat:not(.me){width:76px;min-height:52px}.seat.s0.me .hand .card{width:58px;height:88px;margin-left:-8px}#avatarInput{min-width:76px;font-size:20px}.log{height:220px;padding:12px}.chatMsg{max-width:94%}.chatBubble{font-size:11.8px;line-height:1.4}.chatInputRow{gap:5px}.chatSendBtn{min-width:58px;font-size:12px;padding:9px}}
+/* ===== HOST CONTROL PANEL ===== */
+.hostPanel{
+  margin-top:12px;
+  padding:14px;
+  border-radius:22px;
+  background:linear-gradient(135deg,rgba(17,24,39,.96),rgba(2,6,23,.98));
+  border:1px solid rgba(255,209,102,.35);
+  box-shadow:0 0 30px rgba(255,209,102,.18), inset 0 0 28px rgba(0,0,0,.25);
+  color:white;
+  text-align:right;
+}
+.hostTitle{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  font-size:18px;
+  font-weight:900;
+  color:var(--gold);
+  margin-bottom:10px;
+  text-shadow:0 2px 8px #000;
+}
+.hostSubTitle{
+  font-size:13px;
+  color:#b9d7ff;
+  font-weight:800;
+  margin:10px 0 6px;
+}
+.hostRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:9px;
+  margin:7px 0;
+  border-radius:16px;
+  background:rgba(255,255,255,.075);
+  border:1px solid rgba(255,255,255,.09);
+}
+.hostName{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-width:0;
+  font-weight:900;
+}
+.hostName span.nameTxt{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.badgeHost,.badgeDeputy{
+  display:inline-flex;
+  align-items:center;
+  padding:3px 7px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:900;
+  white-space:nowrap;
+}
+.badgeHost{
+  color:#071126;
+  background:linear-gradient(180deg,#fff0a6,#ffd166);
+}
+.badgeDeputy{
+  color:white;
+  background:linear-gradient(180deg,#c084fc,#7c3aed);
+}
+.hostBtns{
+  display:flex;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+  gap:5px;
+}
+.hostBtns button{
+  margin:0;
+  padding:7px 9px;
+  border-radius:11px;
+  font-size:12px;
+  box-shadow:none;
+  color:white;
+}
+.hostBtns .btnDeputy{background:linear-gradient(180deg,#c084fc,#7c3aed)}
+.hostBtns .btnHost{background:linear-gradient(180deg,#ffd166,#f59e0b);color:#071126}
+.hostBtns .btnKick{background:linear-gradient(180deg,#ff8aa0,#dc2626)}
+@media(max-width:640px){
+  .hostRow{align-items:stretch;flex-direction:column}
+  .hostBtns{justify-content:flex-start}
+  .hostBtns button{font-size:11px;padding:7px 8px}
+}
+
 </style>
 </head>
 <body>
@@ -446,6 +537,100 @@ function sendChat(){
 function kickPlayer(targetId){
   if(!confirm("تأكيد طرد هذا الشخص من الغرفة؟")) return;
   socket.emit("kick_player", {room: roomCode, hostId: myId, targetId});
+}
+
+function isHost(){
+  return !!(state && myId && (state.host === myId || state.hostId === myId));
+}
+
+function toggleDeputy(targetId){
+  if(!isHost()) return alert("فقط القائد يقدر يعيّن نائب");
+  socket.emit("toggle_trusted_host", {room: roomCode, hostId: myId, targetId});
+}
+
+function makeHost(targetId){
+  if(!isHost()) return alert("فقط القائد يقدر ينقل القيادة");
+  if(!confirm("تنقل القيادة لهذا اللاعب؟")) return;
+  socket.emit("make_host", {room: roomCode, hostId: myId, targetId});
+}
+
+function renderHostPanel(){
+  const old = document.getElementById("hostPanel");
+  if(old) old.remove();
+
+  if(!state || !isHost()) return;
+
+  const players = state.players || [];
+  const spectators = state.spectators || [];
+  const trusted = state.trustedHosts || [];
+
+  const box = document.createElement("div");
+  box.id = "hostPanel";
+  box.className = "hostPanel";
+
+  let html = `
+    <div class="hostTitle">
+      <span>👑 لوحة تحكم القائد</span>
+      <span style="font-size:12px;color:#93c5fd">الغرفة: ${escapeHTML(state.room || roomCode || "-")}</span>
+    </div>
+    <div class="hostSubTitle">🎮 اللاعبين</div>
+  `;
+
+  html += players.map(p => {
+    const isMeHost = p.id === myId;
+    const isDeputy = trusted.includes(p.id);
+    const avatar = avatarForPlayer(p);
+
+    if(isMeHost){
+      return `
+        <div class="hostRow">
+          <div class="hostName">
+            <span>${avatar}</span>
+            <span class="nameTxt">${escapeHTML(p.name || "لاعب")}</span>
+            <span class="badgeHost">القائد</span>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="hostRow">
+        <div class="hostName">
+          <span>${avatar}</span>
+          <span class="nameTxt">${escapeHTML(p.name || "لاعب")}</span>
+          ${isDeputy ? `<span class="badgeDeputy">⭐ نائب</span>` : ``}
+        </div>
+        <div class="hostBtns">
+          <button class="btnDeputy" onclick="toggleDeputy('${p.id}')">${isDeputy ? "إلغاء نائب" : "تعيين نائب"}</button>
+          <button class="btnHost" onclick="makeHost('${p.id}')">نقل القيادة</button>
+          <button class="btnKick" onclick="kickPlayer('${p.id}')">طرد</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  if(spectators.length){
+    html += `<div class="hostSubTitle">👀 المشاهدين</div>`;
+    html += spectators.map(s => {
+      const avatar = (s.avatar && s.avatar !== "auto") ? s.avatar : "👀";
+      return `
+        <div class="hostRow">
+          <div class="hostName">
+            <span>${avatar}</span>
+            <span class="nameTxt">${escapeHTML(s.name || "مشاهد")}</span>
+          </div>
+          <div class="hostBtns">
+            <button class="btnKick" onclick="kickPlayer('${s.id}')">طرد المشاهد</button>
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  box.innerHTML = html;
+
+  const target = document.getElementById("spectatorsBox") || document.getElementById("logBox") || document.body;
+  target.insertAdjacentElement("afterend", box);
 }
 
 function startGame(){
@@ -757,6 +942,7 @@ function render(){
   renderLog();
   renderSeats();
   renderSpectators();
+  renderHostPanel();
   renderFinalResults();
 }
 
