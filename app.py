@@ -13,6 +13,10 @@ rooms = {}
 
 COLORS = ["red","bluec","greenc","yellow"]
 
+@app.route("/")
+def index():
+    return send_file("templates/index.html")
+
 # ===============================
 # أدوات أساسية
 # ===============================
