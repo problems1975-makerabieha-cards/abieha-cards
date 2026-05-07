@@ -30,34 +30,71 @@ def find_player(room, player_id):
     return -1
 
 def send_state(room):
+    if room not in rooms:
+        return
+
     r = rooms[room]
 
-    for p in r["players"]:
-        payload = {
-            "room": room,
-            "players": [
-                {
-                    "id": x["id"],
-                    "name": x["name"],
-                    "avatar": x.get("avatar","auto"),
-                    "count": len(x.get("hand",[]))
-                } for x in r["players"]
-            ],
-            "spectators": [
-                {
-                    "id": s["id"],
-                    "name": s["name"],
-                    "avatar": s.get("avatar","🎭")
-                } for s in r.get("spectators",[])
-            ],
-            "log": r.get("log",[])
-        }
+    base_payload = {
+        "room": room,
+        "started": r.get("started", False),
+        "turn": r.get("turn", 0),
+        "direction": r.get("direction", 1),
+        "color": r.get("color"),
+        "mode": r.get("mode", "solo"),
+        "teamMode": r.get("teamMode", "auto"),
+        "teamCount": r.get("teamCount", 2),
+        "pendingDraw4": r.get("pendingDraw4", 0),
+        "pendingDraw2": r.get("pendingDraw2", 0),
+        "top": r["discard"][-1] if r.get("discard") else None,
+        "deckCount": len(r.get("deck", [])),
+        "timeLeft": r.get("timeLeft", 0),
+        "timeLimit": r.get("timeLimit", 30),
+        "scoreLimit": r.get("scoreLimit", 500),
+        "gameOver": r.get("gameOver", False),
+        "finalResults": r.get("finalResults"),
+        "host": r.get("host"),
+        "hostId": r.get("host"),
+        "players": [
+            {
+                "id": p.get("id"),
+                "name": p.get("name"),
+                "team": p.get("team"),
+                "avatar": p.get("avatar", "auto"),
+                "count": len(p.get("hand", [])),
+                "last": p.get("last", False),
+                "wins": p.get("wins", 0),
+                "score": p.get("score", 0),
+                "seat": p.get("seat", 0),
+            }
+            for p in r.get("players", [])
+        ],
+        "spectators": [
+            {
+                "id": s.get("id"),
+                "name": s.get("name"),
+                "avatar": s.get("avatar", "🎭"),
+            }
+            for s in r.get("spectators", [])
+        ],
+        "log": r.get("log", [])[-80:],
+    }
 
-        payload["myId"] = p["id"]
-        payload["myHand"] = p.get("hand",[])
+    # إرسال للاعبين
+    for p in r.get("players", []):
+        payload = dict(base_payload)
+        payload["myId"] = p.get("id")
+        payload["myHand"] = p.get("hand", [])
+        payload["role"] = "player"
+        socketio.emit("state", payload, room=p.get("sid"))
 
-        socketio.emit("state", payload, room=p["sid"])
-
+    # إرسال للمشاهدين
+    for s in r.get("spectators", []):
+        payload = dict(base_payload)
+        payload["myId"] = s.get("id")
+        payload["myHand"] = []
+        payload["role"] = "spectator"
+        socketio.emit("state", payload, room=s.get("sid"))
 # ===============================
 # دخول
 # ===============================
