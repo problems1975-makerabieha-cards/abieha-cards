@@ -379,7 +379,14 @@ function drawCard(){
   }
   socket.emit("draw",{room:roomCode,playerId:myId});
 }
-function lastCard(){if(isSpectator())return alert("أنت مشاهد: تقدر تدردش فقط");socket.emit("last_card",{room:roomCode,playerId:myId})}
+function lastCard(){
+  if(state?.role === "spectator"){
+    alert("أنت مشاهد فقط");
+    return;
+  }
+
+  socket.emit("last_card",{room:roomCode,playerId:myId});
+}
 function endGame(){socket.emit("end_game",{room:roomCode,playerId:myId})}
 function leaveGame(){socket.emit("leave_room",{room:roomCode,playerId:myId})}socket.on("left_room",()=>{location.reload()});
 function isBlackCard(card){
