@@ -187,7 +187,51 @@ def on_chat(data):
     })
 
     send_state(room)
+@socketio.on("sit_seat")
+def on_sit_seat(data):
+    room = data.get("room")
+    player_id = data.get("playerId")
+    seat = int(data.get("seat", 0))
 
+    if room not in rooms:
+        return
+
+    r = rooms[room]
+
+    if r.get("started"):
+        emit("error_msg", "لا يمكن الجلوس بعد بداية اللعبة")
+        return
+
+    if any(p.get("seat") == seat for p in r.get("players", [])):
+        emit("error_msg", "هذا المقعد محجوز")
+        return
+
+    spectator = next((s for s in r.get("spectators", []) if s.get("id") == player_id), None)
+
+    if not spectator:
+        emit("error_msg", "أنت جالس بالفعل أو غير موجود")
+        return
+
+    r["spectators"].remove(spectator)
+
+    r["players"].append({
+        "id": spectator["id"],
+        "sid": spectator["sid"],
+        "name": spectator["name"],
+        "avatar": spectator.get("avatar", "auto"),
+        "seat": seat,
+        "hand": [],
+        "score": 0,
+        "wins": 0,
+        "last": False,
+        "connected": True,
+    })
+
+    if r.get("host") is None:
+        r["host"] = spectator["id"]
+
+    r["log"].insert(0, f"{spectator['name']} جلس على المقعد {seat + 1}")
+    send_state(room)
 # ===============================
 # الطرد (يشمل الجميع)
 # ===============================
