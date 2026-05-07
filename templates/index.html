@@ -98,7 +98,31 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
   from{opacity:0;transform:translateY(5px)}
   to{opacity:1;transform:translateY(0)}
 }
+.chatLine{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-bottom:4px;
+  font-weight:700;
+}
 
+.chatAvatar{
+  font-size:16px;
+}
+
+.chatName{
+  font-weight:900;
+}
+
+.chatText{
+  color:#fff;
+  font-weight:500;
+}
+
+.logLine{
+  color:#aaa;
+  font-size:13px;
+}
 .chatMe{
   align-self:flex-end;
   flex-direction:row-reverse;
@@ -545,18 +569,32 @@ function render(){
 
 const logEl = document.getElementById("log");
 
-const visibleLog = (state.log || []).filter(msg => {
-  if(typeof msg === "object" && msg.type === "chat") return true;
+const visibleLog = (state.log || []);
 
-  const text = String(msg || "");
+logEl.innerHTML = visibleLog.map(msg => {
 
-  return (
-    text.includes("دخل") ||
-    text.includes("انضم") ||
-    text.includes("خرج") ||
-    text.includes("غادر") ||
-    text.includes("لاعب خرج")
-  );
+  if(typeof msg === "object" && msg.type === "chat"){
+
+    const color = getPlayerColor(msg.id);
+
+    const avatar = (msg.avatar && msg.avatar !== "auto")
+      ? msg.avatar
+      : "💬";
+
+    return `
+      <div class="chatLine">
+        <span class="chatAvatar">${avatar}</span>
+        <span class="chatName" style="color:${color}">${msg.name}:</span>
+        <span class="chatText">${msg.text}</span>
+      </div>
+    `;
+  }
+
+  return `<div class="logLine">${msg}</div>`;
+
+}).join("");
+
+logEl.scrollTop = logEl.scrollHeight;
 });
 
 logEl.innerHTML = visibleLog.map(msg => {
@@ -617,6 +655,24 @@ function renderSpectators(){
       `;
     }).join("")}
   `;
+}
+  function getPlayerColor(id){
+  const colors = [
+    "#ff4b4b",
+    "#4bd0ff",
+    "#4bff88",
+    "#ffd84b",
+    "#c04bff",
+    "#ff8c4b"
+  ];
+
+  if(!state?.players) return "#fff";
+
+  const index = state.players.findIndex(p => p.id === id);
+
+  if(index === -1) return "#aaa";
+
+  return colors[index % colors.length];
 }
 function renderSeats(){
   if(!state) return;
