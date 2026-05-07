@@ -367,50 +367,59 @@ let state = null;
 let selectedIndex = null;
 let selectedAvatar = "auto";
 let myRole = "spectator";
+
 const COMEDY_AVATARS = ["🤡","😂","😈","🤖","👽","🐸","🐵","🐔","💀","🧠","🥸","👻","🦖","🦄"];
-function simpleHash(str){let h=0;str=String(str||"");for(let i=0;i<str.length;i++)h=((h<<5)-h+str.charCodeAt(i))|0;return Math.abs(h)}
-function avatarForPlayer(p){if(!p)return"🤡";if(p.avatar&&p.avatar!=="auto")return p.avatar;if(p.id===myId&&selectedAvatar&&selectedAvatar!=="auto")return selectedAvatar;return COMEDY_AVATARS[simpleHash((p.id||"")+(p.name||""))%COMEDY_AVATARS.length]}
-function avatarHtml(p){return `<div class="avatarBadge" title="شخصية اللاعب">${avatarForPlayer(p)}</div>`}
-function playerById(id){return (state?.players||[]).find(p=>p.id===id)}
-function chatColorForKey(key){
-  const colors=["#ffd166","#4da3ff","#35d66b","#ff6b83","#b084ff","#ff9f43","#55efc4","#ff77e9","#a3e635","#f97316"];
-  return colors[simpleHash(key||"player")%colors.length];
+
+function escapeHTML(value){
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
-function chatAvatarForMsg(msg){
-  const p=playerById(msg.id);
-  if(msg.avatar&&msg.avatar!=="auto")return msg.avatar;
-  if(p)return avatarForPlayer(p);
-  return "🎭";
+
+function simpleHash(str){
+  let h = 0;
+  str = String(str || "");
+  for(let i=0; i<str.length; i++) h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  return Math.abs(h);
 }
-  function sitAtSeat(seat){
-  socket.emit("sit_seat", {
-    room: roomCode,
-    playerId: myId,
-    seat: seat
-  });
+
+function avatarForPlayer(p){
+  if(!p) return "🤡";
+  if(p.avatar && p.avatar !== "auto") return p.avatar;
+  if(p.id === myId && selectedAvatar && selectedAvatar !== "auto") return selectedAvatar;
+  return COMEDY_AVATARS[simpleHash((p.id || "") + (p.name || "")) % COMEDY_AVATARS.length];
 }
-function sendChat(){const input=document.getElementById("chatInput");const text=input.value.trim();if(!text)return;socket.emit("chat",{room:roomCode,playerId:myId,text});input.value=""}
-function toggleRoleOptions(){
-  const role=document.getElementById("roleInput")?.value||"player";
-  document.querySelectorAll(".playerOnly").forEach(x=>x.classList.toggle("hidden",role!=="player"));
+
+function avatarHtml(p){
+  return `<div class="avatarBadge" title="شخصية اللاعب">${avatarForPlayer(p)}</div>`;
 }
+
 function isSpectator(){
   return (state?.role || myRole) === "spectator";
 }
-function toggleTeamOptions(){const mode=document.getElementById("modeInput").value;const teamMode=document.getElementById("teamModeInput").value;document.querySelectorAll(".teamOnly").forEach(x=>x.classList.toggle("hidden",mode!=="teams"));document.querySelectorAll(".manualOnly").forEach(x=>x.classList.toggle("hidden",!(mode==="teams"&&teamMode==="manual")))}
-function kickPlayer(targetId){if(!confirm("تأكيد طرد اللاعب؟"))return;socket.emit("kick_player",{room:roomCode,hostId:myId,targetId})}
-socket.on("kicked",()=>{alert("تم طردك من الغرفة");location.reload()});
+
+function toggleTeamOptions(){
+  const mode = document.getElementById("modeInput")?.value || "solo";
+  const teamMode = document.getElementById("teamModeInput")?.value || "auto";
+  document.querySelectorAll(".teamOnly").forEach(x => x.classList.toggle("hidden", mode !== "teams"));
+  document.querySelectorAll(".manualOnly").forEach(x => x.classList.toggle("hidden", !(mode === "teams" && teamMode === "manual")));
+}
+
 function joinGame(){
-  const name = document.getElementById("nameInput").value || "لاعب";
+  const nameInput = document.getElementById("nameInput");
+  const name = (nameInput?.value || "لاعب").trim() || "لاعب";
   selectedAvatar = document.getElementById("avatarInput")?.value || "auto";
-  roomCode = (document.getElementById("roomInput").value || "ROOM1").toUpperCase();
+  roomCode = (document.getElementById("roomInput")?.value || "ROOM1").trim().toUpperCase();
 
-  const mode = document.getElementById("modeInput").value;
-  const teamMode = document.getElementById("teamModeInput").value;
-  const teamCount = document.getElementById("teamCountInput").value;
-  const team = document.getElementById("teamInput").value;
+  const mode = document.getElementById("modeInput")?.value || "solo";
+  const teamMode = document.getElementById("teamModeInput")?.value || "auto";
+  const teamCount = document.getElementById("teamCountInput")?.value || "2";
+  const team = document.getElementById("teamInput")?.value || "A";
 
-  socket.emit("join",{
+  socket.emit("join", {
     name,
     room: roomCode,
     mode,
@@ -421,85 +430,108 @@ function joinGame(){
     role: "spectator"
   });
 }
-socket.on("joined",data=>{myId=data.playerId;roomCode=data.room;document.getElementById("joinBox").classList.add("hidden");document.getElementById("controls").classList.remove("hidden");document.getElementById("arena").classList.remove("hidden");document.getElementById("logBox").classList.remove("hidden")});
-socket.on("error_msg",msg=>alert(msg));
-function startGame(){if(isSpectator())return alert("المشاهد لا يبدأ اللعبة");const timeLimit=parseInt(document.getElementById("timeLimitInput")?.value||"30",10);const scoreLimit=parseInt(document.getElementById("scoreLimitInput")?.value||"500",10);socket.emit("start",{room:roomCode,playerId:myId,timeLimit,scoreLimit})}
+
+function sitAtSeat(seat){
+  socket.emit("sit_seat", {room: roomCode, playerId: myId, seat});
+}
+
+function sendChat(){
+  const input = document.getElementById("chatInput");
+  const text = (input?.value || "").trim();
+  if(!text) return;
+  socket.emit("chat", {room: roomCode, playerId: myId, text});
+  input.value = "";
+}
+
+function kickPlayer(targetId){
+  if(!confirm("تأكيد طرد هذا الشخص من الغرفة؟")) return;
+  socket.emit("kick_player", {room: roomCode, hostId: myId, targetId});
+}
+
+function startGame(){
+  if(isSpectator()) return alert("اختر مقعد أولاً حتى تصبح لاعب");
+  const timeLimit = parseInt(document.getElementById("timeLimitInput")?.value || "30", 10);
+  const scoreLimit = parseInt(document.getElementById("scoreLimitInput")?.value || "500", 10);
+  socket.emit("start", {room: roomCode, playerId: myId, timeLimit, scoreLimit});
+}
+
 function drawCard(){
-  if(state?.role === "spectator"){
-    alert("أنت مشاهد فقط");
-    return;
-  }
-  socket.emit("draw",{room:roomCode,playerId:myId});
+  if(isSpectator()) return alert("أنت مشاهد فقط");
+  socket.emit("draw", {room: roomCode, playerId: myId});
 }
+
 function lastCard(){
-  if(state?.role === "spectator"){
-    alert("أنت مشاهد فقط");
-    return;
-  }
-
-  socket.emit("last_card",{room:roomCode,playerId:myId});
+  if(isSpectator()) return alert("أنت مشاهد فقط");
+  socket.emit("last_card", {room: roomCode, playerId: myId});
 }
-function endGame(){socket.emit("end_game",{room:roomCode,playerId:myId})}
-function leaveGame(){socket.emit("leave_room",{room:roomCode,playerId:myId})}socket.on("left_room",()=>{location.reload()});
+
+function endGame(){
+  socket.emit("end_game", {room: roomCode, playerId: myId});
+}
+
+function leaveGame(){
+  socket.emit("leave_room", {room: roomCode, playerId: myId});
+}
+
 function isBlackCard(card){
-  return card && (card.c === "black" || card.n === "+4" || card.n === "لون");
+  return card && (card.c === "black" || card.n === "+4" || card.n === "لون" || card.n === "تبديل");
 }
+
 function playCard(i){
-  if(state?.role === "spectator"){
-    alert("أنت مشاهد فقط");
-    return;
-  }
-
+  if(isSpectator()) return alert("أنت مشاهد فقط");
   if(!state || !state.myHand) return;
-
   const card = state.myHand[i];
   if(!card) return;
 
   if(isBlackCard(card)){
     selectedIndex = i;
-    document.getElementById("colorPicker").classList.add("show");
+    document.getElementById("colorPicker")?.classList.add("show");
     return;
   }
 
-  socket.emit("play",{room:roomCode,playerId:myId,index:i});
+  socket.emit("play", {room: roomCode, playerId: myId, index: i});
 }
+
 function chooseColor(color){
   if(selectedIndex === null || selectedIndex === undefined) return;
-  socket.emit("play", {room:roomCode, playerId:myId, index:selectedIndex, color:color});
+  socket.emit("play", {room: roomCode, playerId: myId, index: selectedIndex, color});
   selectedIndex = null;
-  const picker = document.getElementById("colorPicker");
-  if(picker) picker.classList.remove("show");
+  document.getElementById("colorPicker")?.classList.remove("show");
 }
-document.getElementById("colorPicker")?.addEventListener("click", function(e){
-  if(e.target === this){
-    this.classList.remove("show");
-    selectedIndex = null;
-  }
-});
-socket.on("state", data => {
-  console.log("✅ state received", data);
 
-  state = data;
-  myId = data.myId;
-  myRole = data.role || "spectator";
-  roomCode = data.room;
-
-  document.getElementById("joinBox").classList.add("hidden");
-  document.getElementById("controls").classList.remove("hidden");
-  document.getElementById("arena").classList.remove("hidden");
-  document.getElementById("logBox").classList.remove("hidden");
-
-  render();
-});
 function cardSymbol(n){
-  if(n==="عكس") return "↺";
-  if(n==="تخطي") return "⊘";
-  if(n==="تبديل") return "⇄";  // 👈 الرمز الجديد
+  if(n === "عكس") return "↺";
+  if(n === "تخطي") return "⊘";
+  if(n === "تبديل") return "⇄";
   return n;
 }
-function cardValueOrder(n){const v=parseInt(n,10);if(!Number.isNaN(v))return v;if(n==="تخطي")return 10;if(n==="عكس")return 11;if(n==="+2")return 12;if(n==="+4")return 13;if(n==="لون")return 14;return 99}
-function colorOrder(c){return({bluec:1,yellow:2,red:3,greenc:4,black:5})[c]||99}
-function sortedHandWithIndex(hand){return(hand||[]).map((c,i)=>({...c,realIndex:i})).sort((a,b)=>{const ca=colorOrder(a.c),cb=colorOrder(b.c);if(ca!==cb)return ca-cb;return cardValueOrder(a.n)-cardValueOrder(b.n)})}
+
+function cardValueOrder(n){
+  const v = parseInt(n, 10);
+  if(!Number.isNaN(v)) return v;
+  if(n === "تخطي") return 10;
+  if(n === "عكس") return 11;
+  if(n === "+2") return 12;
+  if(n === "+4") return 13;
+  if(n === "لون") return 14;
+  if(n === "تبديل") return 15;
+  return 99;
+}
+
+function colorOrder(c){
+  return ({bluec:1, yellow:2, red:3, greenc:4, black:5})[c] || 99;
+}
+
+function sortedHandWithIndex(hand){
+  return (hand || [])
+    .map((c, i) => ({...c, realIndex:i}))
+    .sort((a,b) => {
+      const ca = colorOrder(a.c), cb = colorOrder(b.c);
+      if(ca !== cb) return ca - cb;
+      return cardValueOrder(a.n) - cardValueOrder(b.n);
+    });
+}
+
 function cardHtml(c){
   const symbol = cardSymbol(c.n);
   return `<div class="card ${c.c}" onclick="playCard(${c.realIndex})">
@@ -508,130 +540,82 @@ function cardHtml(c){
     <span class="mark">${symbol}</span>
   </div>`;
 }
-function tableCardHtml(c){const symbol=cardSymbol(c.n);return `<div class="card ${c.c}"><span class="cornerNum">${symbol}</span><span class="skullBig">☠</span><span class="mark">${symbol}</span></div>`}
-function scoreHtml(p){const score=Number(p?.score||0);const limit=Number(state?.scoreLimit||500);const cls=score>=Math.max(0,limit-50)?"playerScore danger":"playerScore";return `<div class="${cls}">النقاط: ${score} / ${limit}</div>`}
 
-function closeFinalOverlay(){document.getElementById("finalOverlay")?.classList.remove("show")}
+function tableCardHtml(c){
+  const symbol = cardSymbol(c.n);
+  return `<div class="card ${c.c}">
+    <span class="cornerNum">${symbol}</span>
+    <span class="skullBig">☠</span>
+    <span class="mark">${symbol}</span>
+  </div>`;
+}
+
+function scoreHtml(p){
+  const score = Number(p?.score || 0);
+  const limit = Number(state?.scoreLimit || 500);
+  const cls = score >= Math.max(0, limit - 50) ? "playerScore danger" : "playerScore";
+  return `<div class="${cls}">النقاط: ${score} / ${limit}</div>`;
+}
+
+function getPlayerColor(id){
+  const colors = ["#ff4b4b", "#4bd0ff", "#4bff88", "#ffd84b", "#c04bff", "#ff8c4b", "#55efc4", "#ff77e9"];
+  const allPeople = [...(state?.players || []), ...(state?.spectators || [])];
+  const index = allPeople.findIndex(p => p.id === id);
+  if(index === -1) return "#aaa";
+  return colors[index % colors.length];
+}
+
+function closeFinalOverlay(){
+  document.getElementById("finalOverlay")?.classList.remove("show");
+}
+
 function renderFinalResults(){
-  const overlay=document.getElementById("finalOverlay");
-  if(!overlay||!state)return;
-  const fr=state.finalResults;
-  if(!state.gameOver||!fr){overlay.classList.remove("show");return;}
-  document.getElementById("finalWinner").innerHTML="الفائز: "+(fr.winner||"-");
-  const losers=Array.isArray(fr.losers)?fr.losers:[];
-  document.getElementById("finalLosers").innerHTML=losers.length?`<div class="finalLoser">الخاسر: ${losers.join("، ")}</div>`:"";
-  const rows=(fr.players||[]).map(p=>`<tr><td>${p.name||"-"}</td><td>${p.score||0}</td><td>${p.wins||0}</td></tr>`).join("");
-  document.getElementById("finalRows").innerHTML=rows;
+  const overlay = document.getElementById("finalOverlay");
+  if(!overlay || !state) return;
+  const fr = state.finalResults;
+  if(!state.gameOver || !fr){
+    overlay.classList.remove("show");
+    return;
+  }
+
+  document.getElementById("finalWinner").innerHTML = "الفائز: " + escapeHTML(fr.winner || "-");
+  const losers = Array.isArray(fr.losers) ? fr.losers : [];
+  document.getElementById("finalLosers").innerHTML = losers.length
+    ? `<div class="finalLoser">الخاسر: ${escapeHTML(losers.join("، "))}</div>`
+    : "";
+  document.getElementById("finalRows").innerHTML = (fr.players || []).map(p =>
+    `<tr><td>${escapeHTML(p.name || "-")}</td><td>${p.score || 0}</td><td>${p.wins || 0}</td></tr>`
+  ).join("");
   overlay.classList.add("show");
 }
-function render(){
-  if(!state) return;
 
-  const players = state.players || [];
-  const currentPlayer = players[state.turn];
+function renderLog(){
+  const logEl = document.getElementById("log");
+  if(!logEl || !state) return;
 
-  document.getElementById("turn").innerHTML =
-    "🔥 الدور: " + (currentPlayer ? currentPlayer.name : "-");
-
-  const colorMap = {
-    red:"#ff4b4b",
-    yellow:"#ffd84d",
-    greenc:"#35d66b",
-    bluec:"#4da3ff",
-    black:"#ffffff"
-  };
-
-  const colorNameMap = {
-    red:"أحمر",
-    yellow:"أصفر",
-    greenc:"أخضر",
-    bluec:"أزرق",
-    black:"اختيار"
-  };
-
-  document.getElementById("need").innerHTML =
-    "اللون: <span style='color:" + (colorMap[state.color] || "#fff") + "'>" +
-    (colorNameMap[state.color] || state.color || "-") +
-    "</span>";
-
-  let penalty = "";
-  if(Number(state.pendingDraw4 || 0) > 0){
-    penalty = "عقوبة +4: " + state.pendingDraw4 + " — رد بنفس اللون أو اسحب";
-  }else if(Number(state.pendingDraw2 || 0) > 0){
-    penalty = "عقوبة +2: " + state.pendingDraw2 + " — رد بنفس اللون أو اسحب";
-  }
-
-  document.getElementById("penaltyLine").innerHTML = penalty;
-  document.getElementById("top").innerHTML = state.top ? tableCardHtml(state.top) : "";
-  document.getElementById("hand").innerHTML = isSpectator()
-    ? '<div class="spectatorNote">👀 أنت مشاهد — دردشة فقط</div>'
-    : sortedHandWithIndex(state.myHand || []).map(c => cardHtml(c)).join("");
-
-const logEl = document.getElementById("log");
-
-const visibleLog = (state.log || []);
-
-logEl.innerHTML = visibleLog.map(msg => {
-
-  if(typeof msg === "object" && msg.type === "chat"){
-
-    const color = getPlayerColor(msg.id);
-
-    const avatar = (msg.avatar && msg.avatar !== "auto")
-      ? msg.avatar
-      : "💬";
-
-    return `
-      <div class="chatLine">
-        <span class="chatAvatar">${avatar}</span>
-        <span class="chatName" style="color:${color}">${msg.name}:</span>
-        <span class="chatText">${msg.text}</span>
-      </div>
-    `;
-  }
-
-  return `<div class="logLine">${msg}</div>`;
-
-}).join("");
-
-logEl.scrollTop = logEl.scrollHeight;
-});
-
-logEl.innerHTML = visibleLog.map(msg => {
-  if(typeof msg === "object" && msg.type === "chat"){
-    const mine = msg.id === myId;
-
-    return `
-      <div class="chatMsg ${mine ? "chatMe" : "chatOther"}">
-        <div class="chatBubble">
-          <span class="chatEmoji">${msg.avatar && msg.avatar !== "auto" ? msg.avatar : "💬"}</span>
-          <span class="chatName">${msg.name || "لاعب"}:</span>
-          <span class="chatText">${msg.text || ""}</span>
+  logEl.innerHTML = (state.log || []).map(msg => {
+    if(typeof msg === "object" && msg.type === "chat"){
+      const color = getPlayerColor(msg.id);
+      const avatar = (msg.avatar && msg.avatar !== "auto") ? msg.avatar : "💬";
+      return `
+        <div class="chatLine">
+          <span class="chatAvatar">${avatar}</span>
+          <span class="chatName" style="color:${color}">${escapeHTML(msg.name || "لاعب")}:</span>
+          <span class="chatText">${escapeHTML(msg.text || "")}</span>
         </div>
-      </div>
-    `;
-  }
+      `;
+    }
 
-  return `<div class="sysMsg">${msg}</div>`;
-}).join("");
+    const text = String(msg || "");
+    if(text.includes("دخل") || text.includes("خرج") || text.includes("انضم") || text.includes("غادر") || text.includes("طرد") || text.includes("مشاهد")){
+      return `<div class="logLine">${escapeHTML(text)}</div>`;
+    }
+    return "";
+  }).join("");
 
-logEl.scrollTop = logEl.scrollHeight;
-
-  const percent = state.timeLimit
-    ? Math.max(0, Math.min(100, (Number(state.timeLeft || 0) / Number(state.timeLimit || 1)) * 100))
-    : 0;
-
-  document.getElementById("timerBar").style.width = percent + "%";
-
-  document.getElementById("timeText").innerHTML =
-    state.started
-      ? "⏱️ الوقت المتبقي: " + (state.timeLeft ?? 0) + " ثانية"
-      : "⏱️ وقت اللاعب: " + (state.timeLimit ?? "-") + " ثانية";
-
-  renderSeats();
-  renderSpectators();
-  renderFinalResults();
+  logEl.scrollTop = logEl.scrollHeight;
 }
+
 function renderSpectators(){
   const box = document.getElementById("spectatorsBox");
   if(!box || !state) return;
@@ -642,45 +626,28 @@ function renderSpectators(){
   box.innerHTML = `
     <div class="spectatorsTitle">👀 المشاهدين</div>
     ${spectators.map(s => {
+      const avatar = (s.avatar && s.avatar !== "auto") ? s.avatar : "👀";
       const kickBtn = (state.host === myId || state.hostId === myId)
         ? `<button class="redBtn" onclick="kickPlayer('${s.id}')">طرد</button>`
         : "";
-
       return `
         <span class="spectatorChip">
-          <span>${s.avatar && s.avatar !== "auto" ? s.avatar : "👀"}</span>
-          <span>${s.name}</span>
+          <span>${avatar}</span>
+          <span>${escapeHTML(s.name || "مشاهد")}</span>
           ${kickBtn}
         </span>
       `;
     }).join("")}
   `;
 }
-  function getPlayerColor(id){
-  const colors = [
-    "#ff4b4b",
-    "#4bd0ff",
-    "#4bff88",
-    "#ffd84b",
-    "#c04bff",
-    "#ff8c4b"
-  ];
 
-  if(!state?.players) return "#fff";
-
-  const index = state.players.findIndex(p => p.id === id);
-
-  if(index === -1) return "#aaa";
-
-  return colors[index % colors.length];
-}
 function renderSeats(){
   if(!state) return;
 
   const players = state.players || [];
   const me = players.find(p => p.id === myId);
 
-  for(let i = 0; i < 6; i++){
+  for(let i=0; i<6; i++){
     const seat = document.getElementById("seat" + i);
     if(!seat) continue;
 
@@ -688,7 +655,6 @@ function renderSeats(){
 
     if(i === 0){
       const hand = document.getElementById("hand");
-
       seat.querySelectorAll(".avatarBadge,.playerName,.playerMeta,.playerScore,.spectatorNote,.sitChoices").forEach(x => x.remove());
 
       if(isSpectator()){
@@ -710,27 +676,17 @@ function renderSeats(){
       if(me){
         seat.insertAdjacentHTML("afterbegin", `
           ${avatarHtml(me)}
-          <div class="playerName">${me.name}</div>
-          <div class="playerMeta">
-            <span class="playerCards">${(state.myHand || []).length}</span> كرت
-            ${scoreHtml(me)}
-          </div>
+          <div class="playerName">${escapeHTML(me.name)}</div>
+          <div class="playerMeta"><span class="playerCards">${(state.myHand || []).length}</span> كرت${scoreHtml(me)}</div>
         `);
 
-        if(players[state.turn] && players[state.turn].id === me.id){
-          seat.classList.add("active");
-        }
-
-        if(hand && hand.parentElement !== seat){
-          seat.appendChild(hand);
-        }
+        if(players[state.turn] && players[state.turn].id === me.id) seat.classList.add("active");
+        if(hand && hand.parentElement !== seat) seat.appendChild(hand);
       }
-
       continue;
     }
 
     const p = players.find(pp => Number(pp.seat) === i);
-
     if(!p){
       seat.classList.add("empty");
       seat.innerHTML = !state.started && isSpectator()
@@ -744,40 +700,104 @@ function renderSeats(){
       continue;
     }
 
-    const teamTxt = p.team ? ` — ${p.team}` : "";
+    const teamTxt = p.team ? ` — ${escapeHTML(p.team)}` : "";
     const kickBtn = (state.host === myId || state.hostId === myId) && p.id !== myId
       ? `<button class="redBtn" onclick="kickPlayer('${p.id}')">طرد</button>`
       : "";
 
     seat.innerHTML = `
       ${avatarHtml(p)}
-      <div class="playerName">${p.name}</div>
-      <div class="playerMeta">
-        <span class="playerCards">${p.count ?? p.cards ?? 0}</span> كرت${teamTxt}
-        ${scoreHtml(p)}
-      </div>
+      <div class="playerName">${escapeHTML(p.name)}</div>
+      <div class="playerMeta"><span class="playerCards">${p.count ?? p.cards ?? 0}</span> كرت${teamTxt}${scoreHtml(p)}</div>
       ${kickBtn}
     `;
 
-    if(players[state.turn] && players[state.turn].id === p.id){
-      seat.classList.add("active");
-    }
+    if(players[state.turn] && players[state.turn].id === p.id) seat.classList.add("active");
   }
 }
-// باقي كودك...
 
-socket.on("connect", () => {
-  console.log("✅ socket connected", socket.id);
+function render(){
+  if(!state) return;
+
+  const players = state.players || [];
+  const currentPlayer = players[state.turn];
+
+  document.getElementById("turn").innerHTML = "🔥 الدور: " + escapeHTML(currentPlayer ? currentPlayer.name : "-");
+
+  const colorMap = {red:"#ff4b4b", yellow:"#ffd84d", greenc:"#35d66b", bluec:"#4da3ff", black:"#ffffff"};
+  const colorNameMap = {red:"أحمر", yellow:"أصفر", greenc:"أخضر", bluec:"أزرق", black:"اختيار"};
+
+  document.getElementById("need").innerHTML =
+    "اللون: <span style='color:" + (colorMap[state.color] || "#fff") + "'>" +
+    escapeHTML(colorNameMap[state.color] || state.color || "-") +
+    "</span>";
+
+  let penalty = "";
+  if(Number(state.pendingDraw4 || 0) > 0) penalty = "عقوبة +4: " + state.pendingDraw4 + " — رد بنفس اللون أو اسحب";
+  else if(Number(state.pendingDraw2 || 0) > 0) penalty = "عقوبة +2: " + state.pendingDraw2 + " — رد بنفس اللون أو اسحب";
+
+  document.getElementById("penaltyLine").innerHTML = penalty;
+  document.getElementById("top").innerHTML = state.top ? tableCardHtml(state.top) : "";
+
+  document.getElementById("hand").innerHTML = isSpectator()
+    ? '<div class="spectatorNote">👀 أنت مشاهد — دردشة فقط</div>'
+    : sortedHandWithIndex(state.myHand || []).map(c => cardHtml(c)).join("");
+
+  const percent = state.timeLimit
+    ? Math.max(0, Math.min(100, (Number(state.timeLeft || 0) / Number(state.timeLimit || 1)) * 100))
+    : 0;
+
+  const timerBar = document.getElementById("timerBar");
+  if(timerBar) timerBar.style.width = percent + "%";
+
+  document.getElementById("timeText").innerHTML = state.started
+    ? "⏱️ الوقت المتبقي: " + (state.timeLeft ?? 0) + " ثانية"
+    : "⏱️ وقت اللاعب: " + (state.timeLimit ?? "-") + " ثانية";
+
+  renderLog();
+  renderSeats();
+  renderSpectators();
+  renderFinalResults();
+}
+
+socket.on("joined", data => {
+  myId = data.playerId;
+  roomCode = data.room;
+  document.getElementById("joinBox")?.classList.add("hidden");
+  document.getElementById("controls")?.classList.remove("hidden");
+  document.getElementById("arena")?.classList.remove("hidden");
+  document.getElementById("logBox")?.classList.remove("hidden");
 });
 
-socket.on("connect_error", (err) => {
-  console.log("❌ socket error", err.message);
+socket.on("state", data => {
+  console.log("✅ state received", data);
+  state = data;
+  myId = data.myId;
+  myRole = data.role || "spectator";
+  roomCode = data.room;
+
+  document.getElementById("joinBox")?.classList.add("hidden");
+  document.getElementById("controls")?.classList.remove("hidden");
+  document.getElementById("arena")?.classList.remove("hidden");
+  document.getElementById("logBox")?.classList.remove("hidden");
+
+  render();
 });
 
-// 👇 هنا تضيفه
-document.getElementById("chatInput").addEventListener("keydown", function(e){
-  if(e.key === "Enter"){
-    sendChat();
+socket.on("error_msg", msg => alert(typeof msg === "string" ? msg : (msg?.message || JSON.stringify(msg))));
+socket.on("kicked", () => { alert("تم طردك من الغرفة"); location.reload(); });
+socket.on("left_room", () => location.reload());
+socket.on("connect", () => console.log("✅ socket connected", socket.id));
+socket.on("connect_error", err => console.log("❌ socket error", err.message));
+
+document.getElementById("chatInput")?.addEventListener("keydown", function(e){
+  if(e.key === "Enter") sendChat();
+});
+
+document.getElementById("colorPicker")?.addEventListener("click", function(e){
+  if(e.target === this){
+    this.classList.remove("show");
+    selectedIndex = null;
   }
 });
 </script>
