@@ -278,18 +278,7 @@ button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
   <span class="avatarSelectWrap">🎭 <select id="avatarInput" title="اختر شخصيتك الكوميدية">
     <option value="auto">تلقائي</option><option value="🤡">🤡</option><option value="😂">😂</option><option value="😈">😈</option><option value="🤖">🤖</option><option value="👽">👽</option><option value="🐸">🐸</option><option value="🐵">🐵</option><option value="🐔">🐔</option><option value="💀">💀</option><option value="🧠">🧠</option><option value="🥸">🥸</option><option value="👻">👻</option>
   </select></span>
-  <select id="roleInput" onchange="toggleRoleOptions()">
-    <option value="player">🎮 لاعب / أجلس على الطاولة</option>
-    <option value="spectator">👀 مشاهد / دردشة فقط</option>
-  </select>
-  <select id="seatInput" class="playerOnly">
-    <option value="0">المقعد 1</option>
-    <option value="1">المقعد 2</option>
-    <option value="2">المقعد 3</option>
-    <option value="3">المقعد 4</option>
-    <option value="4">المقعد 5</option>
-    <option value="5">المقعد 6</option>
-  </select>
+
   <input id="roomInput" value="ROOM1">
   <select id="modeInput" onchange="toggleTeamOptions()"><option value="solo">فردي</option><option value="teams">جماعي</option></select>
   <select id="teamModeInput" class="teamOnly hidden" onchange="toggleTeamOptions()"><option value="auto">تلقائي</option><option value="manual">يدوي</option></select>
@@ -347,6 +336,13 @@ function chatAvatarForMsg(msg){
   if(p)return avatarForPlayer(p);
   return "🎭";
 }
+  function sitAtSeat(seat){
+  socket.emit("sit_seat", {
+    room: roomCode,
+    playerId: myId,
+    seat: seat
+  });
+}
 function sendChat(){const input=document.getElementById("chatInput");const text=input.value.trim();if(!text)return;socket.emit("chat",{room:roomCode,playerId:myId,text});input.value=""}
 function toggleRoleOptions(){
   const role=document.getElementById("roleInput")?.value||"player";
@@ -357,17 +353,25 @@ function toggleTeamOptions(){const mode=document.getElementById("modeInput").val
 function kickPlayer(targetId){if(!confirm("تأكيد طرد اللاعب؟"))return;socket.emit("kick_player",{room:roomCode,hostId:myId,targetId})}
 socket.on("kicked",()=>{alert("تم طردك من الغرفة");location.reload()});
 function joinGame(){
-  const name=document.getElementById("nameInput").value||"لاعب";
-  selectedAvatar=document.getElementById("avatarInput")?.value||"auto";
-  roomCode=(document.getElementById("roomInput").value||"ROOM1").toUpperCase();
-  const mode=document.getElementById("modeInput").value;
-  const teamMode=document.getElementById("teamModeInput").value;
-  const teamCount=document.getElementById("teamCountInput").value;
-  const team=document.getElementById("teamInput").value;
-  const role=document.getElementById("roleInput")?.value||"player";
-  const seat=parseInt(document.getElementById("seatInput")?.value||"0",10);
-  myRole=role;
-  socket.emit("join",{name,room:roomCode,mode,teamMode,teamCount,team,avatar:selectedAvatar,role,seat});
+  const name = document.getElementById("nameInput").value || "لاعب";
+  selectedAvatar = document.getElementById("avatarInput")?.value || "auto";
+  roomCode = (document.getElementById("roomInput").value || "ROOM1").toUpperCase();
+
+  const mode = document.getElementById("modeInput").value;
+  const teamMode = document.getElementById("teamModeInput").value;
+  const teamCount = document.getElementById("teamCountInput").value;
+  const team = document.getElementById("teamInput").value;
+
+  socket.emit("join",{
+    name,
+    room: roomCode,
+    mode,
+    teamMode,
+    teamCount,
+    team,
+    avatar: selectedAvatar,
+    role: "spectator"
+  });
 }
 socket.on("joined",data=>{myId=data.playerId;roomCode=data.room;document.getElementById("joinBox").classList.add("hidden");document.getElementById("controls").classList.remove("hidden");document.getElementById("arena").classList.remove("hidden");document.getElementById("logBox").classList.remove("hidden")});
 socket.on("error_msg",msg=>alert(msg));
@@ -567,15 +571,23 @@ logEl.scrollTop = logEl.scrollHeight;
   renderFinalResults();
 }
 function renderSpectators(){
-  const box=document.getElementById("spectatorsBox");
-  if(!box||!state)return;
-  const specs=state.spectators||[];
-  box.classList.toggle("hidden", specs.length===0);
-  if(!specs.length){box.innerHTML="";return;}
-  const canKick=state.host===myId || state.hostId===myId;
-  box.innerHTML='<div class="spectatorsTitle">👀 المشاهدون</div>' + specs.map(s=>{
-    const kick=canKick&&s.id!==myId?`<button class="redBtn" onclick="kickPlayer('${s.id}')">طرد</button>`:"";
-    return `<span class="spectatorChip">${s.avatar&&s.avatar!=="auto"?s.avatar:"👀"} ${s.name||"مشاهد"} ${kick}</span>`;
+  const box = document.getElementById("spectatorsBox");
+  if(!box || !state) return;
+
+  const spectators = state.spectators || [];
+
+  box.innerHTML = spectators.map(s => {
+    const kickBtn = state.host === myId
+      ? `<button class="redBtn" onclick="kickPlayer('${s.id}')">طرد</button>`
+      : "";
+
+    return `
+      <div class="spectatorItem">
+        <span>${s.avatar && s.avatar !== "auto" ? s.avatar : "👀"}</span>
+        <span>${s.name}</span>
+        ${kickBtn}
+      </div>
+    `;
   }).join("");
 }
 function renderSeats(){
