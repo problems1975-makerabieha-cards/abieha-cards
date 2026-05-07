@@ -236,44 +236,86 @@ def is_allowed(r, card):
 
 
 def apply_effect(r, card):
-    if card["n"] == "+2":
-        r["pendingDraw2"] = int(r.get("pendingDraw2", 0)) + 2
+
+    # كرت التبديل
+    if card["n"] == "تبديل":
+        if int(r.get("pendingDraw2", 0)) == 0 and int(r.get("pendingDraw4", 0)) == 0:
+            swap_random_two_hands(r)
+
+        r["pendingDraw2"] = 0
         r["pendingDraw4"] = 0
         r["turn"] = next_index(r)
         return
 
+    # +2 يتراكم
+    if card["n"] == "+2":
+        r["pendingDraw2"] = int(r.get("pendingDraw2", 0)) + 2
+        r["pendingDraw4"] = 0
+        r["log"].insert(0, f"العقوبة الآن: اسحب {r['pendingDraw2']}")
+        r["turn"] = next_index(r)
+        return
+
+    # +4 يتراكم
     if card["n"] == "+4":
         r["pendingDraw4"] = int(r.get("pendingDraw4", 0)) + 4
         r["pendingDraw2"] = 0
+        r["log"].insert(0, f"العقوبة الآن: اسحب {r['pendingDraw4']}")
         r["turn"] = next_index(r)
         return
 
-    if card["n"] == "عكس":
-        r["direction"] *= -1
-        r["log"].insert(0, "↺ عكس الاتجاه")
+    # عكس / تخطي أثناء العقوبة: يمرر العقوبة ولا يصفرها
+    if card["n"] in ["عكس", "تخطي"]:
 
-        # إذا لاعبين فقط: نفس اللاعب يلعب مرة ثانية
-        if len(r["players"]) == 2:
+        if r.get("pendingDraw2", 0) > 0 or r.get("pendingDraw4", 0) > 0:
+
+            if card["n"] == "عكس":
+                r["direction"] *= -1
+                r["log"].insert(0, "↺ عكس أثناء العقوبة — العقوبة مستمرة")
+
+            if card["n"] == "تخطي":
+                r["log"].insert(0, "⊘ تخطي أثناء العقوبة — العقوبة مستمرة")
+
+            # إذا لاعبين فقط: نفس اللاعب يلعب مرة ثانية
+            if len(r["players"]) == 2:
+                return
+
+            r["turn"] = next_index(r)
+
+            if card["n"] == "تخطي":
+                r["turn"] = next_index(r)
+
             return
 
-        r["turn"] = next_index(r)
-        return
+        # عكس / تخطي بدون عقوبة
+        r["pendingDraw2"] = 0
+        r["pendingDraw4"] = 0
 
-    if card["n"] == "تخطي":
-        r["log"].insert(0, "⊘ تخطي اللاعب التالي")
+        if card["n"] == "عكس":
+            r["direction"] *= -1
+            r["log"].insert(0, "عكس اتجاه اللعب")
 
-        # إذا لاعبين فقط: نفس اللاعب يلعب مرة ثانية
-        if len(r["players"]) == 2:
+            # إذا لاعبين فقط: نفس اللاعب يلعب مرة ثانية
+            if len(r["players"]) == 2:
+                return
+
+            r["turn"] = next_index(r)
             return
 
-        r["turn"] = next_index(r)
-        r["turn"] = next_index(r)
-        return
+        if card["n"] == "تخطي":
+            r["log"].insert(0, "تم تخطي اللاعب التالي")
 
+            # إذا لاعبين فقط: نفس اللاعب يلعب مرة ثانية
+            if len(r["players"]) == 2:
+                return
+
+            r["turn"] = next_index(r)
+            r["turn"] = next_index(r)
+            return
+
+    # الكروت العادية
     r["pendingDraw2"] = 0
     r["pendingDraw4"] = 0
     r["turn"] = next_index(r)
-
 def handle_timeout(room):
     r = rooms.get(room)
     if not r or not r.get("started") or not r.get("players"):
