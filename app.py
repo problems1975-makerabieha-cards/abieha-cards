@@ -259,14 +259,13 @@ def apply_effect(r, card):
     if card["n"] == "تبديل":
         if int(r.get("pendingDraw2", 0)) == 0 and int(r.get("pendingDraw4", 0)) == 0:
             swap_random_two_hands(r)
-         else:
+        else:
             r["log"].insert(0, "لا يمكن استخدام التبديل أثناء العقوبة")
 
         r["pendingDraw2"] = 0
         r["pendingDraw4"] = 0
         r["turn"] = next_index(r)
         return
-
     # +2 يتراكم
     if card["n"] == "+2":
         r["pendingDraw2"] = int(r.get("pendingDraw2", 0)) + 2
