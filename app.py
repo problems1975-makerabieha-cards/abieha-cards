@@ -255,17 +255,15 @@ def swap_random_two_hands(r):
 
 def apply_effect(r, card):
 
-    # كرت التبديل
+    # كرت التبديل: يبدل أوراق أي لاعبين عشوائي فقط
+    # لا يغير اللون ولا يتحول إلى +4 ولا يسحب أوراق
     if card["n"] == "تبديل":
-        if int(r.get("pendingDraw2", 0)) == 0 and int(r.get("pendingDraw4", 0)) == 0:
-            swap_random_two_hands(r)
-        else:
-            r["log"].insert(0, "لا يمكن استخدام التبديل أثناء العقوبة")
-
+        swap_random_two_hands(r)
         r["pendingDraw2"] = 0
         r["pendingDraw4"] = 0
         r["turn"] = next_index(r)
         return
+
     # +2 يتراكم
     if card["n"] == "+2":
         r["pendingDraw2"] = int(r.get("pendingDraw2", 0)) + 2
@@ -274,7 +272,7 @@ def apply_effect(r, card):
         r["turn"] = next_index(r)
         return
 
-    # +4 يتراكم
+    # +4 يتراكم ويغير اللون من on_play حسب اختيار اللاعب
     if card["n"] == "+4":
         r["pendingDraw4"] = int(r.get("pendingDraw4", 0)) + 4
         r["pendingDraw2"] = 0
@@ -331,10 +329,13 @@ def apply_effect(r, card):
             r["turn"] = next_index(r)
             return
 
+    # كرت تغيير اللون فقط: اللون يتغير في on_play ثم ينتقل الدور
     # الكروت العادية
     r["pendingDraw2"] = 0
     r["pendingDraw4"] = 0
     r["turn"] = next_index(r)
+
+
 def handle_timeout(room):
     r = rooms.get(room)
     if not r or not r.get("started") or not r.get("players"):
@@ -646,14 +647,16 @@ def on_play(data):
     p["hand"].pop(index)
     r["discard"].append(card)
 
-    if card["c"] == "black":
+    # +4 وكرت اللون فقط يحتاجون اختيار لون.
+    # كرت تبديل لا يحتاج لون ولا يغير اللون الحالي.
+    if card["n"] in ["+4", "لون"]:
         if not chosen_color or chosen_color not in COLORS:
             emit("error_msg", "اختر لون")
             p["hand"].insert(index, card)
             r["discard"].pop()
             return
         r["color"] = chosen_color
-    else:
+    elif card["c"] != "black":
         r["color"] = card["c"]
 
     r["log"].insert(0, f"{p['name']} رمى {card['n']}")
@@ -696,30 +699,20 @@ def on_play(data):
             send_state(room)
             return
 
+        # انتهت الجولة فقط، ولا نوزع جولة جديدة إلا عند ضغط ابدأ مرة ثانية
         r["started"] = False
         cancel_timer(r)
         send_state(room)
         return
 
-    # 🔁 إذا ما انتهت اللعبة → نبدأ جولة جديدة
-    r["deck"] = build_deck()
-    r["discard"] = []
-    r["pendingDraw4"] = 0
-    r["pendingDraw2"] = 0
+    apply_effect(r, card)
 
     for pp in r["players"]:
-        pp["hand"] = [r["deck"].pop() for _ in range(7)]
-        pp["last"] = False
-
-    first = r["deck"].pop()
-    r["discard"].append(first)
-    r["color"] = first["c"] if first["c"] != "black" else random.choice(COLORS)
-
-    r["turn"] = idx  # الفائز يبدأ الجولة
+        if len(pp.get("hand", [])) != 1:
+            pp["last"] = False
 
     start_timer(room)
     send_state(room)
-    return
 
 
 @socketio.on("draw")
