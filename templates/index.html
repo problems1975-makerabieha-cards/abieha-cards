@@ -659,7 +659,8 @@ function leaveGame(){
 }
 
 function isBlackCard(card){
-  return card && (card.c === "black" || card.n === "+4" || card.n === "لون" || card.n === "تبديل");
+  // كرت التبديل لا يفتح اختيار اللون، ينسحب مباشرة للسيرفر ويبدّل أوراق لاعبين عشوائي
+  return card && (card.n === "+4" || card.n === "لون");
 }
 
 function playCard(i){
