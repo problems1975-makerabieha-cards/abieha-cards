@@ -659,38 +659,45 @@ def on_play(data):
     r["log"].insert(0, f"{p['name']} رمى {card['n']}")
 
     if len(p["hand"]) == 0:
-    winner = p
-    winner["wins"] = winner.get("wins", 0) + 1
+        winner = p
+        winner["wins"] = winner.get("wins", 0) + 1
 
-    # حساب النقاط على الباقي
-    for i, pp in enumerate(r["players"]):
-        if i == idx:
-            continue
-        add_score = sum(card_points(c) for c in pp["hand"])
-        pp["score"] = pp.get("score", 0) + add_score
+        for i, pp in enumerate(r["players"]):
+            if i == idx:
+                continue
 
-    r["log"].insert(0, f"🏆 فاز {winner['name']}")
+            add_score = sum(card_points(c) for c in pp["hand"])
+            pp["score"] = pp.get("score", 0) + add_score
+            r["log"].insert(0, f"📊 {pp['name']} انضاف عليه {add_score} نقطة — المجموع {pp['score']}")
 
-    # 🔥 تحقق من السكور النهائي
-    score_limit = int(r.get("scoreLimit", 500) or 500)
+        r["log"].insert(0, f"🏆 فاز {winner['name']}")
 
-    final_winner = None
-    for pp in r["players"]:
-        if pp.get("score", 0) >= score_limit:
-            final_winner = pp
-            break
+        score_limit = int(r.get("scoreLimit", 500) or 500)
+        losers = [pp for pp in r["players"] if pp.get("score", 0) >= score_limit]
 
-    if final_winner:
+        if losers:
+            loser_ids = {pp["id"] for pp in losers}
+            candidates = [pp for pp in r["players"] if pp["id"] not in loser_ids]
+            final_winner = min(candidates, key=lambda x: x.get("score", 0), default=winner)
+
+            r["started"] = False
+            r["gameOver"] = True
+            r["finalResults"] = {
+                "winner": final_winner["name"],
+                "losers": [pp["name"] for pp in losers],
+                "players": [
+                    {"name": pp["name"], "score": pp.get("score", 0), "wins": pp.get("wins", 0)}
+                    for pp in sorted(r["players"], key=lambda x: x.get("score", 0))
+                ],
+            }
+
+            cancel_timer(r)
+            r["log"].insert(0, f"🏆 الفائز النهائي: {final_winner['name']}")
+            send_state(room)
+            return
+
         r["started"] = False
-        r["gameOver"] = True
-        r["finalResults"] = {
-            "winner": final_winner["name"],
-            "score": final_winner["score"]
-        }
-
         cancel_timer(r)
-        r["log"].insert(0, f"🏆 انتهت اللعبة! الفائز النهائي: {final_winner['name']}")
-
         send_state(room)
         return
 
