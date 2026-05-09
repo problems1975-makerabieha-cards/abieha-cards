@@ -234,13 +234,23 @@ def is_allowed(r, card):
         or card["n"] == "تبديل"
     )
 
+def swap_random_two_hands(r):
+    if len(r.get("players", [])) < 2:
+        return
 
+    p1, p2 = random.sample(r["players"], 2)
+
+    p1["hand"], p2["hand"] = p2["hand"], p1["hand"]
+
+    r["log"].insert(0, f"🔀 تم تبديل أوراق {p1['name']} مع {p2['name']}")
 def apply_effect(r, card):
 
     # كرت التبديل
     if card["n"] == "تبديل":
         if int(r.get("pendingDraw2", 0)) == 0 and int(r.get("pendingDraw4", 0)) == 0:
             swap_random_two_hands(r)
+         else:
+            r["log"].insert(0, "لا يمكن استخدام التبديل أثناء العقوبة")
 
         r["pendingDraw2"] = 0
         r["pendingDraw4"] = 0
