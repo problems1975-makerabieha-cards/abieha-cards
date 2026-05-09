@@ -216,20 +216,29 @@ def send_state(room):
 
 
 def is_allowed(r, card):
-    if not r.get("discard"):
-        return True
-
     top = r["discard"][-1]
 
+    # أثناء عقوبة +4
     if r.get("pendingDraw4", 0) > 0:
-        return card["n"] == "+4" or card["n"] == top["n"]
+        return (
+            card["n"] == "+4"
+            or card["n"] == top["n"]
+            or (card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"])
+        )
 
+    # أثناء عقوبة +2
     if r.get("pendingDraw2", 0) > 0:
-        return card["n"] in ["+2", "+4"] or card["n"] == top["n"]
+        return (
+            card["n"] == "+2"
+            or card["n"] == "+4"
+            or card["n"] == top["n"]
+            or (card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"])
+        )
 
+    # اللعب الطبيعي
     return (
         card["c"] == "black"
-        or card["c"] == r.get("color")
+        or card["c"] == r["color"]
         or card["n"] == top["n"]
         or card["n"] == "تبديل"
     )
@@ -243,6 +252,7 @@ def swap_random_two_hands(r):
     p1["hand"], p2["hand"] = p2["hand"], p1["hand"]
 
     r["log"].insert(0, f"🔀 تم تبديل أوراق {p1['name']} مع {p2['name']}")
+
 def apply_effect(r, card):
 
     # كرت التبديل
