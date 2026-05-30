@@ -358,6 +358,16 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
             <option value="5">صعب 5×5</option>
             <option value="6">أسطوري 6×6</option>
         </select>
+
+        <label style="display:block;margin-top:12px;margin-bottom:6px;font-weight:800">عدد الجولات</label>
+        <select id="roundLimit">
+            <option value="1">1 جولة</option>
+            <option value="3" selected>3 جولات</option>
+            <option value="5">5 جولات</option>
+            <option value="7">7 جولات</option>
+            <option value="10">10 جولات</option>
+        </select>
+
         <button class="gold" onclick="startChallenge()">ابدأ التحدي للجميع</button>
         <button class="danger" onclick="resetGame()">تصفير الروم</button>
     </div>
@@ -375,6 +385,7 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
         <div class="badge">⏱ الوقت: <span id="timer">0</span> ث</div>
         <div class="badge">🧩 القطع: <span id="pieces">16</span></div>
         <div class="badge">✅ التقدم: <span id="progressText">0%</span></div>
+        <div class="badge">🏁 الجولة: <span id="roundText">0/3</span></div>
         <div class="badge">👆 اضغط قطعتين للتبديل</div>
     </div>
 
@@ -604,7 +615,8 @@ function startChallenge(){
         room: myRoom,
         size: chosenSize,
         imageUrl: imageUrl,
-        order: order
+        order: order,
+        roundLimit: parseInt(document.getElementById("roundLimit").value || "3")
     });
 }
 
@@ -691,7 +703,26 @@ function finishGame(name, finishTime){
     started = false;
     clearInterval(interval);
     document.getElementById("gameState").innerText = "انتهى";
-    document.getElementById("winnerText").innerText = `${name} خلص التركيب خلال ${finishTime || timer} ثانية`;
+    document.getElementById("winnerText").innerText = `${name} فاز بالجولة خلال ${finishTime || timer} ثانية`;
+    document.getElementById("winScreen").style.display = "flex";
+    soundWin();
+    renderPlayers();
+    renderRanking();
+}
+
+function showFinalWinner(state){
+    winner = state.winner || "الفائز";
+    started = false;
+    clearInterval(interval);
+    document.getElementById("gameState").innerText = "انتهت البطولة";
+
+    const finalName = state.finalWinner || state.winner || "الفائز";
+    const roundNow = state.round || 0;
+    const roundLimit = state.roundLimit || 0;
+
+    document.getElementById("winnerText").innerText =
+        `🏆 الفائز النهائي: ${finalName} — بعد ${roundNow}/${roundLimit} جولات`;
+
     document.getElementById("winScreen").style.display = "flex";
     soundWin();
     renderPlayers();
@@ -748,7 +779,7 @@ function renderPlayers(){
         <div class="player">
             <div>
                 <b>${p.name}</b><br>
-                <small>${p.finished?"🏁 خلص":"نسبة التركيب "+(p.progress||0)+"%"}</small>
+                <small>${p.finished?"🏁 خلص":"نسبة التركيب "+(p.progress||0)+"%"} | 🏆 ${p.wins||0} فوز</small>
                 <div class="progressBar"><div class="progressFill" style="width:${p.progress||0}%"></div></div>
             </div>
             <div class="status"></div>
@@ -772,7 +803,7 @@ function renderRanking(){
         box.innerHTML += `
         <div class="rank">
             <div class="medal">${medal}</div>
-            <div><b>${p.name}</b><br><small>${p.progress||0}%</small></div>
+            <div><b>${p.name}</b><br><small>${p.progress||0}% | 🏆 ${p.wins||0} فوز</small></div>
             <div>${p.time||"-"}ث</div>
         </div>`;
     });
@@ -791,14 +822,25 @@ socket.on("puzzle_state", function(state){
     const resetBtn = document.querySelector(".danger");
     const randomBtn = document.getElementById("randomImageBtn");
     const levelSelect = document.getElementById("level");
+    const roundLimitSelect = document.getElementById("roundLimit");
 
     if(startBtn) startBtn.disabled = !isHost;
     if(resetBtn) resetBtn.disabled = !isHost;
     if(randomBtn) randomBtn.disabled = !isHost;
     if(levelSelect) levelSelect.disabled = !isHost;
+    if(roundLimitSelect) roundLimitSelect.disabled = !isHost;
 
     renderPlayers();
     renderRanking();
+
+    if(document.getElementById("roundText")){
+        document.getElementById("roundText").innerText =
+            `${state.round || 0}/${state.roundLimit || 3}`;
+    }
+
+    if(document.getElementById("roundLimit") && state.roundLimit){
+        document.getElementById("roundLimit").value = String(state.roundLimit);
+    }
 
     if(state.imageUrl){
         imageUrl = state.imageUrl;
@@ -810,7 +852,11 @@ socket.on("puzzle_state", function(state){
     }
 
     if(state.winner && !winner){
-        finishGame(state.winner, state.winnerTime || timer);
+        if(state.status === "game_finished"){
+            showFinalWinner(state);
+        }else{
+            finishGame(state.winner, state.winnerTime || timer);
+        }
     }
 });
 socket.on("puzzle_started", function(data){
