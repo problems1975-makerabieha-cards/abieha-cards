@@ -106,7 +106,8 @@ def puzzle_reset(data):
 
     if room not in puzzle_rooms:
         return
-
+    if puzzle_rooms[room].get("host") != request.sid:
+    return
     puzzle_rooms[room]["winner"] = None
 
     for p in puzzle_rooms[room]["players"]:
@@ -121,7 +122,8 @@ def puzzle_start(data):
 
     if room not in puzzle_rooms:
         return
-
+    if puzzle_rooms[room].get("host") != request.sid:
+    return
     r = puzzle_rooms[room]
 
     r["winner"] = None
@@ -145,7 +147,8 @@ def puzzle_image(data):
 
     if room not in puzzle_rooms:
         return
-
+    if puzzle_rooms[room].get("host") != request.sid:
+    return
     host_sid = puzzle_rooms[room].get("host")
 
     if host_sid != request.sid:
