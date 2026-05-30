@@ -364,7 +364,7 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
 
     <div class="card">
         <h2>🖼️ صورة البازل</h2>
-        <button class="secondary" onclick="useRandomImage()">صورة عشوائية للجميع</button>
+        <button id="randomImageBtn" class="secondary" onclick="useRandomImage()">صورة عشوائية للجميع</button>
         <img id="preview" class="preview" src="https://picsum.photos/900?random=77">
         <p style="line-height:1.7;opacity:.8">ملاحظة: رفع صورة من جهازك يكون محلي فقط، أما الصورة العشوائية تظهر للجميع.</p>
     </div>
@@ -434,7 +434,8 @@ let myRoom = "ROOM1";
 let myMode = "solo";
 let lastProgressSent = -1;
 let joined = false;
-
+let isHost = false;
+    
 const board = document.getElementById("board");
 
 function toast(msg){
@@ -776,6 +777,19 @@ function renderRanking(){
 
 socket.on("puzzle_state", function(state){
     players = state.players || [];
+
+    isHost = state.host === socket.id;
+
+    const startBtn = document.querySelector(".gold");
+    const resetBtn = document.querySelector(".danger");
+    const randomBtn = document.getElementById("randomImageBtn");
+    const levelSelect = document.getElementById("level");
+
+    if(startBtn) startBtn.disabled = !isHost;
+    if(resetBtn) resetBtn.disabled = !isHost;
+    if(randomBtn) randomBtn.disabled = !isHost;
+    if(levelSelect) levelSelect.disabled = !isHost;
+
     renderPlayers();
     renderRanking();
 
@@ -792,7 +806,6 @@ socket.on("puzzle_state", function(state){
         finishGame(state.winner, state.winnerTime || timer);
     }
 });
-
 socket.on("puzzle_started", function(data){
     applyStart(data);
 });
