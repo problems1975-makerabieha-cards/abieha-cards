@@ -13,13 +13,18 @@ TEAM_ORDER = ["A", "B", "C"]
 
 
 @app.route("/")
-def index():
+def home():
+    return send_file("templates/home.html")
+
+
+@app.route("/uno")
+def uno():
     return send_file("templates/index.html")
 
 
 @app.route("/puzzle")
 def puzzle():
-    return send_file("templates/puzzle.html")
+    return send_file("templates/puzzle.html")")
 
 def build_deck():
     deck = []
