@@ -110,7 +110,51 @@ def puzzle_reset(data):
         p["finished"] = False
 
     emit("puzzle_state", puzzle_rooms[room], room="puzzle_" + room)
+@socketio.on("puzzle_start")
+def puzzle_start(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
 
+    if room not in puzzle_rooms:
+        return
+
+    r = puzzle_rooms[room]
+
+    r["winner"] = None
+    r["size"] = int(data.get("size", 4))
+    r["imageUrl"] = data.get("imageUrl", "https://picsum.photos/900?random=77")
+    r["order"] = data.get("order", [])
+    r["status"] = "started"
+
+    for p in r["players"]:
+        p["progress"] = 0
+        p["time"] = 0
+        p["finished"] = False
+
+    emit("puzzle_started", r, room="puzzle_" + room)
+    emit("puzzle_state", r, room="puzzle_" + room)
+
+
+@socketio.on("puzzle_image")
+def puzzle_image(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+
+    if room not in puzzle_rooms:
+        return
+
+    image_url = data.get("imageUrl")
+
+    if not image_url:
+        return
+
+    puzzle_rooms[room]["imageUrl"] = image_url
+
+    emit(
+        "puzzle_image_changed",
+        {"imageUrl": image_url},
+        room="puzzle_" + room
+    )
+
+    emit("puzzle_state", puzzle_rooms[room], room="puzzle_" + room)
 def build_deck():
     deck = []
     for c in COLORS:
