@@ -246,6 +246,36 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
 </head>
 <body>
 
+
+<div id="loginArea" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;padding-top:25px;background:linear-gradient(180deg,#0c234a,#050b18 75%);text-align:center">
+    <h1 style="margin:8px 0 18px;text-shadow:0 4px 10px #000;font-size:clamp(26px,5vw,38px)">🧩 أبيها - تحدي التركيب</h1>
+
+    <div style="width:96%;background:linear-gradient(135deg,rgba(22,53,105,.95),rgba(7,17,38,.95));border:1px solid rgba(120,190,255,.25);border-radius:24px;padding:18px 12px;margin-bottom:14px;box-shadow:0 18px 55px #0008;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
+        <button onclick="enterPuzzle()" style="width:auto;border:0;border-radius:15px;padding:12px 22px;margin:6px;font-weight:900;cursor:pointer;color:#071126;background:linear-gradient(180deg,#7affb2,#35dd7b);box-shadow:0 7px 0 #0b7d3b,0 12px 22px #0008">دخول</button>
+
+        <select id="loginMode" style="width:auto;min-width:160px;border:0;border-radius:14px;padding:12px 14px;margin:6px;font-size:16px;background:white;color:#111">
+            <option>فردي</option>
+            <option>فرق</option>
+        </select>
+
+        <input id="loginRoom" value="ROOM1" placeholder="الروم" style="width:auto;min-width:220px;border:0;border-radius:14px;padding:12px 14px;margin:6px;font-size:16px;background:white;color:#111;text-align:center">
+
+        <select id="loginAvatar" style="width:auto;min-width:95px;border:0;border-radius:14px;padding:12px 14px;margin:6px;font-size:18px;background:white;color:#111">
+            <option>🎭</option>
+            <option>😂</option>
+            <option>😎</option>
+            <option>🔥</option>
+            <option>💀</option>
+            <option>🧩</option>
+            <option>👻</option>
+            <option>🐺</option>
+        </select>
+
+        <input id="loginName" placeholder="اسم اللاعب" style="width:auto;min-width:220px;border:0;border-radius:14px;padding:12px 14px;margin:6px;font-size:16px;background:white;color:#111;text-align:right">
+    </div>
+</div>
+
+<div id="gameArea" style="display:none">
 <div class="topbar">
     <div class="logo">🧩 تحدي البازل</div>
     <div class="room">الغرفة: <b id="roomCode">ABIEHA-75</b></div>
@@ -326,6 +356,7 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
 </aside>
 
 </div>
+</div>
 
 <script>
 let size = 4;
@@ -362,6 +393,36 @@ function soundWin(){
             osc.stop(ctx.currentTime+i*.12+.2);
         });
     }catch(e){}
+}
+
+
+function enterPuzzle(){
+    const name = document.getElementById("loginName").value.trim();
+    const room = document.getElementById("loginRoom").value.trim() || "ROOM1";
+    const avatar = document.getElementById("loginAvatar").value;
+
+    if(!name){
+        alert("اكتب اسم اللاعب");
+        return;
+    }
+
+    document.getElementById("loginArea").style.display = "none";
+    document.getElementById("gameArea").style.display = "block";
+    document.getElementById("roomCode").innerText = room;
+
+    if(!players.some(p=>p.me)){
+        players.push({
+            name: avatar + " " + name,
+            progress:0,
+            time:0,
+            me:true,
+            finished:false
+        });
+    }
+
+    renderPlayers();
+    renderRanking();
+    toast(avatar + " " + name + " دخل روم " + room);
 }
 
 function setLevel(){
