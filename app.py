@@ -37,13 +37,15 @@ def puzzle_join(data):
 
     if room not in puzzle_rooms:
         puzzle_rooms[room] = {
-    "players": [],
-    "winner": None,
-    "size": 4,
-    "imageUrl": "https://picsum.photos/900?random=77",
-    "order": [],
-    "status": "waiting"
-}
+            "players": [],
+            "winner": None,
+            "winnerTime": 0,
+            "size": 4,
+            "imageUrl": "https://picsum.photos/900?random=77",
+            "order": [],
+            "status": "waiting",
+            "host": request.sid
+        }
 
     players = puzzle_rooms[room]["players"]
     display_name = f"{avatar} {name}"
@@ -62,7 +64,6 @@ def puzzle_join(data):
         })
 
     emit("puzzle_state", puzzle_rooms[room], room="puzzle_" + room)
-
 
 @socketio.on("puzzle_progress")
 def puzzle_progress(data):
