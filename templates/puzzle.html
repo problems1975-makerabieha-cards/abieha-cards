@@ -3,377 +3,634 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>تحدي البازل أونلاين</title>
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<title>تحدي البازل أونلاين - ضغط للتبديل</title>
 <style>
+:root{
+    --bg:#060b18;
+    --card:#111f3d;
+    --gold:#ffd166;
+    --green:#45ff8a;
+    --blue:#3772ff;
+    --red:#ff3864;
+}
+*{box-sizing:border-box}
 body{
-  margin:0;
-  font-family:Arial;
-  background:#071126;
-  color:white;
+    margin:0;
+    font-family:Arial,Tahoma,sans-serif;
+    background:radial-gradient(circle at top,#19335f 0,#060b18 42%,#02050c 100%);
+    color:white;
+    overflow:hidden;
 }
-
-#loginScreen{
-  position:fixed;
-  inset:0;
-  z-index:9999;
-  background:linear-gradient(180deg,#0c2b5d,#071126);
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  padding-top:35px;
+.topbar{
+    height:76px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:12px 22px;
+    background:rgba(7,14,30,.88);
+    border-bottom:1px solid rgba(119,160,255,.35);
+    box-shadow:0 18px 45px rgba(0,0,0,.35);
 }
-
-#loginScreen h1{
-  font-size:42px;
-  text-shadow:0 4px 8px #000;
-  margin-bottom:18px;
+.logo{font-size:28px;font-weight:900}
+.room{
+    padding:9px 14px;
+    border-radius:999px;
+    background:rgba(255,255,255,.09);
+    border:1px solid rgba(255,255,255,.18);
 }
-
-.loginBox{
-  width:96%;
-  min-height:90px;
-  background:rgba(11,35,75,.75);
-  border:1px solid rgba(120,190,255,.35);
-  border-radius:24px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
-  flex-wrap:wrap;
-  padding:18px;
+.app{
+    height:calc(100vh - 76px);
+    display:grid;
+    grid-template-columns:340px 1fr 300px;
+    gap:14px;
+    padding:14px;
 }
-
+.panel{
+    background:linear-gradient(180deg,rgba(17,31,61,.96),rgba(8,14,29,.96));
+    border:1px solid rgba(112,154,238,.35);
+    border-radius:24px;
+    padding:16px;
+    box-shadow:0 24px 65px rgba(0,0,0,.35);
+    overflow:auto;
+}
+.card{
+    background:rgba(255,255,255,.055);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:20px;
+    padding:14px;
+    margin-bottom:14px;
+}
+h2,h3{margin:0 0 12px}
 input,select{
-  border:0;
-  border-radius:14px;
-  padding:12px 14px;
-  margin:6px;
-  font-size:16px;
-  min-width:160px;
+    width:100%;
+    padding:13px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.15);
+    background:#08152d;
+    color:white;
+    font-size:17px;
+    outline:none;
 }
-
 button{
-  border:0;
-  border-radius:15px;
-  padding:12px 18px;
-  margin:6px;
-  font-weight:900;
-  cursor:pointer;
-  color:#071126;
-  background:linear-gradient(180deg,#fff0a6,#ffd166);
-  box-shadow:0 7px 0 #9b6a00,0 12px 22px #0008;
+    width:100%;
+    padding:13px;
+    border:none;
+    border-radius:15px;
+    background:linear-gradient(135deg,#2f6bff,#6b4dff);
+    color:white;
+    font-size:18px;
+    font-weight:800;
+    cursor:pointer;
+    margin-top:9px;
+    box-shadow:0 12px 28px rgba(55,114,255,.25);
 }
-
-button:active{
-  transform:translateY(4px);
-  box-shadow:0 3px 0 #9b6a00;
+button:hover{transform:translateY(-1px) scale(1.01)}
+button.secondary{background:linear-gradient(135deg,#16294d,#263f71)}
+button.danger{background:linear-gradient(135deg,#ff3864,#a80f36)}
+button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
+.center{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    min-width:0;
 }
-
-.green{
-  background:linear-gradient(180deg,#7affb2,#35dd7b);
-  box-shadow:0 7px 0 #0b7d3b,0 12px 22px #0008;
+.hud{
+    display:flex;
+    gap:10px;
+    margin-bottom:12px;
+    flex-wrap:wrap;
+    justify-content:center;
+}
+.badge{
+    background:rgba(255,255,255,.09);
+    border:1px solid rgba(255,255,255,.14);
+    border-radius:999px;
+    padding:10px 15px;
+    font-weight:800;
+}
+.boardWrap{
+    position:relative;
+    width:min(72vh,720px);
+    height:min(72vh,720px);
+    max-width:calc(100vw - 690px);
+    max-height:calc(100vh - 190px);
+}
+#board{
+    width:100%;
+    height:100%;
+    display:grid;
+    gap:3px;
+    background:#000;
+    border:6px solid white;
+    border-radius:22px;
+    overflow:hidden;
+    box-shadow:0 30px 90px rgba(0,0,0,.55),0 0 45px rgba(55,114,255,.25);
+}
+.tile{
+    background-repeat:no-repeat;
+    cursor:pointer;
+    user-select:none;
+    transition:transform .12s, box-shadow .12s, filter .12s, outline .12s;
+    border:1px solid rgba(255,255,255,.15);
+    position:relative;
+}
+.tile:hover{filter:brightness(1.15);transform:scale(.985)}
+.tile.selected{
+    outline:6px solid var(--gold);
+    outline-offset:-6px;
+    box-shadow:inset 0 0 30px rgba(255,209,102,.9),0 0 25px rgba(255,209,102,.55);
+    z-index:3;
+}
+.tile.correct::after{
+    content:"✓";
+    position:absolute;
+    top:5px;
+    left:7px;
+    color:var(--green);
+    font-weight:900;
+    text-shadow:0 0 9px #000;
+}
+.player{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:8px;
+    align-items:center;
+    background:#14284e;
+    border:1px solid rgba(255,255,255,.11);
+    padding:11px;
+    border-radius:16px;
+    margin-top:9px;
+}
+.player small{opacity:.78}
+.status{
+    width:10px;height:10px;border-radius:50%;background:var(--green);
+    box-shadow:0 0 12px var(--green);
+}
+.rank{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:10px;
+    align-items:center;
+    padding:11px;
+    background:rgba(255,255,255,.065);
+    border-radius:15px;
+    margin:8px 0;
+}
+.medal{font-size:24px}
+.progressBar{
+    height:9px;
+    background:#071225;
+    border-radius:99px;
+    overflow:hidden;
+    margin-top:7px;
+}
+.progressFill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,#45ff8a,#ffd166);
+}
+.preview{
+    width:100%;
+    border-radius:16px;
+    border:2px solid rgba(255,255,255,.18);
+    margin-top:10px;
+}
+.win{
+    position:absolute;
+    inset:0;
+    z-index:20;
+    background:rgba(0,0,0,.82);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    text-align:center;
+}
+.win h1{
+    font-size:74px;
+    color:var(--gold);
+    text-shadow:0 0 30px #ff8c00;
+    margin:0;
+}
+.win p{font-size:28px}
+.firework{
+    position:absolute;
+    width:10px;height:10px;border-radius:50%;
+    background:var(--gold);
+    animation:boom 1.1s infinite ease-out;
+}
+@keyframes boom{
+    0%{transform:scale(.2);opacity:1}
+    100%{transform:scale(8);opacity:0;box-shadow:0 0 60px 20px #ff3864}
+}
+.toast{
+    position:absolute;
+    top:18px;
+    right:50%;
+    transform:translateX(50%);
+    background:rgba(0,0,0,.72);
+    border:1px solid rgba(255,255,255,.22);
+    padding:12px 18px;
+    border-radius:999px;
+    display:none;
+    z-index:30;
+}
+@media(max-width:1050px){
+    body{overflow:auto}
+    .app{grid-template-columns:1fr;height:auto}
+    .boardWrap{max-width:95vw;width:95vw;height:95vw;max-height:none}
 }
 </style>
 </head>
-
 <body>
 
-<div id="loginScreen">
-  <h1>🧩 أبيها - تحدي التركيب</h1>
-
-  <div class="loginBox">
-    <input id="joinName" placeholder="اسم اللاعب">
-
-    <select id="playMode">
-      <option value="solo">فردي</option>
-      <option value="teams">فرق</option>
-    </select>
-
-    <input id="joinRoom" value="ROOM1" placeholder="رقم الروم">
-
-    <button class="green" onclick="joinPuzzleRoom()">دخول</button>
-  </div>
+<div class="topbar">
+    <div class="logo">🧩 تحدي البازل</div>
+    <div class="room">الغرفة: <b id="roomCode">ABIEHA-75</b></div>
+    <div class="room">الحالة: <b id="gameState">انتظار</b></div>
 </div>
 
 <div class="app">
 
-<div class="side">
-  <div class="card">
-    <h3>⚙️ الإعدادات</h3>
-    <select id="level" onchange="setLevel()" style="width:100%;padding:12px;border-radius:10px;font-size:18px">
-      <option value="3">سهل 3×3</option>
-      <option value="4" selected>متوسط 4×4</option>
-      <option value="5">صعب 5×5</option>
-    </select>
-    <button onclick="startChallenge()">ابدأ التحدي</button>
-    <button onclick="resetChallenge()">تصفير</button>
-  </div>
+<aside class="panel">
+    <div class="card">
+        <h2>👤 دخول اللاعب</h2>
+        <input id="playerName" placeholder="اكتب اسم اللاعب">
+        <button onclick="joinGame()">دخول</button>
+        <button class="secondary" onclick="addBots()">إضافة لاعبين تجربة</button>
+    </div>
 
-  <div class="card">
-    <h3>🖼️ صورة البازل</h3>
-    <input type="file" accept="image/*" onchange="loadImage(event)">
-    <button onclick="randomImage()">صورة عشوائية</button>
-    <img id="preview" src="https://picsum.photos/900?random=77">
-  </div>
+    <div class="card">
+        <h2>⚙️ إعدادات التحدي</h2>
+        <select id="level" onchange="setLevel()">
+            <option value="3">سهل 3×3</option>
+            <option value="4" selected>متوسط 4×4</option>
+            <option value="5">صعب 5×5</option>
+            <option value="6">أسطوري 6×6</option>
+        </select>
+        <button class="gold" onclick="startChallenge()">ابدأ التحدي</button>
+        <button class="danger" onclick="resetGame()">تصفير</button>
+    </div>
 
-  <div class="card">
-    <h3>✅ تقدمي</h3>
-    <div id="myProgress">0%</div>
-  </div>
-</div>
+    <div class="card">
+        <h2>🖼️ صورة البازل</h2>
+        <input type="file" id="imageUpload" accept="image/*" onchange="loadImage(event)">
+        <button class="secondary" onclick="useRandomImage()">صورة عشوائية</button>
+        <img id="preview" class="preview" src="https://picsum.photos/900?random=77">
+    </div>
+</aside>
 
-<div class="center">
-  <div style="margin-bottom:10px;font-size:20px">اضغط قطعة أولى ثم اضغط قطعة ثانية للتبديل</div>
-  <div id="board"></div>
-</div>
+<main class="center">
+    <div class="hud">
+        <div class="badge">⏱ الوقت: <span id="timer">0</span> ث</div>
+        <div class="badge">🧩 القطع: <span id="pieces">16</span></div>
+        <div class="badge">✅ التقدم: <span id="progressText">0%</span></div>
+        <div class="badge">👆 اضغط قطعتين للتبديل</div>
+    </div>
 
-<div class="side">
-  <div class="card">
-    <h3>🟢 اللاعبين</h3>
-    <div id="playersBox"></div>
-  </div>
-</div>
+    <div class="boardWrap">
+        <div id="board"></div>
+    </div>
 
-</div>
+    <div class="toast" id="toast"></div>
 
-<div id="winScreen">
-  <h1>🏆 الفائز</h1>
-  <p id="winnerText" style="font-size:32px"></p>
-  <button onclick="resetChallenge()">لعبة جديدة</button>
+    <div class="win" id="winScreen">
+        <div class="firework" style="top:25%;left:30%"></div>
+        <div class="firework" style="top:35%;left:65%;animation-delay:.2s"></div>
+        <div class="firework" style="top:65%;left:42%;animation-delay:.4s"></div>
+        <h1>🏆 الفائز</h1>
+        <p id="winnerText"></p>
+        <button style="max-width:320px" onclick="resetGame()">لعبة جديدة</button>
+    </div>
+</main>
+
+<aside class="panel">
+    <div class="card">
+        <h2>🟢 اللاعبين</h2>
+        <div id="players"></div>
+    </div>
+
+    <div class="card">
+        <h2>🏆 الترتيب المباشر</h2>
+        <div id="ranking"></div>
+    </div>
+
+    <div class="card">
+        <h3>طريقة اللعب</h3>
+        <p style="line-height:1.8;opacity:.85">
+            اضغط على القطعة الأولى، ثم اضغط على القطعة الثانية، وسيتم تبديل أماكنهم مباشرة.
+        </p>
+    </div>
+</aside>
+
 </div>
 
 <script>
-const socket = io();
-
-let puzzleRoom = "777";
-let puzzleName = "لاعب";
 let size = 4;
 let imageUrl = "https://picsum.photos/900?random=77";
 let tiles = [];
 let firstSelected = null;
-let started = false;
 let timer = 0;
 let interval = null;
+let started = false;
+let players = [];
 let winner = null;
 
 const board = document.getElementById("board");
 
-function joinPuzzleRoom(){
-  puzzleName = document.getElementById("joinName").value.trim();
-  puzzleRoom = document.getElementById("joinRoom").value.trim() || "777";
-
-  if(!puzzleName){
-    alert("اكتب اسمك");
-    return;
-  }
-
-  document.getElementById("loginScreen").style.display = "none";
-  document.getElementById("roomText").innerText = puzzleRoom;
-
-  socket.emit("puzzle_join", {
-    name: puzzleName,
-    room: puzzleRoom
-  });
+function toast(msg){
+    const t = document.getElementById("toast");
+    t.innerText = msg;
+    t.style.display = "block";
+    setTimeout(()=>t.style.display="none",1600);
 }
 
-function buildBoard(shuffle=false){
-  board.innerHTML = "";
-  tiles = [];
-  firstSelected = null;
-
-  board.style.gridTemplateColumns = `repeat(${size},1fr)`;
-  board.style.gridTemplateRows = `repeat(${size},1fr)`;
-
-  for(let i=0;i<size*size;i++){
-    const tile = document.createElement("div");
-    tile.className = "tile";
-    tile.dataset.index = i;
-
-    const x = i % size;
-    const y = Math.floor(i / size);
-
-    tile.style.backgroundImage = `url('${imageUrl}')`;
-    tile.style.backgroundSize = `${size*100}% ${size*100}%`;
-    tile.style.backgroundPosition = `${(x/(size-1))*100}% ${(y/(size-1))*100}%`;
-
-    tile.onclick = () => selectTile(tile);
-
-    tiles.push(tile);
-  }
-
-  if(shuffle){
-    do{
-      for(let i=tiles.length-1;i>0;i--){
-        const j = Math.floor(Math.random()*(i+1));
-        [tiles[i],tiles[j]] = [tiles[j],tiles[i]];
-      }
-    }while(tiles.every((t,i)=>parseInt(t.dataset.index)===i));
-  }
-
-  tiles.forEach(t=>board.appendChild(t));
-  updateProgress();
-}
-
-function selectTile(tile){
-  if(!started || winner) return;
-
-  if(!firstSelected){
-    firstSelected = tile;
-    tile.classList.add("selected");
-    return;
-  }
-
-  if(firstSelected === tile){
-    tile.classList.remove("selected");
-    firstSelected = null;
-    return;
-  }
-
-  swapTiles(firstSelected, tile);
-  firstSelected.classList.remove("selected");
-  firstSelected = null;
-
-  updateProgress();
-  checkWin();
-}
-
-function swapTiles(a,b){
-  const children = [...board.children];
-  const ai = children.indexOf(a);
-  const bi = children.indexOf(b);
-
-  const ph = document.createElement("div");
-  board.insertBefore(ph, a);
-  board.insertBefore(a, b);
-  board.insertBefore(b, ph);
-  board.removeChild(ph);
-}
-
-function updateProgress(){
-  const current = [...board.children];
-  let correct = 0;
-
-  current.forEach((tile,index)=>{
-    const ok = parseInt(tile.dataset.index) === index;
-    tile.classList.toggle("correct", ok);
-    if(ok) correct++;
-  });
-
-  const pct = Math.round((correct/current.length)*100);
-  document.getElementById("myProgress").innerText = pct + "%";
-
-  socket.emit("puzzle_progress", {
-    room: puzzleRoom,
-    progress: pct,
-    time: timer
-  });
-}
-
-function checkWin(){
-  const current = [...board.children];
-  const ok = current.every((tile,index)=>parseInt(tile.dataset.index)===index);
-
-  if(ok && !winner){
-    winner = puzzleName;
-    started = false;
-    clearInterval(interval);
-
-    socket.emit("puzzle_finish", {
-      room: puzzleRoom,
-      time: timer
-    });
-
-    showWinner(puzzleName);
-  }
-}
-
-function showWinner(name){
-  document.getElementById("winnerText").innerText =
-    name + " خلص خلال " + timer + " ثانية";
-  document.getElementById("winScreen").style.display = "flex";
-}
-
-function startChallenge(){
-  winner = null;
-  started = true;
-  timer = 0;
-  document.getElementById("timer").innerText = timer;
-  document.getElementById("winScreen").style.display = "none";
-
-  clearInterval(interval);
-  buildBoard(true);
-
-  interval = setInterval(()=>{
-    timer++;
-    document.getElementById("timer").innerText = timer;
-  },1000);
-
-  socket.emit("puzzle_reset", {room:puzzleRoom});
-}
-
-function resetChallenge(){
-  winner = null;
-  started = false;
-  timer = 0;
-  clearInterval(interval);
-  document.getElementById("timer").innerText = 0;
-  document.getElementById("winScreen").style.display = "none";
-  buildBoard(false);
-
-  socket.emit("puzzle_reset", {room:puzzleRoom});
+function soundWin(){
+    try{
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        [440,660,880,1320].forEach((freq,i)=>{
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.frequency.value = freq;
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            gain.gain.setValueAtTime(.08,ctx.currentTime+i*.12);
+            gain.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+i*.12+.18);
+            osc.start(ctx.currentTime+i*.12);
+            osc.stop(ctx.currentTime+i*.12+.2);
+        });
+    }catch(e){}
 }
 
 function setLevel(){
-  size = parseInt(document.getElementById("level").value);
-  buildBoard(false);
+    size = parseInt(document.getElementById("level").value);
+    document.getElementById("pieces").innerText = size*size;
+    firstSelected = null;
+    buildBoard(false);
+}
+
+function buildBoard(shuffle=false){
+    board.innerHTML = "";
+    tiles = [];
+    firstSelected = null;
+    board.style.gridTemplateColumns = `repeat(${size},1fr)`;
+    board.style.gridTemplateRows = `repeat(${size},1fr)`;
+
+    for(let i=0;i<size*size;i++){
+        const tile = document.createElement("div");
+        tile.className = "tile";
+        tile.dataset.index = i;
+
+        const x = i % size;
+        const y = Math.floor(i / size);
+
+        tile.style.backgroundImage = `url('${imageUrl}')`;
+        tile.style.backgroundSize = `${size*100}% ${size*100}%`;
+        tile.style.backgroundPosition = `${(x/(size-1))*100}% ${(y/(size-1))*100}%`;
+
+        tile.addEventListener("click",()=>selectTile(tile));
+
+        tiles.push(tile);
+    }
+
+    if(shuffle) shuffleTiles();
+    tiles.forEach(t=>board.appendChild(t));
+    updateProgress();
+}
+
+function selectTile(tile){
+    if(!started) return toast("اضغط ابدأ التحدي أولاً");
+    if(winner) return;
+
+    if(!firstSelected){
+        firstSelected = tile;
+        tile.classList.add("selected");
+        return;
+    }
+
+    if(firstSelected === tile){
+        tile.classList.remove("selected");
+        firstSelected = null;
+        return;
+    }
+
+    swapTiles(firstSelected, tile);
+    firstSelected.classList.remove("selected");
+    firstSelected = null;
+
+    updateProgress();
+    checkWin();
+}
+
+function swapTiles(a,b){
+    const children = [...board.children];
+    const ai = children.indexOf(a);
+    const bi = children.indexOf(b);
+
+    if(ai === -1 || bi === -1 || ai === bi) return;
+
+    const placeholder = document.createElement("div");
+    board.insertBefore(placeholder, a);
+    board.insertBefore(a, b);
+    board.insertBefore(b, placeholder);
+    board.removeChild(placeholder);
+}
+
+function shuffleTiles(){
+    do{
+        for(let i=tiles.length-1;i>0;i--){
+            const j = Math.floor(Math.random()*(i+1));
+            [tiles[i],tiles[j]]=[tiles[j],tiles[i]];
+        }
+    }while(tiles.every((tile,index)=>parseInt(tile.dataset.index)===index));
+}
+
+function startChallenge(){
+    winner = null;
+    firstSelected = null;
+    document.getElementById("winScreen").style.display = "none";
+    document.getElementById("gameState").innerText = "بدأ";
+    timer = 0;
+    document.getElementById("timer").innerText = timer;
+    started = true;
+    clearInterval(interval);
+    buildBoard(true);
+    interval = setInterval(()=>{
+        timer++;
+        document.getElementById("timer").innerText = timer;
+        simulateBots();
+        renderPlayers();
+        renderRanking();
+    },1000);
+    toast("بدأ التحدي 🔥");
+}
+
+function updateProgress(){
+    const current = [...board.children];
+    let correct = 0;
+    current.forEach((tile,index)=>{
+        const ok = parseInt(tile.dataset.index) === index;
+        tile.classList.toggle("correct", ok);
+        if(ok) correct++;
+    });
+    const pct = Math.round((correct/current.length)*100);
+    document.getElementById("progressText").innerText = pct+"%";
+
+    const me = players.find(p=>p.me);
+    if(me && started && !winner){
+        me.progress = pct;
+        me.time = timer;
+    }
+}
+
+function checkWin(){
+    const current = [...board.children];
+    const correct = current.every((tile,index)=>parseInt(tile.dataset.index)===index);
+    if(correct && !winner){
+        const me = players.find(p=>p.me) || {name:"أنت"};
+        finishGame(me.name);
+    }
+}
+
+function finishGame(name){
+    winner = name;
+    started = false;
+    clearInterval(interval);
+    document.getElementById("gameState").innerText = "انتهى";
+    document.getElementById("winnerText").innerText = `${name} خلص التركيب خلال ${timer} ثانية`;
+    document.getElementById("winScreen").style.display = "flex";
+    soundWin();
+
+    const p = players.find(x=>x.name===name);
+    if(p){p.progress=100;p.finished=true;p.time=timer;}
+    renderPlayers();
+    renderRanking();
+}
+
+function joinGame(){
+    const input = document.getElementById("playerName");
+    const name = input.value.trim();
+    if(!name) return toast("اكتب اسم اللاعب");
+    if(players.some(p=>p.name===name)) return toast("الاسم موجود");
+
+    players.push({
+        name,
+        progress:0,
+        time:0,
+        me:players.every(p=>!p.me),
+        finished:false
+    });
+
+    input.value = "";
+    renderPlayers();
+    renderRanking();
+    toast(name+" دخل الغرفة");
+}
+
+function addBots(){
+    ["سالم","نورة","فهد"].forEach(n=>{
+        if(!players.some(p=>p.name===n)){
+            players.push({name:n,progress:0,time:0,bot:true,finished:false});
+        }
+    });
+    renderPlayers();
+    renderRanking();
+    toast("تمت إضافة لاعبين تجربة");
+}
+
+function simulateBots(){
+    if(!started || winner) return;
+    players.forEach(p=>{
+        if(p.bot && !p.finished){
+            p.progress = Math.min(99, p.progress + Math.floor(Math.random()*8));
+            p.time = timer;
+            if(p.progress >= 99 && Math.random() > .90){
+                p.progress = 100;
+                p.finished = true;
+                finishGame(p.name);
+            }
+        }
+    });
+}
+
+function renderPlayers(){
+    const box = document.getElementById("players");
+    box.innerHTML = "";
+    if(players.length===0){
+        box.innerHTML = "<p style='opacity:.7'>لا يوجد لاعبين</p>";
+        return;
+    }
+    players.forEach(p=>{
+        box.innerHTML += `
+        <div class="player">
+            <div>
+                <b>${p.me?"⭐ ":""}${p.name}</b><br>
+                <small>${p.finished?"🏁 خلص":"نسبة التركيب "+p.progress+"%"}</small>
+                <div class="progressBar"><div class="progressFill" style="width:${p.progress}%"></div></div>
+            </div>
+            <div class="status"></div>
+        </div>`;
+    });
+}
+
+function renderRanking(){
+    const box = document.getElementById("ranking");
+    const sorted = [...players].sort((a,b)=>{
+        if(b.progress !== a.progress) return b.progress-a.progress;
+        return a.time-b.time;
+    });
+    box.innerHTML = "";
+    if(sorted.length===0){
+        box.innerHTML = "<p style='opacity:.7'>الترتيب يظهر بعد دخول اللاعبين</p>";
+        return;
+    }
+    sorted.forEach((p,i)=>{
+        const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":"🎮";
+        box.innerHTML += `
+        <div class="rank">
+            <div class="medal">${medal}</div>
+            <div><b>${p.name}</b><br><small>${p.progress}%</small></div>
+            <div>${p.time||"-"}ث</div>
+        </div>`;
+    });
 }
 
 function loadImage(event){
-  const file = event.target.files[0];
-  if(!file) return;
-  imageUrl = URL.createObjectURL(file);
-  document.getElementById("preview").src = imageUrl;
-  buildBoard(false);
+    const file = event.target.files[0];
+    if(!file) return;
+    imageUrl = URL.createObjectURL(file);
+    document.getElementById("preview").src = imageUrl;
+    buildBoard(false);
+    toast("تم تحميل الصورة");
 }
 
-function randomImage(){
-  imageUrl = "https://picsum.photos/900?random=" + Math.floor(Math.random()*9999);
-  document.getElementById("preview").src = imageUrl;
-  buildBoard(false);
+function useRandomImage(){
+    imageUrl = "https://picsum.photos/900?random=" + Math.floor(Math.random()*9999);
+    document.getElementById("preview").src = imageUrl;
+    buildBoard(false);
 }
 
-socket.on("puzzle_state", function(state){
-  const box = document.getElementById("playersBox");
-  box.innerHTML = "";
-
-  let players = state.players || [];
-
-  players.sort((a,b)=>{
-    if(b.progress !== a.progress) return b.progress - a.progress;
-    return a.time - b.time;
-  });
-
-  players.forEach((p,i)=>{
-    box.innerHTML += `
-      <div class="player">
-        <b>${i+1}. ${p.name}</b><br>
-        <small>${p.progress}% - ${p.time || 0} ثانية</small>
-        <div class="bar"><div class="fill" style="width:${p.progress}%"></div></div>
-      </div>
-    `;
-  });
-
-  if(state.winner && !winner){
-    winner = state.winner;
+function resetGame(){
     started = false;
+    winner = null;
+    firstSelected = null;
     clearInterval(interval);
-    showWinner(state.winner);
-  }
-});
+    timer = 0;
+    document.getElementById("timer").innerText = "0";
+    document.getElementById("gameState").innerText = "انتظار";
+    document.getElementById("winScreen").style.display = "none";
+    players.forEach(p=>{p.progress=0;p.time=0;p.finished=false});
+    buildBoard(false);
+    renderPlayers();
+    renderRanking();
+    toast("تم التصفير");
+}
 
 buildBoard(false);
+renderPlayers();
+renderRanking();
 </script>
-
 </body>
 </html>
