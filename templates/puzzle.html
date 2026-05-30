@@ -699,19 +699,22 @@ function finishGame(name, finishTime){
 }
 
 function useRandomImage(){
-    imageUrl =
-        "https://picsum.photos/900?random=" +
-        Math.floor(Math.random() * 999999);
+    if(!isHost){
+        toast("فقط صاحب الروم يقدر يغير الصورة");
+        return;
+    }
 
-    document.getElementById("preview").src = imageUrl;
+    imageUrl =
+        "https://picsum.photos/seed/" +
+        Date.now() +
+        "/900";
 
     socket.emit("puzzle_image", {
         room: myRoom.trim().toUpperCase(),
         imageUrl: imageUrl
     });
 
-    buildBoard(null);
-    toast("تم تغيير الصورة للجميع");
+    toast("تم إرسال الصورة للجميع");
 }
 function resetGame(){
     if(!joined) return;
@@ -819,7 +822,7 @@ socket.on("puzzle_image_changed", function(data){
         imageUrl = data.imageUrl;
         document.getElementById("preview").src = imageUrl;
         buildBoard(null);
-        toast("تم تغيير الصورة من مدير الروم");
+        toast("تم تغيير الصورة من صاحب الروم");
     }
 });
 
