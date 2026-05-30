@@ -193,14 +193,22 @@ def puzzle_start(data):
             p["score"] = 0
             p["roundScore"] = 0
 
+    next_round = int(r.get("round", 0)) + 1
+
     r["winner"] = None
     r["winnerTime"] = 0
     r["size"] = int(data.get("size", 4))
-    r["imageUrl"] = data.get("imageUrl", "https://picsum.photos/900?random=77")
+
+    # أول جولة تستخدم الصورة الحالية، وبعد كل جولة تتغير الصورة تلقائياً للجولة التالية
+    if next_round <= 1:
+        r["imageUrl"] = data.get("imageUrl", r.get("imageUrl", "https://picsum.photos/900?random=77"))
+    else:
+        r["imageUrl"] = f"https://picsum.photos/seed/{room}-{next_round}-{random.randint(100000,999999)}/900"
+
     r["order"] = data.get("order", [])
     r["status"] = "started"
     r["roundLimit"] = int(data.get("roundLimit", r.get("roundLimit", 3)))
-    r["round"] = int(r.get("round", 0)) + 1
+    r["round"] = next_round
 
     for p in r["players"]:
         p["progress"] = 0
