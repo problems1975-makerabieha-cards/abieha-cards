@@ -7,6 +7,7 @@ app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "abieha-final-secret")
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 rooms = {}
+puzzle_rooms = {}
 
 COLORS = ["red", "bluec", "greenc", "yellow"]
 TEAM_ORDER = ["A", "B", "C"]
