@@ -17,6 +17,10 @@ def index():
     return send_file("templates/index.html")
 
 
+@app.route("/puzzle")
+def puzzle():
+    return send_file("templates/puzzle.html")
+
 def build_deck():
     deck = []
     for c in COLORS:
