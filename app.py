@@ -44,13 +44,17 @@ def puzzle_join(data):
             "imageUrl": "https://picsum.photos/900?random=77",
             "order": [],
             "status": "waiting",
-            "host": request.sid
+            "host": request.sid,
+            "round": 0,
+            "roundLimit": 3,
+            "finalWinner": None
         }
 
-    players = puzzle_rooms[room]["players"]
+    r = puzzle_rooms[room]
+    players = r["players"]
     display_name = f"{avatar} {name}"
 
-    old = next((p for p in players if p["sid"] == request.sid), None)
+    old = next((p for p in players if p.get("sid") == request.sid), None)
 
     if old:
         old["name"] = display_name
@@ -60,10 +64,12 @@ def puzzle_join(data):
             "name": display_name,
             "progress": 0,
             "time": 0,
-            "finished": False
+            "finished": False,
+            "wins": 0
         })
 
-    emit("puzzle_state", puzzle_rooms[room], room="puzzle_" + room)
+    emit("puzzle_state", r, room="puzzle_" + room)
+
 
 @socketio.on("puzzle_progress")
 def puzzle_progress(data):
@@ -72,13 +78,15 @@ def puzzle_progress(data):
     if room not in puzzle_rooms:
         return
 
-    for p in puzzle_rooms[room]["players"]:
-        if p["sid"] == request.sid:
+    r = puzzle_rooms[room]
+
+    for p in r["players"]:
+        if p.get("sid") == request.sid:
             p["progress"] = int(data.get("progress", 0))
             p["time"] = int(data.get("time", 0))
             break
 
-    emit("puzzle_state", puzzle_rooms[room], room="puzzle_" + room)
+    emit("puzzle_state", r, room="puzzle_" + room)
 
 
 @socketio.on("puzzle_finish")
@@ -88,16 +96,33 @@ def puzzle_finish(data):
     if room not in puzzle_rooms:
         return
 
-    if puzzle_rooms[room]["winner"] is None:
-        for p in puzzle_rooms[room]["players"]:
-            if p["sid"] == request.sid:
+    r = puzzle_rooms[room]
+    time = int(data.get("time", 0))
+
+    if r.get("winner") is None:
+        for p in r["players"]:
+            if p.get("sid") == request.sid:
                 p["progress"] = 100
-                p["time"] = int(data.get("time", 0))
+                p["time"] = time
                 p["finished"] = True
-                puzzle_rooms[room]["winner"] = p["name"]
+                p["wins"] = int(p.get("wins", 0)) + 1
+
+                r["winner"] = p["name"]
+                r["winnerTime"] = time
+                r["status"] = "round_finished"
+
+                if int(r.get("round", 0)) >= int(r.get("roundLimit", 3)):
+                    r["status"] = "game_finished"
+                    best = sorted(
+                        r["players"],
+                        key=lambda x: (int(x.get("wins", 0)), int(x.get("progress", 0)), -int(x.get("time", 999999))),
+                        reverse=True
+                    )
+                    r["finalWinner"] = best[0]["name"] if best else p["name"]
+
                 break
 
-    emit("puzzle_state", puzzle_rooms[room], room="puzzle_" + room)
+    emit("puzzle_state", r, room="puzzle_" + room)
 
 
 @socketio.on("puzzle_reset")
@@ -106,31 +131,54 @@ def puzzle_reset(data):
 
     if room not in puzzle_rooms:
         return
+
     if puzzle_rooms[room].get("host") != request.sid:
         return
-    puzzle_rooms[room]["winner"] = None
 
-    for p in puzzle_rooms[room]["players"]:
+    r = puzzle_rooms[room]
+    r["winner"] = None
+    r["winnerTime"] = 0
+    r["status"] = "waiting"
+    r["order"] = []
+    r["round"] = 0
+    r["finalWinner"] = None
+
+    for p in r["players"]:
         p["progress"] = 0
         p["time"] = 0
         p["finished"] = False
+        p["wins"] = 0
 
-    emit("puzzle_state", puzzle_rooms[room], room="puzzle_" + room)
+    emit("puzzle_reset_done", {}, room="puzzle_" + room)
+    emit("puzzle_state", r, room="puzzle_" + room)
+
+
 @socketio.on("puzzle_start")
 def puzzle_start(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
 
     if room not in puzzle_rooms:
         return
+
     if puzzle_rooms[room].get("host") != request.sid:
         return
+
     r = puzzle_rooms[room]
 
+    if r.get("status") == "game_finished":
+        r["round"] = 0
+        r["finalWinner"] = None
+        for p in r["players"]:
+            p["wins"] = 0
+
     r["winner"] = None
+    r["winnerTime"] = 0
     r["size"] = int(data.get("size", 4))
     r["imageUrl"] = data.get("imageUrl", "https://picsum.photos/900?random=77")
     r["order"] = data.get("order", [])
     r["status"] = "started"
+    r["roundLimit"] = int(data.get("roundLimit", r.get("roundLimit", 3)))
+    r["round"] = int(r.get("round", 0)) + 1
 
     for p in r["players"]:
         p["progress"] = 0
@@ -147,11 +195,8 @@ def puzzle_image(data):
 
     if room not in puzzle_rooms:
         return
-    if puzzle_rooms[room].get("host") != request.sid:
-        return
-    host_sid = puzzle_rooms[room].get("host")
 
-    if host_sid != request.sid:
+    if puzzle_rooms[room].get("host") != request.sid:
         return
 
     image_url = data.get("imageUrl")
@@ -172,6 +217,8 @@ def puzzle_image(data):
         puzzle_rooms[room],
         room="puzzle_" + room
     )
+
+
 def build_deck():
     deck = []
     for c in COLORS:
