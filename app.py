@@ -37,9 +37,13 @@ def puzzle_join(data):
 
     if room not in puzzle_rooms:
         puzzle_rooms[room] = {
-            "players": [],
-            "winner": None
-        }
+    "players": [],
+    "winner": None,
+    "size": 4,
+    "imageUrl": "https://picsum.photos/900?random=77",
+    "order": [],
+    "status": "waiting"
+}
 
     players = puzzle_rooms[room]["players"]
     display_name = f"{avatar} {name}"
