@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>تحدي البازل أونلاين - ضغط للتبديل</title>
+<title>تحدي التركيب أونلاين</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
 :root{
     --bg:#060b18;
@@ -21,6 +22,64 @@ body{
     color:white;
     overflow:hidden;
 }
+.hidden{display:none!important}
+
+/* دخول بنفس ستايل الأونو */
+#loginArea{
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding-top:25px;
+    background:radial-gradient(circle at 50% 0%,rgba(70,140,255,.28),transparent 35%),linear-gradient(180deg,#0c234a,#050b18 75%);
+    text-align:center;
+}
+#loginArea h1{
+    margin:8px 0 10px;
+    text-shadow:0 4px 10px #000;
+    font-size:clamp(24px,5vw,38px);
+}
+.joinBar{
+    width:96%;
+    background:linear-gradient(135deg,rgba(22,53,105,.95),rgba(7,17,38,.95));
+    border:1px solid rgba(120,190,255,.25);
+    border-radius:24px;
+    padding:12px;
+    margin-bottom:14px;
+    box-shadow:0 18px 55px #0008;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    flex-wrap:wrap;
+}
+.joinBar input,.joinBar select{
+    border:0;
+    border-radius:14px;
+    padding:12px 14px;
+    margin:6px;
+    font-size:16px;
+    min-width:160px;
+    background:#fff;
+    color:#111;
+}
+.joinBar button{
+    width:auto;
+    border:0;
+    border-radius:15px;
+    padding:12px 18px;
+    margin:6px;
+    font-weight:900;
+    cursor:pointer;
+    color:#071126;
+    background:linear-gradient(180deg,#7affb2,#35dd7b);
+    box-shadow:0 7px 0 #0b7d3b,0 12px 22px #0008;
+}
+.joinBar button:active{
+    transform:translateY(4px);
+    box-shadow:0 3px 0 #0b7d3b;
+}
+
 .topbar{
     height:76px;
     display:flex;
@@ -246,21 +305,19 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
 </head>
 <body>
 
+<div id="loginArea">
+    <h1>🧩 أبيها - تحدي التركيب</h1>
+    <div class="joinBar">
+        <button onclick="enterPuzzle()">دخول</button>
 
-<div id="loginArea" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;padding-top:25px;background:linear-gradient(180deg,#0c234a,#050b18 75%);text-align:center">
-    <h1 style="margin:8px 0 18px;text-shadow:0 4px 10px #000;font-size:clamp(26px,5vw,38px)">🧩 أبيها - تحدي التركيب</h1>
-
-    <div style="width:96%;background:linear-gradient(135deg,rgba(22,53,105,.95),rgba(7,17,38,.95));border:1px solid rgba(120,190,255,.25);border-radius:24px;padding:18px 12px;margin-bottom:14px;box-shadow:0 18px 55px #0008;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
-        <button onclick="enterPuzzle()" style="width:auto;border:0;border-radius:15px;padding:12px 22px;margin:6px;font-weight:900;cursor:pointer;color:#071126;background:linear-gradient(180deg,#7affb2,#35dd7b);box-shadow:0 7px 0 #0b7d3b,0 12px 22px #0008">دخول</button>
-
-        <select id="loginMode" style="width:auto;min-width:160px;border:0;border-radius:14px;padding:12px 14px;margin:6px;font-size:16px;background:white;color:#111">
-            <option>فردي</option>
-            <option>فرق</option>
+        <select id="loginMode">
+            <option value="solo">فردي</option>
+            <option value="teams">فرق</option>
         </select>
 
-        <input id="loginRoom" value="ROOM1" placeholder="الروم" style="width:auto;min-width:220px;border:0;border-radius:14px;padding:12px 14px;margin:6px;font-size:16px;background:white;color:#111;text-align:center">
+        <input id="loginRoom" value="ROOM1" placeholder="الروم">
 
-        <select id="loginAvatar" style="width:auto;min-width:95px;border:0;border-radius:14px;padding:12px 14px;margin:6px;font-size:18px;background:white;color:#111">
+        <select id="loginAvatar">
             <option>🎭</option>
             <option>😂</option>
             <option>😎</option>
@@ -271,14 +328,15 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
             <option>🐺</option>
         </select>
 
-        <input id="loginName" placeholder="اسم اللاعب" style="width:auto;min-width:220px;border:0;border-radius:14px;padding:12px 14px;margin:6px;font-size:16px;background:white;color:#111;text-align:right">
+        <input id="loginName" placeholder="اسم اللاعب">
     </div>
 </div>
 
-<div id="gameArea" style="display:none">
+<div id="gameArea" class="hidden">
+
 <div class="topbar">
     <div class="logo">🧩 تحدي البازل</div>
-    <div class="room">الغرفة: <b id="roomCode">ABIEHA-75</b></div>
+    <div class="room">الغرفة: <b id="roomCode">---</b></div>
     <div class="room">الحالة: <b id="gameState">انتظار</b></div>
 </div>
 
@@ -286,10 +344,9 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
 
 <aside class="panel">
     <div class="card">
-        <h2>👤 دخول اللاعب</h2>
-        <input id="playerName" placeholder="اكتب اسم اللاعب">
-        <button onclick="joinGame()">دخول</button>
-        <button class="secondary" onclick="addBots()">إضافة لاعبين تجربة</button>
+        <h2>👤 اللاعب</h2>
+        <div id="meBox" style="font-size:20px;line-height:1.8">---</div>
+        <button class="secondary" onclick="copyRoomLink()">نسخ رابط الروم</button>
     </div>
 
     <div class="card">
@@ -300,15 +357,15 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
             <option value="5">صعب 5×5</option>
             <option value="6">أسطوري 6×6</option>
         </select>
-        <button class="gold" onclick="startChallenge()">ابدأ التحدي</button>
-        <button class="danger" onclick="resetGame()">تصفير</button>
+        <button class="gold" onclick="startChallenge()">ابدأ التحدي للجميع</button>
+        <button class="danger" onclick="resetGame()">تصفير الروم</button>
     </div>
 
     <div class="card">
         <h2>🖼️ صورة البازل</h2>
-        <input type="file" id="imageUpload" accept="image/*" onchange="loadImage(event)">
-        <button class="secondary" onclick="useRandomImage()">صورة عشوائية</button>
+        <button class="secondary" onclick="useRandomImage()">صورة عشوائية للجميع</button>
         <img id="preview" class="preview" src="https://picsum.photos/900?random=77">
+        <p style="line-height:1.7;opacity:.8">ملاحظة: رفع صورة من جهازك يكون محلي فقط، أما الصورة العشوائية تظهر للجميع.</p>
     </div>
 </aside>
 
@@ -338,7 +395,7 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
 
 <aside class="panel">
     <div class="card">
-        <h2>🟢 اللاعبين</h2>
+        <h2>🟢 اللاعبين بنفس الروم</h2>
         <div id="players"></div>
     </div>
 
@@ -350,7 +407,7 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
     <div class="card">
         <h3>طريقة اللعب</h3>
         <p style="line-height:1.8;opacity:.85">
-            اضغط على القطعة الأولى، ثم اضغط على القطعة الثانية، وسيتم تبديل أماكنهم مباشرة.
+            اضغط على القطعة الأولى، ثم اضغط على القطعة الثانية، وسيتم تبديل أماكنهم مباشرة. أول لاعب يركب الصورة يفوز.
         </p>
     </div>
 </aside>
@@ -359,6 +416,8 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
 </div>
 
 <script>
+const socket = io();
+
 let size = 4;
 let imageUrl = "https://picsum.photos/900?random=77";
 let tiles = [];
@@ -368,6 +427,12 @@ let interval = null;
 let started = false;
 let players = [];
 let winner = null;
+let myName = "";
+let myAvatar = "";
+let myRoom = "ROOM1";
+let myMode = "solo";
+let lastProgressSent = -1;
+let joined = false;
 
 const board = document.getElementById("board");
 
@@ -395,34 +460,44 @@ function soundWin(){
     }catch(e){}
 }
 
-
 function enterPuzzle(){
     const name = document.getElementById("loginName").value.trim();
     const room = document.getElementById("loginRoom").value.trim() || "ROOM1";
     const avatar = document.getElementById("loginAvatar").value;
+    const mode = document.getElementById("loginMode").value;
 
     if(!name){
         alert("اكتب اسم اللاعب");
         return;
     }
 
-    document.getElementById("loginArea").style.display = "none";
-    document.getElementById("gameArea").style.display = "block";
-    document.getElementById("roomCode").innerText = room;
+    myName = name;
+    myRoom = room;
+    myAvatar = avatar;
+    myMode = mode;
+    joined = true;
 
-    if(!players.some(p=>p.me)){
-        players.push({
-            name: avatar + " " + name,
-            progress:0,
-            time:0,
-            me:true,
-            finished:false
-        });
-    }
+    document.getElementById("loginArea").classList.add("hidden");
+    document.getElementById("gameArea").classList.remove("hidden");
+    document.getElementById("roomCode").innerText = myRoom;
+    document.getElementById("meBox").innerHTML = `${myAvatar} ${myName}<br><small>الروم: ${myRoom}</small>`;
 
-    renderPlayers();
-    renderRanking();
-    toast(avatar + " " + name + " دخل روم " + room);
+    socket.emit("puzzle_join", {
+        room: myRoom,
+        name: myName,
+        avatar: myAvatar,
+        mode: myMode
+    });
+
+    const url = new URL(window.location.href);
+    url.searchParams.set("room", myRoom);
+    window.history.replaceState({}, "", url.toString());
+}
+
+function copyRoomLink(){
+    const url = new URL(window.location.href);
+    url.searchParams.set("room", myRoom);
+    navigator.clipboard.writeText(url.toString()).then(()=>toast("تم نسخ رابط الروم"));
 }
 
 function setLevel(){
@@ -432,7 +507,7 @@ function setLevel(){
     buildBoard(false);
 }
 
-function buildBoard(shuffle=false){
+function buildBoard(shuffleOrder=null){
     board.innerHTML = "";
     tiles = [];
     firstSelected = null;
@@ -456,9 +531,26 @@ function buildBoard(shuffle=false){
         tiles.push(tile);
     }
 
-    if(shuffle) shuffleTiles();
+    if(Array.isArray(shuffleOrder)){
+        tiles = shuffleOrder.map(i => tiles[i]).filter(Boolean);
+    }
+
     tiles.forEach(t=>board.appendChild(t));
-    updateProgress();
+    updateProgress(false);
+}
+
+function makeShuffleOrder(){
+    let arr = [];
+    for(let i=0;i<size*size;i++) arr.push(i);
+
+    do{
+        for(let i=arr.length-1;i>0;i--){
+            const j = Math.floor(Math.random()*(i+1));
+            [arr[i],arr[j]]=[arr[j],arr[i]];
+        }
+    }while(arr.every((v,i)=>v===i));
+
+    return arr;
 }
 
 function selectTile(tile){
@@ -481,7 +573,7 @@ function selectTile(tile){
     firstSelected.classList.remove("selected");
     firstSelected = null;
 
-    updateProgress();
+    updateProgress(true);
     checkWin();
 }
 
@@ -499,36 +591,68 @@ function swapTiles(a,b){
     board.removeChild(placeholder);
 }
 
-function shuffleTiles(){
-    do{
-        for(let i=tiles.length-1;i>0;i--){
-            const j = Math.floor(Math.random()*(i+1));
-            [tiles[i],tiles[j]]=[tiles[j],tiles[i]];
-        }
-    }while(tiles.every((tile,index)=>parseInt(tile.dataset.index)===index));
-}
-
 function startChallenge(){
+    if(!joined) return;
     winner = null;
     firstSelected = null;
+    const chosenSize = parseInt(document.getElementById("level").value);
+    const order = makeShuffleOrderForSize(chosenSize);
+
+    socket.emit("puzzle_start", {
+        room: myRoom,
+        size: chosenSize,
+        imageUrl: imageUrl,
+        order: order
+    });
+}
+
+function makeShuffleOrderForSize(s){
+    let arr = [];
+    for(let i=0;i<s*s;i++) arr.push(i);
+
+    do{
+        for(let i=arr.length-1;i>0;i--){
+            const j = Math.floor(Math.random()*(i+1));
+            [arr[i],arr[j]]=[arr[j],arr[i]];
+        }
+    }while(arr.every((v,i)=>v===i));
+
+    return arr;
+}
+
+function applyStart(data){
+    winner = null;
+    started = true;
+    timer = 0;
+    lastProgressSent = -1;
     document.getElementById("winScreen").style.display = "none";
     document.getElementById("gameState").innerText = "بدأ";
-    timer = 0;
     document.getElementById("timer").innerText = timer;
-    started = true;
+
+    if(data.size){
+        size = parseInt(data.size);
+        document.getElementById("level").value = String(size);
+        document.getElementById("pieces").innerText = size*size;
+    }
+
+    if(data.imageUrl){
+        imageUrl = data.imageUrl;
+        document.getElementById("preview").src = imageUrl;
+    }
+
     clearInterval(interval);
-    buildBoard(true);
+    buildBoard(data.order);
+
     interval = setInterval(()=>{
         timer++;
         document.getElementById("timer").innerText = timer;
-        simulateBots();
-        renderPlayers();
-        renderRanking();
     },1000);
-    toast("بدأ التحدي 🔥");
+
+    updateProgress(true);
+    toast("بدأ التحدي للجميع 🔥");
 }
 
-function updateProgress(){
+function updateProgress(send=true){
     const current = [...board.children];
     let correct = 0;
     current.forEach((tile,index)=>{
@@ -539,10 +663,13 @@ function updateProgress(){
     const pct = Math.round((correct/current.length)*100);
     document.getElementById("progressText").innerText = pct+"%";
 
-    const me = players.find(p=>p.me);
-    if(me && started && !winner){
-        me.progress = pct;
-        me.time = timer;
+    if(send && joined && started && pct !== lastProgressSent){
+        lastProgressSent = pct;
+        socket.emit("puzzle_progress", {
+            room: myRoom,
+            progress: pct,
+            time: timer
+        });
     }
 }
 
@@ -550,70 +677,55 @@ function checkWin(){
     const current = [...board.children];
     const correct = current.every((tile,index)=>parseInt(tile.dataset.index)===index);
     if(correct && !winner){
-        const me = players.find(p=>p.me) || {name:"أنت"};
-        finishGame(me.name);
+        socket.emit("puzzle_finish", {
+            room: myRoom,
+            time: timer
+        });
     }
 }
 
-function finishGame(name){
+function finishGame(name, finishTime){
     winner = name;
     started = false;
     clearInterval(interval);
     document.getElementById("gameState").innerText = "انتهى";
-    document.getElementById("winnerText").innerText = `${name} خلص التركيب خلال ${timer} ثانية`;
+    document.getElementById("winnerText").innerText = `${name} خلص التركيب خلال ${finishTime || timer} ثانية`;
     document.getElementById("winScreen").style.display = "flex";
     soundWin();
-
-    const p = players.find(x=>x.name===name);
-    if(p){p.progress=100;p.finished=true;p.time=timer;}
     renderPlayers();
     renderRanking();
 }
 
-function joinGame(){
-    const input = document.getElementById("playerName");
-    const name = input.value.trim();
-    if(!name) return toast("اكتب اسم اللاعب");
-    if(players.some(p=>p.name===name)) return toast("الاسم موجود");
-
-    players.push({
-        name,
-        progress:0,
-        time:0,
-        me:players.every(p=>!p.me),
-        finished:false
-    });
-
-    input.value = "";
-    renderPlayers();
-    renderRanking();
-    toast(name+" دخل الغرفة");
+function useRandomImage(){
+    imageUrl = "https://picsum.photos/900?random=" + Math.floor(Math.random()*9999);
+    document.getElementById("preview").src = imageUrl;
+    if(joined){
+        socket.emit("puzzle_image", {
+            room: myRoom,
+            imageUrl: imageUrl
+        });
+    }
+    buildBoard(null);
 }
 
-function addBots(){
-    ["سالم","نورة","فهد"].forEach(n=>{
-        if(!players.some(p=>p.name===n)){
-            players.push({name:n,progress:0,time:0,bot:true,finished:false});
-        }
-    });
-    renderPlayers();
-    renderRanking();
-    toast("تمت إضافة لاعبين تجربة");
+function resetGame(){
+    if(!joined) return;
+    socket.emit("puzzle_reset", {room: myRoom});
 }
 
-function simulateBots(){
-    if(!started || winner) return;
-    players.forEach(p=>{
-        if(p.bot && !p.finished){
-            p.progress = Math.min(99, p.progress + Math.floor(Math.random()*8));
-            p.time = timer;
-            if(p.progress >= 99 && Math.random() > .90){
-                p.progress = 100;
-                p.finished = true;
-                finishGame(p.name);
-            }
-        }
-    });
+function applyReset(){
+    started = false;
+    winner = null;
+    firstSelected = null;
+    clearInterval(interval);
+    timer = 0;
+    lastProgressSent = -1;
+    document.getElementById("timer").innerText = "0";
+    document.getElementById("gameState").innerText = "انتظار";
+    document.getElementById("winScreen").style.display = "none";
+    buildBoard(null);
+    updateProgress(true);
+    toast("تم تصفير الروم");
 }
 
 function renderPlayers(){
@@ -627,9 +739,9 @@ function renderPlayers(){
         box.innerHTML += `
         <div class="player">
             <div>
-                <b>${p.me?"⭐ ":""}${p.name}</b><br>
-                <small>${p.finished?"🏁 خلص":"نسبة التركيب "+p.progress+"%"}</small>
-                <div class="progressBar"><div class="progressFill" style="width:${p.progress}%"></div></div>
+                <b>${p.name}</b><br>
+                <small>${p.finished?"🏁 خلص":"نسبة التركيب "+(p.progress||0)+"%"}</small>
+                <div class="progressBar"><div class="progressFill" style="width:${p.progress||0}%"></div></div>
             </div>
             <div class="status"></div>
         </div>`;
@@ -639,8 +751,8 @@ function renderPlayers(){
 function renderRanking(){
     const box = document.getElementById("ranking");
     const sorted = [...players].sort((a,b)=>{
-        if(b.progress !== a.progress) return b.progress-a.progress;
-        return a.time-b.time;
+        if((b.progress||0) !== (a.progress||0)) return (b.progress||0)-(a.progress||0);
+        return (a.time||0)-(b.time||0);
     });
     box.innerHTML = "";
     if(sorted.length===0){
@@ -652,44 +764,53 @@ function renderRanking(){
         box.innerHTML += `
         <div class="rank">
             <div class="medal">${medal}</div>
-            <div><b>${p.name}</b><br><small>${p.progress}%</small></div>
+            <div><b>${p.name}</b><br><small>${p.progress||0}%</small></div>
             <div>${p.time||"-"}ث</div>
         </div>`;
     });
 }
 
-function loadImage(event){
-    const file = event.target.files[0];
-    if(!file) return;
-    imageUrl = URL.createObjectURL(file);
-    document.getElementById("preview").src = imageUrl;
-    buildBoard(false);
-    toast("تم تحميل الصورة");
-}
-
-function useRandomImage(){
-    imageUrl = "https://picsum.photos/900?random=" + Math.floor(Math.random()*9999);
-    document.getElementById("preview").src = imageUrl;
-    buildBoard(false);
-}
-
-function resetGame(){
-    started = false;
-    winner = null;
-    firstSelected = null;
-    clearInterval(interval);
-    timer = 0;
-    document.getElementById("timer").innerText = "0";
-    document.getElementById("gameState").innerText = "انتظار";
-    document.getElementById("winScreen").style.display = "none";
-    players.forEach(p=>{p.progress=0;p.time=0;p.finished=false});
-    buildBoard(false);
+socket.on("puzzle_state", function(state){
+    players = state.players || [];
     renderPlayers();
     renderRanking();
-    toast("تم التصفير");
+
+    if(state.imageUrl){
+        imageUrl = state.imageUrl;
+        document.getElementById("preview").src = imageUrl;
+    }
+
+    if(state.status === "started" && state.order && !started){
+        applyStart(state);
+    }
+
+    if(state.winner && !winner){
+        finishGame(state.winner, state.winnerTime || timer);
+    }
+});
+
+socket.on("puzzle_started", function(data){
+    applyStart(data);
+});
+
+socket.on("puzzle_reset_done", function(){
+    applyReset();
+});
+
+socket.on("puzzle_image_changed", function(data){
+    if(data.imageUrl){
+        imageUrl = data.imageUrl;
+        document.getElementById("preview").src = imageUrl;
+        if(!started) buildBoard(null);
+    }
+});
+
+const params = new URLSearchParams(window.location.search);
+if(params.get("room")){
+    document.getElementById("loginRoom").value = params.get("room");
 }
 
-buildBoard(false);
+buildBoard(null);
 renderPlayers();
 renderRanking();
 </script>
