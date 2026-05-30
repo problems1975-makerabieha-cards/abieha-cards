@@ -708,12 +708,12 @@ function finishGame(name, finishTime){
     const roundNow = lastState?.round || 0;
     const roundLimit = lastState?.roundLimit || 0;
     document.getElementById("winnerText").innerText =
-        `${name} فاز بالجولة ${roundNow}/${roundLimit} خلال ${finishTime || timer} ثانية\nتم احتساب نقاط باقي اللاعبين حسب نسبة التركيب الحالية`;
+        `${name} فاز بالجولة ${roundNow}/${roundLimit} خلال ${finishTime || timer} ثانية\nتم احتساب نقاط باقي اللاعبين حسب نسبة التركيب الحالية\nالجولة التالية ستبدأ بصورة جديدة`;
 
     const btn = document.getElementById("nextRoundBtn");
     if(btn){
         btn.style.display = isHost ? "block" : "none";
-        btn.innerText = "ابدأ الجولة التالية";
+        btn.innerText = "ابدأ الجولة التالية بصورة جديدة";
     }
 
     document.getElementById("winScreen").style.display = "flex";
@@ -731,12 +731,30 @@ function showFinalWinner(state){
     const finalName = state.finalWinner || state.winner || "الفائز";
     const roundNow = state.round || 0;
     const roundLimit = state.roundLimit || 0;
-    const finalPlayer = (state.players || []).find(p => p.name === finalName);
-    const finalScore = finalPlayer ? (finalPlayer.score || 0) : 0;
-    const finalWins = finalPlayer ? (finalPlayer.wins || 0) : 0;
 
-    document.getElementById("winnerText").innerText =
-        `🏆 الفائز النهائي: ${finalName}\nعدد الفوز: ${finalWins} | النقاط: ${finalScore}\nبعد ${roundNow}/${roundLimit} جولات`;
+    const sorted = [...(state.players || [])].sort((a,b)=>{
+        if((b.wins||0) !== (a.wins||0)) return (b.wins||0)-(a.wins||0);
+        if((b.score||0) !== (a.score||0)) return (b.score||0)-(a.score||0);
+        if((b.roundScore||0) !== (a.roundScore||0)) return (b.roundScore||0)-(a.roundScore||0);
+        return (a.time||999999)-(b.time||999999);
+    });
+
+    let rows = sorted.map((p,i)=>{
+        const medal = i===0 ? "🥇" : i===1 ? "🥈" : i===2 ? "🥉" : "🎮";
+        return `
+            <div style="display:grid;grid-template-columns:50px 1fr 90px 90px;gap:8px;align-items:center;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:10px;margin:7px 0;text-align:right">
+                <div style="font-size:26px">${medal}</div>
+                <div><b>${p.name}</b><br><small>آخر جولة: ${p.roundScore||0}%</small></div>
+                <div>🏆 ${p.wins||0}</div>
+                <div>⭐ ${p.score||0}</div>
+            </div>
+        `;
+    }).join("");
+
+    document.getElementById("winnerText").innerHTML =
+        `<div style="font-size:32px;margin-bottom:10px">🏆 الفائز النهائي: ${finalName}</div>
+         <div style="font-size:20px;margin-bottom:12px">بعد ${roundNow}/${roundLimit} جولات</div>
+         <div style="width:min(92vw,620px);max-height:50vh;overflow:auto">${rows}</div>`;
 
     const btn = document.getElementById("nextRoundBtn");
     if(btn){
