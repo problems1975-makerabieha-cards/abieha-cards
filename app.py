@@ -27,6 +27,90 @@ def uno():
 def puzzle():
     return send_file("templates/puzzle.html")
 
+@socketio.on("puzzle_join")
+def puzzle_join(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    name = str(data.get("name", "لاعب")).strip()
+    avatar = str(data.get("avatar", "🎮"))
+
+    join_room("puzzle_" + room)
+
+    if room not in puzzle_rooms:
+        puzzle_rooms[room] = {
+            "players": [],
+            "winner": None
+        }
+
+    players = puzzle_rooms[room]["players"]
+    display_name = f"{avatar} {name}"
+
+    old = next((p for p in players if p["sid"] == request.sid), None)
+
+    if old:
+        old["name"] = display_name
+    else:
+        players.append({
+            "sid": request.sid,
+            "name": display_name,
+            "progress": 0,
+            "time": 0,
+            "finished": False
+        })
+
+    emit("puzzle_state", puzzle_rooms[room], room="puzzle_" + room)
+
+
+@socketio.on("puzzle_progress")
+def puzzle_progress(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+
+    if room not in puzzle_rooms:
+        return
+
+    for p in puzzle_rooms[room]["players"]:
+        if p["sid"] == request.sid:
+            p["progress"] = int(data.get("progress", 0))
+            p["time"] = int(data.get("time", 0))
+            break
+
+    emit("puzzle_state", puzzle_rooms[room], room="puzzle_" + room)
+
+
+@socketio.on("puzzle_finish")
+def puzzle_finish(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+
+    if room not in puzzle_rooms:
+        return
+
+    if puzzle_rooms[room]["winner"] is None:
+        for p in puzzle_rooms[room]["players"]:
+            if p["sid"] == request.sid:
+                p["progress"] = 100
+                p["time"] = int(data.get("time", 0))
+                p["finished"] = True
+                puzzle_rooms[room]["winner"] = p["name"]
+                break
+
+    emit("puzzle_state", puzzle_rooms[room], room="puzzle_" + room)
+
+
+@socketio.on("puzzle_reset")
+def puzzle_reset(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+
+    if room not in puzzle_rooms:
+        return
+
+    puzzle_rooms[room]["winner"] = None
+
+    for p in puzzle_rooms[room]["players"]:
+        p["progress"] = 0
+        p["time"] = 0
+        p["finished"] = False
+
+    emit("puzzle_state", puzzle_rooms[room], room="puzzle_" + room)
+
 def build_deck():
     deck = []
     for c in COLORS:
