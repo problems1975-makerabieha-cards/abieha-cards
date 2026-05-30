@@ -696,21 +696,21 @@ function finishGame(name, finishTime){
     renderRanking();
 }
 
-function randomImage(){
+function useRandomImage(){
     imageUrl =
-      "https://picsum.photos/900?random=" +
-      Math.floor(Math.random()*999999);
+        "https://picsum.photos/900?random=" +
+        Math.floor(Math.random() * 999999);
 
     document.getElementById("preview").src = imageUrl;
 
     socket.emit("puzzle_image", {
-        room: myRoom,
+        room: myRoom.trim().toUpperCase(),
         imageUrl: imageUrl
     });
 
+    buildBoard(null);
     toast("تم تغيير الصورة للجميع");
 }
-
 function resetGame(){
     if(!joined) return;
     socket.emit("puzzle_reset", {room: myRoom});
