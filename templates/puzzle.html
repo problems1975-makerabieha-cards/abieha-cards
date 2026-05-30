@@ -401,7 +401,7 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
         <div class="firework" style="top:65%;left:42%;animation-delay:.4s"></div>
         <h1>🏆 الفائز</h1>
         <p id="winnerText"></p>
-        <button style="max-width:320px" onclick="resetGame()">لعبة جديدة</button>
+        <button id="nextRoundBtn" style="max-width:320px" onclick="nextRoundAction()">ابدأ الجولة التالية</button>
     </div>
 </main>
 
@@ -446,6 +446,7 @@ let myMode = "solo";
 let lastProgressSent = -1;
 let joined = false;
 let isHost = false;
+let lastState = null;
     
 const board = document.getElementById("board");
 
@@ -702,8 +703,19 @@ function finishGame(name, finishTime){
     winner = name;
     started = false;
     clearInterval(interval);
-    document.getElementById("gameState").innerText = "انتهى";
-    document.getElementById("winnerText").innerText = `${name} فاز بالجولة خلال ${finishTime || timer} ثانية`;
+    document.getElementById("gameState").innerText = "انتهت الجولة";
+
+    const roundNow = lastState?.round || 0;
+    const roundLimit = lastState?.roundLimit || 0;
+    document.getElementById("winnerText").innerText =
+        `${name} فاز بالجولة ${roundNow}/${roundLimit} خلال ${finishTime || timer} ثانية\nتم احتساب نقاط باقي اللاعبين حسب نسبة التركيب الحالية`;
+
+    const btn = document.getElementById("nextRoundBtn");
+    if(btn){
+        btn.style.display = isHost ? "block" : "none";
+        btn.innerText = "ابدأ الجولة التالية";
+    }
+
     document.getElementById("winScreen").style.display = "flex";
     soundWin();
     renderPlayers();
@@ -719,14 +731,36 @@ function showFinalWinner(state){
     const finalName = state.finalWinner || state.winner || "الفائز";
     const roundNow = state.round || 0;
     const roundLimit = state.roundLimit || 0;
+    const finalPlayer = (state.players || []).find(p => p.name === finalName);
+    const finalScore = finalPlayer ? (finalPlayer.score || 0) : 0;
+    const finalWins = finalPlayer ? (finalPlayer.wins || 0) : 0;
 
     document.getElementById("winnerText").innerText =
-        `🏆 الفائز النهائي: ${finalName} — بعد ${roundNow}/${roundLimit} جولات`;
+        `🏆 الفائز النهائي: ${finalName}\nعدد الفوز: ${finalWins} | النقاط: ${finalScore}\nبعد ${roundNow}/${roundLimit} جولات`;
+
+    const btn = document.getElementById("nextRoundBtn");
+    if(btn){
+        btn.style.display = isHost ? "block" : "none";
+        btn.innerText = "بطولة جديدة";
+    }
 
     document.getElementById("winScreen").style.display = "flex";
     soundWin();
     renderPlayers();
     renderRanking();
+}
+
+function nextRoundAction(){
+    if(!isHost){
+        toast("انتظر صاحب الروم");
+        return;
+    }
+
+    if(lastState && lastState.status === "game_finished"){
+        resetGame();
+    }else{
+        startChallenge();
+    }
 }
 
 function useRandomImage(){
@@ -779,7 +813,7 @@ function renderPlayers(){
         <div class="player">
             <div>
                 <b>${p.name}</b><br>
-                <small>${p.finished?"🏁 خلص":"نسبة التركيب "+(p.progress||0)+"%"} | 🏆 ${p.wins||0} فوز</small>
+                <small>${p.finished?"🏁 خلص":"نسبة التركيب "+(p.progress||0)+"%"} | 🏆 ${p.wins||0} فوز | ⭐ ${p.score||0} نقطة</small>
                 <div class="progressBar"><div class="progressFill" style="width:${p.progress||0}%"></div></div>
             </div>
             <div class="status"></div>
@@ -790,6 +824,8 @@ function renderPlayers(){
 function renderRanking(){
     const box = document.getElementById("ranking");
     const sorted = [...players].sort((a,b)=>{
+        if((b.wins||0) !== (a.wins||0)) return (b.wins||0)-(a.wins||0);
+        if((b.score||0) !== (a.score||0)) return (b.score||0)-(a.score||0);
         if((b.progress||0) !== (a.progress||0)) return (b.progress||0)-(a.progress||0);
         return (a.time||0)-(b.time||0);
     });
@@ -803,13 +839,14 @@ function renderRanking(){
         box.innerHTML += `
         <div class="rank">
             <div class="medal">${medal}</div>
-            <div><b>${p.name}</b><br><small>${p.progress||0}% | 🏆 ${p.wins||0} فوز</small></div>
+            <div><b>${p.name}</b><br><small>${p.progress||0}% | 🏆 ${p.wins||0} فوز | ⭐ ${p.score||0} نقطة</small></div>
             <div>${p.time||"-"}ث</div>
         </div>`;
     });
 }
 
 socket.on("puzzle_state", function(state){
+    lastState = state;
     players = state.players || [];
 
     isHost = state.host === socket.id;
