@@ -804,7 +804,8 @@ socket.on("puzzle_image_changed", function(data){
     if(data.imageUrl){
         imageUrl = data.imageUrl;
         document.getElementById("preview").src = imageUrl;
-        if(!started) buildBoard(null);
+        buildBoard(null);
+        toast("تم تغيير الصورة من مدير الروم");
     }
 });
 
