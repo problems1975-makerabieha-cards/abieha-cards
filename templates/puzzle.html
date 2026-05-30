@@ -350,7 +350,7 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
         <button class="secondary" onclick="copyRoomLink()">نسخ رابط الروم</button>
     </div>
 
-    <div class="card">
+    <div class="card" id="settingsCard">
         <h2>⚙️ إعدادات التحدي</h2>
         <select id="level" onchange="setLevel()">
             <option value="3">سهل 3×3</option>
@@ -362,7 +362,7 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
         <button class="danger" onclick="resetGame()">تصفير الروم</button>
     </div>
 
-    <div class="card">
+    <div class="card" id="imageCard">
         <h2>🖼️ صورة البازل</h2>
         <button id="randomImageBtn" class="secondary" onclick="useRandomImage()">صورة عشوائية للجميع</button>
         <img id="preview" class="preview" src="https://picsum.photos/900?random=77">
@@ -782,7 +782,11 @@ socket.on("puzzle_state", function(state){
     players = state.players || [];
 
     isHost = state.host === socket.id;
+    const settingsCard = document.getElementById("settingsCard");
+    const imageCard = document.getElementById("imageCard");
 
+    if(settingsCard) settingsCard.style.display = isHost ? "block" : "none";
+    if(imageCard) imageCard.style.display = isHost ? "block" : "none";
     const startBtn = document.querySelector(".gold");
     const resetBtn = document.querySelector(".danger");
     const randomBtn = document.getElementById("randomImageBtn");
