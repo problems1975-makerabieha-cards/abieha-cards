@@ -146,6 +146,11 @@ def puzzle_image(data):
     if room not in puzzle_rooms:
         return
 
+    host_sid = puzzle_rooms[room].get("host")
+
+    if host_sid != request.sid:
+        return
+
     image_url = data.get("imageUrl")
 
     if not image_url:
@@ -159,7 +164,11 @@ def puzzle_image(data):
         room="puzzle_" + room
     )
 
-    emit("puzzle_state", puzzle_rooms[room], room="puzzle_" + room)
+    emit(
+        "puzzle_state",
+        puzzle_rooms[room],
+        room="puzzle_" + room
+    )
 def build_deck():
     deck = []
     for c in COLORS:
