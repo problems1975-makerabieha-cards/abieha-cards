@@ -6,61 +6,94 @@
 <title>تحدي البازل أونلاين</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <style>
-body{margin:0;font-family:Arial;background:#071120;color:white;overflow:hidden}
+body{
+  margin:0;
+  font-family:Arial;
+  background:#071126;
+  color:white;
+}
+
 #loginScreen{
-position:fixed;inset:0;background:#071120;z-index:9999;
-display:flex;align-items:center;justify-content:center;flex-direction:column
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  background:linear-gradient(180deg,#0c2b5d,#071126);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding-top:35px;
 }
-#loginScreen input{
-padding:14px;font-size:20px;border-radius:12px;margin:8px;border:0
+
+#loginScreen h1{
+  font-size:42px;
+  text-shadow:0 4px 8px #000;
+  margin-bottom:18px;
 }
+
+.loginBox{
+  width:96%;
+  min-height:90px;
+  background:rgba(11,35,75,.75);
+  border:1px solid rgba(120,190,255,.35);
+  border-radius:24px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  flex-wrap:wrap;
+  padding:18px;
+}
+
+input,select{
+  border:0;
+  border-radius:14px;
+  padding:12px 14px;
+  margin:6px;
+  font-size:16px;
+  min-width:160px;
+}
+
 button{
-padding:14px 28px;font-size:20px;border:0;border-radius:12px;
-background:#2f6bff;color:white;cursor:pointer;margin:6px
+  border:0;
+  border-radius:15px;
+  padding:12px 18px;
+  margin:6px;
+  font-weight:900;
+  cursor:pointer;
+  color:#071126;
+  background:linear-gradient(180deg,#fff0a6,#ffd166);
+  box-shadow:0 7px 0 #9b6a00,0 12px 22px #0008;
 }
-.top{height:70px;background:#101b33;display:flex;align-items:center;justify-content:space-around;font-size:22px}
-.app{display:grid;grid-template-columns:280px 1fr 280px;height:calc(100vh - 70px)}
-.side{background:#0f1a30;padding:15px;overflow:auto}
-.center{display:flex;align-items:center;justify-content:center;position:relative;flex-direction:column}
-#board{
-width:620px;height:620px;display:grid;gap:3px;background:#000;
-border:5px solid white;border-radius:18px;overflow:hidden
+
+button:active{
+  transform:translateY(4px);
+  box-shadow:0 3px 0 #9b6a00;
 }
-.tile{
-background-repeat:no-repeat;cursor:pointer;border:1px solid rgba(255,255,255,.2);
-position:relative
+
+.green{
+  background:linear-gradient(180deg,#7affb2,#35dd7b);
+  box-shadow:0 7px 0 #0b7d3b,0 12px 22px #0008;
 }
-.tile.selected{outline:6px solid #ffd166;outline-offset:-6px}
-.tile.correct::after{
-content:"✓";position:absolute;top:5px;left:8px;color:#45ff8a;
-font-size:22px;font-weight:bold;text-shadow:0 0 8px #000
-}
-.card{background:#162744;border-radius:16px;padding:12px;margin-bottom:12px}
-.player{background:#1d335c;border-radius:12px;padding:10px;margin:8px 0}
-.bar{height:9px;background:#081120;border-radius:20px;overflow:hidden;margin-top:6px}
-.fill{height:100%;background:#45ff8a;width:0%}
-#winScreen{
-position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:999;
-display:none;align-items:center;justify-content:center;flex-direction:column
-}
-#winScreen h1{font-size:70px;color:#ffd166;margin:0}
-#preview{width:100%;border-radius:14px;margin-top:8px}
 </style>
 </head>
 
 <body>
 
 <div id="loginScreen">
-  <h1>🧩 دخول تحدي البازل</h1>
-  <input id="joinName" placeholder="اسم اللاعب">
-  <input id="joinRoom" placeholder="رقم الروم" value="777">
-  <button onclick="joinPuzzleRoom()">دخول الروم</button>
-</div>
+  <h1>🧩 أبيها - تحدي التركيب</h1>
 
-<div class="top">
-  <div>🧩 تحدي البازل</div>
-  <div>الروم: <b id="roomText">---</b></div>
-  <div>⏱ <span id="timer">0</span> ثانية</div>
+  <div class="loginBox">
+    <input id="joinName" placeholder="اسم اللاعب">
+
+    <select id="playMode">
+      <option value="solo">فردي</option>
+      <option value="teams">فرق</option>
+    </select>
+
+    <input id="joinRoom" value="ROOM1" placeholder="رقم الروم">
+
+    <button class="green" onclick="joinPuzzleRoom()">دخول</button>
+  </div>
 </div>
 
 <div class="app">
