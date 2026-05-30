@@ -1,1 +1,85 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ألعاب أبيها</title>
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:radial-gradient(circle at top,#1b376b,#071120 55%,#02050c);
+  color:white;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.box{
+  width:min(92%,700px);
+  text-align:center;
+}
+h1{
+  font-size:52px;
+  margin-bottom:35px;
+}
+.cards{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:22px;
+}
+.card{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:28px;
+  padding:35px 20px;
+  text-decoration:none;
+  color:white;
+  box-shadow:0 25px 60px rgba(0,0,0,.35);
+  transition:.2s;
+}
+.card:hover{
+  transform:scale(1.04);
+  background:rgba(255,255,255,.14);
+}
+.icon{
+  font-size:70px;
+}
+.title{
+  font-size:30px;
+  font-weight:bold;
+  margin-top:15px;
+}
+.desc{
+  opacity:.8;
+  margin-top:10px;
+  font-size:18px;
+}
+@media(max-width:650px){
+  .cards{grid-template-columns:1fr}
+  h1{font-size:38px}
+}
+</style>
+</head>
+<body>
 
+<div class="box">
+  <h1>🎮 اختار اللعبة</h1>
+
+  <div class="cards">
+    <a class="card" href="/uno">
+      <div class="icon">🃏</div>
+      <div class="title">لعبة الأونو</div>
+      <div class="desc">غرف ولاعبين وتحدي كروت</div>
+    </a>
+
+    <a class="card" href="/puzzle">
+      <div class="icon">🧩</div>
+      <div class="title">تحدي التركيب</div>
+      <div class="desc">ركّب الصورة والأسرع يفوز</div>
+    </a>
+  </div>
+</div>
+
+</body>
+</html>
