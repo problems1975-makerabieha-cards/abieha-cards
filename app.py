@@ -24,7 +24,7 @@ def uno():
 
 @app.route("/puzzle")
 def puzzle():
-    return send_file("templates/puzzle.html")")
+    return send_file("templates/puzzle.html")
 
 def build_deck():
     deck = []
