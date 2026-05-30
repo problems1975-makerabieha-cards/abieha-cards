@@ -65,7 +65,8 @@ def puzzle_join(data):
             "progress": 0,
             "time": 0,
             "finished": False,
-            "wins": 0
+            "wins": 0,
+            "score": 0
         })
 
     emit("puzzle_state", r, room="puzzle_" + room)
@@ -100,27 +101,44 @@ def puzzle_finish(data):
     time = int(data.get("time", 0))
 
     if r.get("winner") is None:
+        round_winner = None
+
+        # أول لاعب يكمل يحصل 100% وفوز واحد
         for p in r["players"]:
             if p.get("sid") == request.sid:
                 p["progress"] = 100
                 p["time"] = time
                 p["finished"] = True
                 p["wins"] = int(p.get("wins", 0)) + 1
-
-                r["winner"] = p["name"]
-                r["winnerTime"] = time
-                r["status"] = "round_finished"
-
-                if int(r.get("round", 0)) >= int(r.get("roundLimit", 3)):
-                    r["status"] = "game_finished"
-                    best = sorted(
-                        r["players"],
-                        key=lambda x: (int(x.get("wins", 0)), int(x.get("progress", 0)), -int(x.get("time", 999999))),
-                        reverse=True
-                    )
-                    r["finalWinner"] = best[0]["name"] if best else p["name"]
-
+                round_winner = p
                 break
+
+        if round_winner:
+            # بعد انتهاء الجولة نحسب نقاط كل لاعب حسب نسبة التركيب الحالية
+            for pp in r["players"]:
+                pct = int(pp.get("progress", 0) or 0)
+                pct = max(0, min(100, pct))
+                pp["roundScore"] = pct
+                pp["score"] = int(pp.get("score", 0) or 0) + pct
+
+            r["winner"] = round_winner["name"]
+            r["winnerTime"] = time
+            r["status"] = "round_finished"
+
+            # إذا انتهى عدد الجولات المختار، نطلع الفائز النهائي
+            if int(r.get("round", 0)) >= int(r.get("roundLimit", 3)):
+                r["status"] = "game_finished"
+                best = sorted(
+                    r["players"],
+                    key=lambda x: (
+                        int(x.get("wins", 0) or 0),
+                        int(x.get("score", 0) or 0),
+                        int(x.get("roundScore", 0) or 0),
+                        -int(x.get("time", 999999) or 999999)
+                    ),
+                    reverse=True
+                )
+                r["finalWinner"] = best[0]["name"] if best else round_winner["name"]
 
     emit("puzzle_state", r, room="puzzle_" + room)
 
@@ -148,6 +166,8 @@ def puzzle_reset(data):
         p["time"] = 0
         p["finished"] = False
         p["wins"] = 0
+        p["score"] = 0
+        p["roundScore"] = 0
 
     emit("puzzle_reset_done", {}, room="puzzle_" + room)
     emit("puzzle_state", r, room="puzzle_" + room)
@@ -170,6 +190,8 @@ def puzzle_start(data):
         r["finalWinner"] = None
         for p in r["players"]:
             p["wins"] = 0
+            p["score"] = 0
+            p["roundScore"] = 0
 
     r["winner"] = None
     r["winnerTime"] = 0
@@ -184,6 +206,7 @@ def puzzle_start(data):
         p["progress"] = 0
         p["time"] = 0
         p["finished"] = False
+        p["roundScore"] = 0
 
     emit("puzzle_started", r, room="puzzle_" + room)
     emit("puzzle_state", r, room="puzzle_" + room)
