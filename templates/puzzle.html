@@ -348,6 +348,7 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
         <h2>👤 اللاعب</h2>
         <div id="meBox" style="font-size:20px;line-height:1.8">---</div>
         <button class="secondary" onclick="copyRoomLink()">نسخ رابط الروم</button>
+        <button class="danger" onclick="leavePuzzleRoom()">خروج من اللعبة</button>
     </div>
 
     <div class="card" id="settingsCard">
@@ -446,6 +447,8 @@ let myMode = "solo";
 let lastProgressSent = -1;
 let joined = false;
 let isHost = false;
+let myPid = localStorage.getItem("abieha_puzzle_pid") || ("puz_" + Math.random().toString(36).slice(2) + Date.now().toString(36));
+localStorage.setItem("abieha_puzzle_pid", myPid);
 let lastState = null;
     
 const board = document.getElementById("board");
@@ -500,7 +503,8 @@ function enterPuzzle(){
         room: myRoom,
         name: myName,
         avatar: myAvatar,
-        mode: myMode
+        mode: myMode,
+        pid: myPid
     });
 
     const url = new URL(window.location.href);
@@ -682,6 +686,7 @@ function updateProgress(send=true){
         lastProgressSent = pct;
         socket.emit("puzzle_progress", {
             room: myRoom,
+            pid: myPid,
             progress: pct,
             time: timer
         });
@@ -694,6 +699,7 @@ function checkWin(){
     if(correct && !winner){
         socket.emit("puzzle_finish", {
             room: myRoom,
+            pid: myPid,
             time: timer
         });
     }
@@ -827,15 +833,34 @@ function renderPlayers(){
         return;
     }
     players.forEach(p=>{
+        const canKick = isHost && p.pid !== myPid;
+        const onlineText = p.online === false ? "🔴 غير متصل" : "🟢 متصل";
         box.innerHTML += `
         <div class="player">
             <div>
                 <b>${p.name}</b><br>
-                <small>${p.finished?"🏁 خلص":"نسبة التركيب "+(p.progress||0)+"%"} | 🏆 ${p.wins||0} فوز | ⭐ ${p.score||0} نقطة</small>
+                <small>${onlineText} | ${p.finished?"🏁 خلص":"نسبة التركيب "+(p.progress||0)+"%"} | 🏆 ${p.wins||0} فوز | ⭐ ${p.score||0} نقطة</small>
                 <div class="progressBar"><div class="progressFill" style="width:${p.progress||0}%"></div></div>
+                ${canKick ? `<button class="danger" style="padding:8px;font-size:14px;margin-top:8px" onclick="kickPuzzlePlayer('${p.pid}')">طرد</button>` : ""}
             </div>
             <div class="status"></div>
         </div>`;
+    });
+}
+
+function leavePuzzleRoom(){
+    if(!joined) return;
+    socket.emit("puzzle_leave", {
+        room: myRoom,
+        pid: myPid
+    });
+}
+
+function kickPuzzlePlayer(pid){
+    if(!isHost) return toast("فقط صاحب الروم يقدر يطرد");
+    socket.emit("puzzle_kick", {
+        room: myRoom,
+        targetPid: pid
     });
 }
 
@@ -863,11 +888,27 @@ function renderRanking(){
     });
 }
 
+socket.on("puzzle_joined", function(data){
+    if(data && data.pid){
+        myPid = data.pid;
+        localStorage.setItem("abieha_puzzle_pid", myPid);
+    }
+});
+
+socket.on("puzzle_left", function(){
+    location.href = "/";
+});
+
+socket.on("puzzle_kicked", function(){
+    alert("تم طردك من الروم");
+    location.href = "/";
+});
+
 socket.on("puzzle_state", function(state){
     lastState = state;
     players = state.players || [];
 
-    isHost = state.host === socket.id;
+    isHost = state.host === myPid;
     const settingsCard = document.getElementById("settingsCard");
     const imageCard = document.getElementById("imageCard");
 
