@@ -32,6 +32,7 @@ def puzzle_join(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
     name = str(data.get("name", "لاعب")).strip()
     avatar = str(data.get("avatar", "🎮"))
+    pid = str(data.get("pid") or request.sid).strip()
 
     join_room("puzzle_" + room)
 
@@ -44,7 +45,8 @@ def puzzle_join(data):
             "imageUrl": "https://picsum.photos/900?random=77",
             "order": [],
             "status": "waiting",
-            "host": request.sid,
+            "host": pid,
+            "hostSid": request.sid,
             "round": 0,
             "roundLimit": 3,
             "finalWinner": None
@@ -54,27 +56,41 @@ def puzzle_join(data):
     players = r["players"]
     display_name = f"{avatar} {name}"
 
-    old = next((p for p in players if p.get("sid") == request.sid), None)
+    old = next((p for p in players if p.get("pid") == pid), None)
 
     if old:
+        old["sid"] = request.sid
         old["name"] = display_name
+        old["online"] = True
     else:
         players.append({
+            "pid": pid,
             "sid": request.sid,
             "name": display_name,
             "progress": 0,
             "time": 0,
             "finished": False,
             "wins": 0,
-            "score": 0
+            "score": 0,
+            "roundScore": 0,
+            "online": True
         })
 
+    if not r.get("host"):
+        r["host"] = pid
+        r["hostSid"] = request.sid
+
+    if r.get("host") == pid:
+        r["hostSid"] = request.sid
+
+    emit("puzzle_joined", {"pid": pid, "room": room})
     emit("puzzle_state", r, room="puzzle_" + room)
 
 
 @socketio.on("puzzle_progress")
 def puzzle_progress(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
+    pid = str(data.get("pid", "")).strip()
 
     if room not in puzzle_rooms:
         return
@@ -82,7 +98,9 @@ def puzzle_progress(data):
     r = puzzle_rooms[room]
 
     for p in r["players"]:
-        if p.get("sid") == request.sid:
+        if p.get("pid") == pid or p.get("sid") == request.sid:
+            p["sid"] = request.sid
+            p["online"] = True
             p["progress"] = int(data.get("progress", 0))
             p["time"] = int(data.get("time", 0))
             break
@@ -93,6 +111,7 @@ def puzzle_progress(data):
 @socketio.on("puzzle_finish")
 def puzzle_finish(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
+    pid = str(data.get("pid", "")).strip()
 
     if room not in puzzle_rooms:
         return
@@ -103,9 +122,10 @@ def puzzle_finish(data):
     if r.get("winner") is None:
         round_winner = None
 
-        # أول لاعب يكمل يحصل 100% وفوز واحد
         for p in r["players"]:
-            if p.get("sid") == request.sid:
+            if p.get("pid") == pid or p.get("sid") == request.sid:
+                p["sid"] = request.sid
+                p["online"] = True
                 p["progress"] = 100
                 p["time"] = time
                 p["finished"] = True
@@ -114,7 +134,6 @@ def puzzle_finish(data):
                 break
 
         if round_winner:
-            # بعد انتهاء الجولة نحسب نقاط كل لاعب حسب نسبة التركيب الحالية
             for pp in r["players"]:
                 pct = int(pp.get("progress", 0) or 0)
                 pct = max(0, min(100, pct))
@@ -125,7 +144,6 @@ def puzzle_finish(data):
             r["winnerTime"] = time
             r["status"] = "round_finished"
 
-            # إذا انتهى عدد الجولات المختار، نطلع الفائز النهائي
             if int(r.get("round", 0)) >= int(r.get("roundLimit", 3)):
                 r["status"] = "game_finished"
                 best = sorted(
@@ -150,7 +168,7 @@ def puzzle_reset(data):
     if room not in puzzle_rooms:
         return
 
-    if puzzle_rooms[room].get("host") != request.sid:
+    if puzzle_rooms[room].get("hostSid") != request.sid:
         return
 
     r = puzzle_rooms[room]
@@ -180,7 +198,7 @@ def puzzle_start(data):
     if room not in puzzle_rooms:
         return
 
-    if puzzle_rooms[room].get("host") != request.sid:
+    if puzzle_rooms[room].get("hostSid") != request.sid:
         return
 
     r = puzzle_rooms[room]
@@ -199,7 +217,6 @@ def puzzle_start(data):
     r["winnerTime"] = 0
     r["size"] = int(data.get("size", 4))
 
-    # أول جولة تستخدم الصورة الحالية، وبعد كل جولة تتغير الصورة تلقائياً للجولة التالية
     if next_round <= 1:
         r["imageUrl"] = data.get("imageUrl", r.get("imageUrl", "https://picsum.photos/900?random=77"))
     else:
@@ -227,7 +244,7 @@ def puzzle_image(data):
     if room not in puzzle_rooms:
         return
 
-    if puzzle_rooms[room].get("host") != request.sid:
+    if puzzle_rooms[room].get("hostSid") != request.sid:
         return
 
     image_url = data.get("imageUrl")
@@ -248,6 +265,60 @@ def puzzle_image(data):
         puzzle_rooms[room],
         room="puzzle_" + room
     )
+
+
+@socketio.on("puzzle_leave")
+def puzzle_leave(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    pid = str(data.get("pid", "")).strip()
+
+    if room not in puzzle_rooms:
+        emit("puzzle_left", {"ok": True}, room=request.sid)
+        return
+
+    r = puzzle_rooms[room]
+    r["players"] = [p for p in r.get("players", []) if p.get("pid") != pid]
+
+    if r.get("host") == pid:
+        if r.get("players"):
+            r["host"] = r["players"][0].get("pid")
+            r["hostSid"] = r["players"][0].get("sid")
+        else:
+            del puzzle_rooms[room]
+            emit("puzzle_left", {"ok": True}, room=request.sid)
+            return
+
+    emit("puzzle_left", {"ok": True}, room=request.sid)
+    emit("puzzle_state", r, room="puzzle_" + room)
+
+
+@socketio.on("puzzle_kick")
+def puzzle_kick(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    target_pid = str(data.get("targetPid", "")).strip()
+
+    if room not in puzzle_rooms:
+        return
+
+    r = puzzle_rooms[room]
+
+    if r.get("hostSid") != request.sid:
+        return
+
+    if not target_pid or target_pid == r.get("host"):
+        return
+
+    target = next((p for p in r.get("players", []) if p.get("pid") == target_pid), None)
+    if not target:
+        return
+
+    target_sid = target.get("sid")
+    r["players"] = [p for p in r.get("players", []) if p.get("pid") != target_pid]
+
+    if target_sid:
+        emit("puzzle_kicked", {"room": room}, room=target_sid)
+
+    emit("puzzle_state", r, room="puzzle_" + room)
 
 
 def build_deck():
@@ -1215,6 +1286,17 @@ def on_end_game(data):
 
 @socketio.on("disconnect")
 def on_disconnect():
+    for proom, pr in list(puzzle_rooms.items()):
+        changed = False
+        for p in pr.get("players", []):
+            if p.get("sid") == request.sid:
+                p["online"] = False
+                changed = True
+                if pr.get("hostSid") == request.sid:
+                    pr["hostSid"] = None
+        if changed:
+            emit("puzzle_state", pr, room="puzzle_" + proom)
+
     for room, r in list(rooms.items()):
 
         for i, player in enumerate(list(r.get("players", []))):
