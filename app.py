@@ -278,8 +278,14 @@ def puzzle_start(data):
     r["winnerTime"] = 0
     r["size"] = int(data.get("size", 4))
 
-    category = data.get("category", "general")
+    categories = data.get("categories", ["general"])
+
+    if not isinstance(categories, list) or not categories:
+        categories = ["general"]
+
+    category = random.choice(categories)
     r["imageUrl"] = get_random_puzzle_image(category)
+    r["category"] = category
 
     r["order"] = data.get("order", [])
     r["status"] = "started"
