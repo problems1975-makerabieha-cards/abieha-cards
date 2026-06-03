@@ -302,6 +302,51 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
     .app{grid-template-columns:1fr;height:auto}
     .boardWrap{max-width:95vw;width:95vw;height:95vw;max-height:none}
 }
+
+.category-box{
+    margin:15px 0;
+    border-radius:18px;
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.15);
+    background:rgba(255,255,255,.05);
+}
+
+.category-box summary{
+    cursor:pointer;
+    padding:15px;
+    font-size:18px;
+    font-weight:bold;
+    user-select:none;
+}
+
+.categories-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:10px;
+    padding:12px;
+}
+
+.categories-grid label{
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:8px;
+    padding:10px;
+    border-radius:12px;
+    background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.12);
+    cursor:pointer;
+    transition:.2s;
+}
+
+.categories-grid label:hover{
+    transform:translateY(-2px);
+    background:rgba(255,255,255,.15);
+}
+
+.categories-grid input{
+    transform:scale(1.2);
+}
 </style>
 </head>
 <body>
@@ -360,17 +405,33 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
             <option value="6">أسطوري 6×6</option>
         </select>
 
-        <div id="imageCategories" style="line-height:2;text-align:right">
-          <label><input type="checkbox" value="animals" checked> 🦁 حيوانات</label><br>
-          <label><input type="checkbox" value="football"> ⚽ لاعبين</label><br>
-          <label><input type="checkbox" value="actors"> 🎭 ممثلين</label><br>
-          <label><input type="checkbox" value="artists"> 🎤 فنانين</label><br>
-          <label><input type="checkbox" value="cartoon"> 🧸 كرتون</label><br>
-          <label><input type="checkbox" value="products"> 📦 منتجات</label><br>
-          <label><input type="checkbox" value="flags"> 🏳️ أعلام</label><br>
-          <label><input type="checkbox" value="plants"> 🌳 نباتات</label><br>
-          <label><input type="checkbox" value="general"> 🌍 عام</label>
-         </div>
+        <details class="category-box">
+    <summary id="categorySummary">
+        🖼️ فئات الصور (1 محددة)
+    </summary>
+
+    <div id="imageCategories" class="categories-grid">
+
+        <label><input type="checkbox" value="animals" checked onchange="updateCategoryCount()"> 🦁 حيوانات</label>
+
+        <label><input type="checkbox" value="football" onchange="updateCategoryCount()"> ⚽ رياضة </label>
+
+        <label><input type="checkbox" value="actors" onchange="updateCategoryCount()"> 🎭 ممثلين</label>
+
+        <label><input type="checkbox" value="artists" onchange="updateCategoryCount()"> 🎤 فنانين</label>
+
+        <label><input type="checkbox" value="cartoon" onchange="updateCategoryCount()"> 🧸 كرتون</label>
+
+        <label><input type="checkbox" value="products" onchange="updateCategoryCount()"> 📦 منتجات</label>
+
+        <label><input type="checkbox" value="flags" onchange="updateCategoryCount()"> 🏳️ أعلام</label>
+
+        <label><input type="checkbox" value="plants" onchange="updateCategoryCount()"> 🌳 نباتات</label>
+
+        <label><input type="checkbox" value="general" onchange="updateCategoryCount()"> 🌍 عام</label>
+
+    </div>
+</details>
         
         <label style="display:block;margin-top:12px;margin-bottom:6px;font-weight:800">عدد الجولات</label>
         <select id="roundLimit">
@@ -999,6 +1060,19 @@ const params = new URLSearchParams(window.location.search);
 if(params.get("room")){
     document.getElementById("loginRoom").value = params.get("room");
 }
+
+function updateCategoryCount(){
+
+    const count =
+        document.querySelectorAll(
+            "#imageCategories input:checked"
+        ).length;
+
+    document.getElementById("categorySummary").innerHTML =
+        "🖼️ فئات الصور (" + count + " محددة)";
+}
+
+updateCategoryCount();
 
 buildBoard(null);
 renderPlayers();
