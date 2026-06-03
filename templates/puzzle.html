@@ -360,18 +360,17 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
             <option value="6">أسطوري 6×6</option>
         </select>
 
-        <select id="imageCategory">
-            <option value="random">🎲 عشوائي</option>
-            <option value="animals">🦁 حيوانات</option>
-            <option value="football">⚽ لاعبين</option>
-            <option value="actors">🎭 ممثلين</option>
-            <option value="artists">🎤 فنانين</option>
-            <option value="cartoon">🧸 كرتون</option>
-            <option value="products">📦 منتجات</option>
-            <option value="flags">🏳️ أعلام</option>
-            <option value="plants">🌳 نباتات</option>
-            <option value="general">🌍 عام</option>
-         </select>
+        <div id="imageCategories" style="line-height:2;text-align:right">
+          <label><input type="checkbox" value="animals" checked> 🦁 حيوانات</label><br>
+          <label><input type="checkbox" value="football"> ⚽ لاعبين</label><br>
+          <label><input type="checkbox" value="actors"> 🎭 ممثلين</label><br>
+          <label><input type="checkbox" value="artists"> 🎤 فنانين</label><br>
+          <label><input type="checkbox" value="cartoon"> 🧸 كرتون</label><br>
+          <label><input type="checkbox" value="products"> 📦 منتجات</label><br>
+          <label><input type="checkbox" value="flags"> 🏳️ أعلام</label><br>
+          <label><input type="checkbox" value="plants"> 🌳 نباتات</label><br>
+          <label><input type="checkbox" value="general"> 🌍 عام</label>
+         </div>
         
         <label style="display:block;margin-top:12px;margin-bottom:6px;font-weight:800">عدد الجولات</label>
         <select id="roundLimit">
@@ -638,8 +637,8 @@ function startChallenge(){
         room: myRoom,
         size: chosenSize,
 
-        category:
-            document.getElementById("imageCategory").value,
+        categories: [...document.querySelectorAll("#imageCategories input:checked")]
+            .map(x => x.value)
 
         order: order,
 
