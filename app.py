@@ -336,8 +336,14 @@ def puzzle_leave(data):
         return
 
     r = puzzle_rooms[room]
-    r["players"] = [p for p in r.get("players", []) if p.get("pid") != pid]
 
+    # خروج عادي: فقط اللاعب نفسه ينحذف
+    r["players"] = [
+        p for p in r.get("players", [])
+        if p.get("pid") != pid
+    ]
+
+    # إذا صاحب الروم خرج، ننقل القيادة لأول لاعب موجود
     if r.get("host") == pid:
         if r.get("players"):
             r["host"] = r["players"][0].get("pid")
