@@ -45,6 +45,49 @@ def uno():
 def puzzle():
     return send_file("templates/puzzle.html")
 
+def get_random_puzzle_image(category="general"):
+
+    if category == "random":
+        return f"https://picsum.photos/seed/{random.randint(1000,999999)}/900"
+
+    allowed = {
+        "animals",
+        "football",
+        "actors",
+        "artists",
+        "cartoon",
+        "products",
+        "flags",
+        "plants",
+        "general"
+    }
+
+    category = category if category in allowed else "general"
+
+    folder = os.path.join("static", "puzzle-images", category)
+
+    if not os.path.exists(folder):
+        return f"https://picsum.photos/seed/{random.randint(1000,999999)}/900"
+
+    files = [
+        f for f in os.listdir(folder)
+        if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
+    ]
+
+    if not files:
+        return f"https://picsum.photos/seed/{random.randint(1000,999999)}/900"
+
+    filename = random.choice(files)
+
+    return f"/static/puzzle-images/{category}/{filename}"
+
+
+@socketio.on("puzzle_join")
+def puzzle_join(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    name = str(data.get("name", "لاعب")).strip()
+    avatar = str(data.get("avatar", "🎮"))
+
 @socketio.on("puzzle_join")
 def puzzle_join(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
