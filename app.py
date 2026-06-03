@@ -12,7 +12,25 @@ puzzle_rooms = {}
 COLORS = ["red", "bluec", "greenc", "yellow"]
 TEAM_ORDER = ["A", "B", "C"]
 
+def get_random_puzzle_image(category="general"):
+    allowed = {"animals", "football", "actors", "artists", "cartoon", "products", "flags", "plants", "general"}
+    category = category if category in allowed else "general"
 
+    folder = os.path.join("static", "puzzle-images", category)
+
+    if not os.path.exists(folder):
+        return "https://picsum.photos/seed/default/900"
+
+    files = [
+        f for f in os.listdir(folder)
+        if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
+    ]
+
+    if not files:
+        return "https://picsum.photos/seed/empty/900"
+
+    filename = random.choice(files)
+    return f"/static/puzzle-images/{category}/{filename}"
 @app.route("/")
 def home():
     return send_file("templates/home.html")
@@ -217,15 +235,14 @@ def puzzle_start(data):
     r["winnerTime"] = 0
     r["size"] = int(data.get("size", 4))
 
-    if next_round <= 1:
-        r["imageUrl"] = data.get("imageUrl", r.get("imageUrl", "https://picsum.photos/900?random=77"))
-    else:
-        r["imageUrl"] = f"https://picsum.photos/seed/{room}-{next_round}-{random.randint(100000,999999)}/900"
+    category = data.get("category", "general")
+    r["imageUrl"] = get_random_puzzle_image(category)
 
     r["order"] = data.get("order", [])
     r["status"] = "started"
     r["roundLimit"] = int(data.get("roundLimit", r.get("roundLimit", 3)))
     r["round"] = next_round
+    r["category"] = category
 
     for p in r["players"]:
         p["progress"] = 0
@@ -235,7 +252,6 @@ def puzzle_start(data):
 
     emit("puzzle_started", r, room="puzzle_" + room)
     emit("puzzle_state", r, room="puzzle_" + room)
-
 
 @socketio.on("puzzle_image")
 def puzzle_image(data):
