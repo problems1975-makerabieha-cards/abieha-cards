@@ -433,13 +433,16 @@ button.gold{background:linear-gradient(135deg,#f7b731,#ff7b00)}
     </div>
 </details>
         
-        <label style="display:block;margin-top:12px;margin-bottom:6px;font-weight:800">عدد الجولات</label>
-        <select id="roundLimit">
-            <option value="1">1 جولة</option>
-            <option value="3" selected>3 جولات</option>
-            <option value="5">5 جولات</option>
-            <option value="7">7 جولات</option>
-            <option value="10">10 جولات</option>
+        <label style="display:block;margin-top:10px">
+            🏆 عدد الجولات
+        </label>
+
+        <input
+            id="roundLimit"
+            type="number"
+            min="1"
+            max="50"
+           value="3">
         </select>
 
         <button class="gold" onclick="startChallenge()">ابدأ التحدي للجميع</button>
