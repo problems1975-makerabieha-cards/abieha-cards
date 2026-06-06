@@ -1459,7 +1459,9 @@ def letters_public_state(room):
         "turn": r.get("turn", 0),
         "timeLeft": r.get("timeLeft", 0),
         "timeLimit": r.get("timeLimit", 30),
-        "words": r.get("words", [])
+        "words": r.get("words", []),
+        "roundWinner": r.get("roundWinner"),
+        "roundMessage": r.get("roundMessage", ""),
     }
 
 
@@ -1467,7 +1469,8 @@ def send_letters_state(room):
     if room not in letters_rooms:
         return
 
-    emit("letters_state", letters_public_state(room), room="letters_" + room)
+    # مهم: نستخدم socketio.emit بدل emit لأن التايمر يشتغل خارج request context
+    socketio.emit("letters_state", letters_public_state(room), room="letters_" + room)
 
 
 @socketio.on("letters_join")
@@ -1493,7 +1496,9 @@ def letters_join(data):
             "timeLeft": 30,
             "timer": None,
             "timerToken": 0,
-            "used": set()
+            "used": set(),
+            "roundWinner": None,
+            "roundMessage": "",
         }
     r = letters_rooms[room]
     display_name = f"{avatar} {name}"
@@ -1510,6 +1515,9 @@ def letters_join(data):
             "sid": request.sid,
             "name": display_name,
             "score": 0,
+            "fails": 0,
+            "timeouts": 0,
+            "eliminated": False,
             "online": True
         })
 
@@ -1530,6 +1538,38 @@ def cancel_letters_timer(r):
     r["timer"] = None
 
 
+def letters_active_players(r):
+    return [p for p in r.get("players", []) if not p.get("eliminated")]
+
+
+def finish_letters_round_if_needed(room):
+    if room not in letters_rooms:
+        return True
+
+    r = letters_rooms[room]
+    active = letters_active_players(r)
+
+    if len(active) <= 1 and r.get("started"):
+        cancel_letters_timer(r)
+        r["started"] = False
+        r["timeLeft"] = 0
+
+        if active:
+            winner = active[0]
+            r["roundWinner"] = winner.get("name", "لاعب")
+            r["roundMessage"] = f"🏆 الفائز بالجولة: {r['roundWinner']}"
+            r["words"].append({"word": "🏆 فاز بالجولة", "player": r["roundWinner"]})
+            socketio.emit("letters_round_winner", {"winner": r["roundWinner"]}, room="letters_" + room)
+        else:
+            r["roundWinner"] = None
+            r["roundMessage"] = "انتهت الجولة بدون فائز"
+
+        send_letters_state(room)
+        return True
+
+    return False
+
+
 def next_letters_turn(room):
     if room not in letters_rooms:
         return
@@ -1541,14 +1581,49 @@ def next_letters_turn(room):
         cancel_letters_timer(r)
         return
 
-    r["turn"] = (int(r.get("turn", 0) or 0) + 1) % len(players)
+    if finish_letters_round_if_needed(room):
+        return
 
-    for p in players:
-        if p.get("pid") == players[r["turn"]].get("pid"):
-            p["timeouts"] = int(p.get("timeouts", 0) or 0)
+    start = int(r.get("turn", 0) or 0)
+    for step in range(1, len(players) + 1):
+        ni = (start + step) % len(players)
+        if not players[ni].get("eliminated"):
+            r["turn"] = ni
+            break
 
     start_letters_timer(room)
     send_letters_state(room)
+
+
+def letters_fail_current_player(room, reason="محاولة فاشلة"):
+    if room not in letters_rooms:
+        return
+
+    r = letters_rooms[room]
+    players = r.get("players", [])
+    if not players or not r.get("started"):
+        return
+
+    turn = int(r.get("turn", 0) or 0) % len(players)
+    player = players[turn]
+
+    player["fails"] = int(player.get("fails", 0) or 0) + 1
+    fails = player["fails"]
+
+    if reason == "انتهى الوقت":
+        player["timeouts"] = int(player.get("timeouts", 0) or 0) + 1
+
+    if fails >= 3:
+        player["eliminated"] = True
+        r["words"].append({"word": "❌ طرد من الجولة", "player": player.get("name", "لاعب")})
+        socketio.emit("letters_player_eliminated", {"name": player.get("name", "لاعب")}, room="letters_" + room)
+    else:
+        r["words"].append({"word": f"⚠️ {reason} ({fails}/3)", "player": player.get("name", "لاعب")})
+
+    if finish_letters_round_if_needed(room):
+        return
+
+    next_letters_turn(room)
 
 
 def start_letters_timer(room):
@@ -1584,13 +1659,8 @@ def start_letters_timer(room):
         send_letters_state(room)
 
         if rr["timeLeft"] <= 0:
-            players = rr.get("players", [])
-            if players:
-                turn = int(rr.get("turn", 0) or 0) % len(players)
-                players[turn]["timeouts"] = int(players[turn].get("timeouts", 0) or 0) + 1
-
             socketio.emit("letters_time_up", {}, room="letters_" + room)
-            next_letters_turn(room)
+            letters_fail_current_player(room, "انتهى الوقت")
             return
 
         rr["timer"] = threading.Timer(1, tick)
@@ -1631,11 +1701,18 @@ def letters_start(data):
     r["timeLeft"] = r["timeLimit"]
 
     r["started"] = True
+    r["roundWinner"] = None
+    r["roundMessage"] = ""
     r["currentWord"] = word
     r["neededLetter"] = last_arabic_letter(word)
     r["turn"] = 1 if len(r["players"]) > 1 else 0
     r["words"] = [{"word": word, "player": "القائد"}]
-    r["used"] = {word.strip().lower()}
+    r["used"] = {word.strip().lower(), normalize_arabic_word(word.strip().lower())}
+
+    for p in r.get("players", []):
+        p["fails"] = 0
+        p["timeouts"] = 0
+        p["eliminated"] = False
 
     start_letters_timer(room)
     send_letters_state(room)
@@ -1666,16 +1743,24 @@ def letters_word(data):
         emit("letters_error", {"message": "مو دورك"}, room=request.sid)
         return
 
+    if current_player.get("eliminated"):
+        emit("letters_error", {"message": "أنت مطرود من الجولة"}, room=request.sid)
+        return
+
     if not word:
         emit("letters_error", {"message": "اكتب كلمة"}, room=request.sid)
         return
 
+    def fail_and_reply(message):
+        emit("letters_error", {"message": message}, room=request.sid)
+        letters_fail_current_player(room, message)
+
     if len(word) < 2:
-        emit("letters_error", {"message": "الكلمة قصيرة جداً"}, room=request.sid)
+        fail_and_reply("الكلمة قصيرة جداً")
         return
 
     if not all(("\u0600" <= c <= "\u06FF") or c.isspace() for c in word):
-        emit("letters_error", {"message": "اكتب كلمة عربية فقط"}, room=request.sid)
+        fail_and_reply("اكتب كلمة عربية فقط")
         return
 
     word_key = word.strip().lower()
@@ -1685,18 +1770,18 @@ def letters_word(data):
         if ai_check_arabic_word(word):
             save_custom_arabic_word(word)
         else:
-            emit("letters_error", {"message": "❌ الكلمة غير موجودة أو غير مفهومة"}, room=request.sid)
+            fail_and_reply("❌ الكلمة غير موجودة أو غير مفهومة")
             return
 
     if word_key in r.get("used", set()) or normalized_key in r.get("used", set()):
-        emit("letters_error", {"message": "الكلمة مكررة"}, room=request.sid)
+        fail_and_reply("الكلمة مكررة")
         return
 
     needed = r.get("neededLetter", "")
     first = first_arabic_letter(word)
 
     if needed and first != needed:
-        emit("letters_error", {"message": f"الكلمة لازم تبدأ بحرف: {needed}"}, room=request.sid)
+        fail_and_reply(f"الكلمة لازم تبدأ بحرف: {needed}")
         return
 
     current_player["score"] = int(current_player.get("score", 0)) + 1
@@ -1705,11 +1790,8 @@ def letters_word(data):
     r["words"].append({"word": word, "player": current_player.get("name", "لاعب")})
     r["used"].add(word_key)
     r["used"].add(normalized_key)
-    r["turn"] = (turn + 1) % len(players)
 
-    # بعد الكلمة الصحيحة يبدأ وقت اللاعب التالي من جديد
-    start_letters_timer(room)
-    send_letters_state(room)
+    next_letters_turn(room)
 
 
 @socketio.on("letters_reset")
@@ -1733,10 +1815,14 @@ def letters_reset(data):
     r["words"] = []
     r["used"] = set()
     r["timeLeft"] = int(r.get("timeLimit", 30))
+    r["roundWinner"] = None
+    r["roundMessage"] = ""
 
     for p in r["players"]:
         p["score"] = 0
+        p["fails"] = 0
         p["timeouts"] = 0
+        p["eliminated"] = False
 
     send_letters_state(room)
 
