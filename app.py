@@ -1374,7 +1374,7 @@ def ai_check_arabic_word(word):
             }
         ],
         "temperature": 0,
-        "max_tokens": 3
+        "max_tokens": 2
     }
 
     try:
@@ -1625,7 +1625,7 @@ def letters_fail_current_player(room, reason="محاولة فاشلة"):
         r["words"].append({"word": "❌ طرد من الجولة", "player": player.get("name", "لاعب")})
         socketio.emit("letters_player_eliminated", {"name": player.get("name", "لاعب")}, room="letters_" + room)
     else:
-        r["words"].append({"word": f"⚠️ {reason} ({fails}/3)", "player": player.get("name", "لاعب")})
+        r["words"].append({"word": f"⚠️ {reason} ({fails}/2)", "player": player.get("name", "لاعب")})
 
     if finish_letters_round_if_needed(room):
         return
