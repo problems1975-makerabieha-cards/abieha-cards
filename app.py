@@ -1277,7 +1277,21 @@ def make_host(data):
 
 
 # ===== لعبة آخر حرف =====
+ARABIC_WORDS = set()
 
+try:
+    with open("static/dictionaries/arabic_words.txt", encoding="utf-8") as f:
+        ARABIC_WORDS = {
+            line.strip()
+            for line in f
+            if line.strip()
+        }
+
+    print("Loaded", len(ARABIC_WORDS), "Arabic words")
+
+except Exception as e:
+    print("Dictionary error:", e)
+    
 def last_arabic_letter(word):
     word = (word or "").strip()
     chars = [c for c in word if c.isalpha()]
@@ -1444,6 +1458,10 @@ def letters_word(data):
         emit("letters_error", {"message": "اكتب كلمة"}, room=request.sid)
         return
 
+    if word not in ARABIC_WORDS:
+        emit("letters_error", {"message": "❌ الكلمة غير موجودة في القاموس"}, room=request.sid)
+        return
+
     if word.strip().lower() in r.get("used", set()):
         emit("letters_error", {"message": "الكلمة مكررة"}, room=request.sid)
         return
@@ -1463,7 +1481,6 @@ def letters_word(data):
     r["turn"] = (turn + 1) % len(players)
 
     send_letters_state(room)
-
 
 @socketio.on("letters_reset")
 def letters_reset(data):
