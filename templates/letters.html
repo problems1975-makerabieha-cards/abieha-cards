@@ -152,7 +152,7 @@ function renderState(state){
   isHost=state.host===myPid;
   document.getElementById("hostControls").style.display=isHost?"block":"none";
   document.getElementById("hostText").innerText=state.hostName||"---";
-  document.getElementById("statusText").innerText=state.started?"بدأ":"انتظار";
+  document.getElementById("statusText").innerText=state.started?"بدأ":(state.roundWinner?"انتهت":"انتظار");
   document.getElementById("timeLeft").innerText =
       state.timeLeft || 0;
 
@@ -161,14 +161,18 @@ function renderState(state){
   document.getElementById("currentWord").innerText=state.currentWord||"---";
   document.getElementById("neededLetter").innerText=state.neededLetter||"؟";
   const turnPlayer=(state.players||[])[state.turn||0];
-  document.getElementById("turnName").innerText=turnPlayer?turnPlayer.name:"---";
+  document.getElementById("turnName").innerText = state.roundWinner
+    ? ("🏆 الفائز: " + state.roundWinner)
+    : (turnPlayer ? turnPlayer.name : "---");
+  if(state.roundMessage) showMsg(state.roundMessage);
 
   const playersBox=document.getElementById("playersBox");
   playersBox.innerHTML="";
   (state.players||[]).forEach((p,i)=>{
     const canKick=isHost&&p.pid!==myPid;
-    const cls=i===state.turn&&state.started?"player turn":"player";
-    playersBox.innerHTML+=`<div class="${cls}"><b>${p.name}</b><br><span class="small">${p.online===false?"🔴 غير متصل":"🟢 متصل"} | ⭐ ${p.score||0} نقطة</span>${canKick?`<button class="red" style="padding:8px;font-size:14px" onclick="kickLetters('${p.pid}')">طرد</button>`:""}</div>`;
+    const cls=i===state.turn&&state.started&&!p.eliminated?"player turn":"player";
+    const status = p.eliminated ? "❌ مطرود من الجولة" : (p.online===false ? "🔴 غير متصل" : "🟢 متصل");
+    playersBox.innerHTML+=`<div class="${cls}" style="${p.eliminated?'opacity:.45;filter:grayscale(1);':''}"><b>${p.name}</b><br><span class="small">${status} | ⭐ ${p.score||0} نقطة | ⚠️ فشل ${p.fails||0}/3</span>${canKick?`<button class="red" style="padding:8px;font-size:14px" onclick="kickLetters('${p.pid}')">طرد</button>`:""}</div>`;
   });
 
   const logBox=document.getElementById("logBox");
@@ -184,7 +188,15 @@ socket.on("letters_timer", data => {
 });
 
 socket.on("letters_time_up", () => {
-  showMsg("⏰ انتهى الوقت، الدور انتقل للاعب التالي");
+  showMsg("⏰ انتهى الوقت، انحسبت محاولة فاشلة وانتقل الدور");
+});
+
+socket.on("letters_player_eliminated", data => {
+  showMsg("❌ " + (data.name || "لاعب") + " طلع من الجولة بعد 3 محاولات فاشلة");
+});
+
+socket.on("letters_round_winner", data => {
+  alert("🏆 الفائز بالجولة: " + (data.winner || "---"));
 });
 
 socket.on("letters_error",data=>showMsg(data.message||"خطأ"));
