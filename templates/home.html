@@ -16,7 +16,7 @@ body{
   justify-content:center;
 }
 .box{
-  width:min(92%,700px);
+  width:min(92%,900px);
   text-align:center;
 }
 h1{
@@ -25,7 +25,7 @@ h1{
 }
 .cards{
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:repeat(3,1fr);
   gap:22px;
 }
 .card{
@@ -55,7 +55,7 @@ h1{
   margin-top:10px;
   font-size:18px;
 }
-@media(max-width:650px){
+@media(max-width:900px){
   .cards{grid-template-columns:1fr}
   h1{font-size:38px}
 }
@@ -67,6 +67,7 @@ h1{
   <h1>🎮 اختار اللعبة</h1>
 
   <div class="cards">
+
     <a class="card" href="/uno">
       <div class="icon">🃏</div>
       <div class="title">لعبة الأونو</div>
@@ -78,6 +79,13 @@ h1{
       <div class="title">تحدي التركيب</div>
       <div class="desc">ركّب الصورة والأسرع يفوز</div>
     </a>
+
+    <a class="card" href="/letters">
+      <div class="icon">🔤</div>
+      <div class="title">لعبة آخر حرف</div>
+      <div class="desc">اكتب كلمة تبدأ بآخر حرف</div>
+    </a>
+
   </div>
 </div>
 
