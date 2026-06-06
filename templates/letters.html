@@ -172,7 +172,7 @@ function renderState(state){
     const canKick=isHost&&p.pid!==myPid;
     const cls=i===state.turn&&state.started&&!p.eliminated?"player turn":"player";
     const status = p.eliminated ? "❌ مطرود من الجولة" : (p.online===false ? "🔴 غير متصل" : "🟢 متصل");
-    playersBox.innerHTML+=`<div class="${cls}" style="${p.eliminated?'opacity:.45;filter:grayscale(1);':''}"><b>${p.name}</b><br><span class="small">${status} | ⭐ ${p.score||0} نقطة | ⚠️ فشل ${p.fails||0}/3</span>${canKick?`<button class="red" style="padding:8px;font-size:14px" onclick="kickLetters('${p.pid}')">طرد</button>`:""}</div>`;
+    playersBox.innerHTML+=`<div class="${cls}" style="${p.eliminated?'opacity:.45;filter:grayscale(1);':''}"><b>${p.name}</b><br><span class="small">${status} | ⭐ ${p.score||0} نقطة | ⚠️ فشل ${p.fails||0}/2</span>${canKick?`<button class="red" style="padding:8px;font-size:14px" onclick="kickLetters('${p.pid}')">طرد</button>`:""}</div>`;
   });
 
   const logBox=document.getElementById("logBox");
