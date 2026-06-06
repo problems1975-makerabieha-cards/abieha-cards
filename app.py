@@ -1,6 +1,7 @@
 from flask import Flask, request, send_file
 from flask_socketio import SocketIO, join_room, emit
 import random, os, threading
+import json, urllib.request
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "abieha-final-secret")
@@ -1277,21 +1278,137 @@ def make_host(data):
 
 
 # ===== لعبة آخر حرف =====
+
+
+# ===== قاموس لعبة آخر حرف + فحص AI للكلمات الجديدة =====
+DICTIONARY_PATH = "static/dictionaries/arabic_words.txt"
+CUSTOM_WORDS_PATH = "static/dictionaries/custom_words.txt"
+
 ARABIC_WORDS = set()
 
-try:
-    with open("static/dictionaries/arabic_words.txt", encoding="utf-8") as f:
-        ARABIC_WORDS = {
-            line.strip()
-            for line in f
-            if line.strip()
-        }
 
-    print("Loaded", len(ARABIC_WORDS), "Arabic words")
+def normalize_arabic_word(word):
+    word = (word or "").strip()
+    replacements = {
+        "أ": "ا",
+        "إ": "ا",
+        "آ": "ا",
+        "ى": "ي",
+        "ة": "ه",
+        "ؤ": "و",
+        "ئ": "ي"
+    }
+    for old, new in replacements.items():
+        word = word.replace(old, new)
+    return word
 
-except Exception as e:
-    print("Dictionary error:", e)
-    
+
+def load_arabic_dictionaries():
+    global ARABIC_WORDS
+    ARABIC_WORDS = set()
+
+    for path in [DICTIONARY_PATH, CUSTOM_WORDS_PATH]:
+        try:
+            if os.path.exists(path):
+                with open(path, encoding="utf-8") as f:
+                    for line in f:
+                        w = line.strip()
+                        if w:
+                            ARABIC_WORDS.add(w)
+                            ARABIC_WORDS.add(normalize_arabic_word(w))
+        except Exception as e:
+            print("Dictionary load error:", path, e)
+
+    print("Loaded Arabic words:", len(ARABIC_WORDS))
+
+
+def save_custom_arabic_word(word):
+    word = (word or "").strip()
+    if not word:
+        return
+
+    os.makedirs(os.path.dirname(CUSTOM_WORDS_PATH), exist_ok=True)
+
+    if word not in ARABIC_WORDS:
+        ARABIC_WORDS.add(word)
+        ARABIC_WORDS.add(normalize_arabic_word(word))
+
+        try:
+            with open(CUSTOM_WORDS_PATH, "a", encoding="utf-8") as f:
+                f.write(word + "\n")
+        except Exception as e:
+            print("Custom word save error:", e)
+
+
+def ai_check_arabic_word(word):
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+
+    if not api_key:
+        return False
+
+    word = (word or "").strip()
+
+    if len(word) < 2 or len(word) > 25:
+        return False
+
+    if not all(("\u0600" <= c <= "\u06FF") or c.isspace() for c in word):
+        return False
+
+    prompt = (
+        "هل الكلمة التالية كلمة عربية حقيقية ومفهومة ومستخدمة ككلمة مستقلة؟ "
+        "ارفض الحروف العشوائية أو الكلمات المخترعة أو التكرار غير المفهوم. "
+        "أجب فقط بكلمة واحدة: نعم أو لا.\n\n"
+        f"الكلمة: {word}"
+    )
+
+    payload = {
+        "model": os.environ.get("OPENAI_WORD_MODEL", "gpt-4.1-mini"),
+        "messages": [
+            {
+                "role": "system",
+                "content": "أنت مدقق كلمات للعبة عربية. أجب فقط: نعم أو لا."
+            },
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        "temperature": 0,
+        "max_tokens": 3
+    }
+
+    try:
+        req = urllib.request.Request(
+            "https://api.openai.com/v1/chat/completions",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": "Bearer " + api_key,
+                "Content-Type": "application/json"
+            },
+            method="POST"
+        )
+
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        answer = (
+            data.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+            .strip()
+            .lower()
+        )
+
+        return answer.startswith("نعم") or answer.startswith("yes")
+
+    except Exception as e:
+        print("AI word check error:", e)
+        return False
+
+
+load_arabic_dictionaries()
+
+
 def last_arabic_letter(word):
     word = (word or "").strip()
     chars = [c for c in word if c.isalpha()]
@@ -1458,11 +1575,25 @@ def letters_word(data):
         emit("letters_error", {"message": "اكتب كلمة"}, room=request.sid)
         return
 
-    if word not in ARABIC_WORDS:
-        emit("letters_error", {"message": "❌ الكلمة غير موجودة في القاموس"}, room=request.sid)
+    if len(word) < 2:
+        emit("letters_error", {"message": "الكلمة قصيرة جداً"}, room=request.sid)
         return
 
-    if word.strip().lower() in r.get("used", set()):
+    if not all(("\u0600" <= c <= "\u06FF") or c.isspace() for c in word):
+        emit("letters_error", {"message": "اكتب كلمة عربية فقط"}, room=request.sid)
+        return
+
+    word_key = word.strip().lower()
+    normalized_key = normalize_arabic_word(word_key)
+
+    if word_key not in ARABIC_WORDS and normalized_key not in ARABIC_WORDS:
+        if ai_check_arabic_word(word):
+            save_custom_arabic_word(word)
+        else:
+            emit("letters_error", {"message": "❌ الكلمة غير موجودة أو غير مفهومة"}, room=request.sid)
+            return
+
+    if word_key in r.get("used", set()) or normalized_key in r.get("used", set()):
         emit("letters_error", {"message": "الكلمة مكررة"}, room=request.sid)
         return
 
@@ -1477,10 +1608,12 @@ def letters_word(data):
     r["currentWord"] = word
     r["neededLetter"] = last_arabic_letter(word)
     r["words"].append({"word": word, "player": current_player.get("name", "لاعب")})
-    r["used"].add(word.strip().lower())
+    r["used"].add(word_key)
+    r["used"].add(normalized_key)
     r["turn"] = (turn + 1) % len(players)
 
     send_letters_state(room)
+
 
 @socketio.on("letters_reset")
 def letters_reset(data):
