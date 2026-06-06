@@ -71,13 +71,7 @@ h1{font-size:46px;margin:0 0 25px;text-shadow:0 5px 14px #000}
         <h2>👑 تحكم القائد</h2>
         <input id="startWord" placeholder="كلمة البداية مثال: باب">
 
-        <input
-            id="turnTimeLimit"
-            type="number"
-            min="5"
-            max="120"
-            value="30"
-            placeholder="وقت اللاعب بالثواني">
+        <input id="turnTimeLimit" type="number" min="5" max="120" value="30" placeholder="وقت اللاعب بالثواني">
         <button class="green" onclick="startLettersGame()">ابدأ اللعبة</button>
         <button class="red" onclick="resetLettersGame()">تصفير</button>
       </div>
@@ -89,6 +83,9 @@ h1{font-size:46px;margin:0 0 25px;text-shadow:0 5px 14px #000}
         <div class="word" id="currentWord">---</div>
         <div>الحرف المطلوب</div>
         <div class="bigLetter" id="neededLetter">؟</div>
+        <div class="badge" style="margin:12px auto;font-size:22px">
+        ⏱ الوقت: <b id="timeLeft">0</b>
+        </div>
         <div>دور اللاعب</div>
         <h2 id="turnName">---</h2>
         <input id="wordInput" placeholder="اكتب كلمتك هنا">
@@ -134,23 +131,16 @@ function joinLetters(){
 
 function copyRoom(){const url=new URL(window.location.href);url.searchParams.set("room",myRoom);navigator.clipboard.writeText(url.toString());showMsg("تم نسخ رابط الروم")}
 function startLettersGame(){
-    if(!isHost)return showMsg("فقط القائد يبدأ");
+  if(!isHost)return showMsg("فقط القائد يبدأ");
 
-    const word =
-        document.getElementById("startWord").value.trim();
+  const word=document.getElementById("startWord").value.trim();
+  if(!word)return showMsg("اكتب كلمة البداية");
 
-    if(!word)
-        return showMsg("اكتب كلمة البداية");
-
-    socket.emit("letters_start",{
-        room:myRoom,
-        word:word,
-
-        timeLimit:
-            parseInt(
-                document.getElementById("turnTimeLimit").value || "30"
-            )
-    });
+  socket.emit("letters_start",{
+    room:myRoom,
+    word:word,
+    timeLimit:parseInt(document.getElementById("turnTimeLimit").value || "30")
+  });
 }
 function resetLettersGame(){if(!isHost)return;socket.emit("letters_reset",{room:myRoom})}
 function leaveLetters(){socket.emit("letters_leave",{room:myRoom,pid:myPid})}
@@ -163,6 +153,7 @@ function renderState(state){
   document.getElementById("hostControls").style.display=isHost?"block":"none";
   document.getElementById("hostText").innerText=state.hostName||"---";
   document.getElementById("statusText").innerText=state.started?"بدأ":"انتظار";
+  document.getElementById("timeLeft").innerText = state.timeLeft || 0;
   document.getElementById("timeLeft").innerText =
     state.timeLeft || 0;
   document.getElementById("currentWord").innerText=state.currentWord||"---";
