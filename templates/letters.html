@@ -84,7 +84,7 @@ h1{font-size:46px;margin:0 0 25px;text-shadow:0 5px 14px #000}
         <div>الحرف المطلوب</div>
         <div class="bigLetter" id="neededLetter">؟</div>
         <div class="badge" style="margin:12px auto;font-size:22px">
-        ⏱ الوقت: <b id="timeLeft">0</b>
+        ⏱ الوقت: <b id="timeLeftCenter">0</b>
         </div>
         <div>دور اللاعب</div>
         <h2 id="turnName">---</h2>
@@ -153,9 +153,11 @@ function renderState(state){
   document.getElementById("hostControls").style.display=isHost?"block":"none";
   document.getElementById("hostText").innerText=state.hostName||"---";
   document.getElementById("statusText").innerText=state.started?"بدأ":"انتظار";
-  document.getElementById("timeLeft").innerText = state.timeLeft || 0;
   document.getElementById("timeLeft").innerText =
-    state.timeLeft || 0;
+      state.timeLeft || 0;
+
+  document.getElementById("timeLeftCenter").innerText =
+      state.timeLeft || 0;
   document.getElementById("currentWord").innerText=state.currentWord||"---";
   document.getElementById("neededLetter").innerText=state.neededLetter||"؟";
   const turnPlayer=(state.players||[])[state.turn||0];
