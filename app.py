@@ -1492,9 +1492,9 @@ def letters_join(data):
             "timeLimit": 30,
             "timeLeft": 30,
             "timer": None,
+            "timerToken": 0,
             "used": set()
         }
-
     r = letters_rooms[room]
     display_name = f"{avatar} {name}"
 
@@ -1534,51 +1534,48 @@ def start_letters_timer(room):
         return
 
     r = letters_rooms[room]
-    cancel_letters_timer(r)
 
-    if not r.get("started"):
-        return
+    r["timerToken"] = int(r.get("timerToken", 0)) + 1
+    token = r["timerToken"]
 
     r["timeLeft"] = int(r.get("timeLimit", 30))
     send_letters_state(room)
 
-    def tick():
-        rr = letters_rooms.get(room)
-        if not rr or not rr.get("started"):
-            return
+    def run_timer():
+        while True:
+            socketio.sleep(1)
 
-        rr["timeLeft"] = max(0, int(rr.get("timeLeft", 0)) - 1)
-        send_letters_state(room)
+            rr = letters_rooms.get(room)
+            if not rr or not rr.get("started"):
+                return
 
-        if rr["timeLeft"] <= 0:
-            players = rr.get("players", [])
+            if rr.get("timerToken") != token:
+                return
 
-            if players:
-                old_turn = int(rr.get("turn", 0)) % len(players)
-                old_player = players[old_turn]
-                old_player["timeouts"] = int(old_player.get("timeouts", 0)) + 1
+            rr["timeLeft"] = int(rr.get("timeLeft", 0)) - 1
 
-                rr["words"].append({
-                    "word": "⏱ انتهى الوقت",
-                    "player": old_player.get("name", "لاعب")
-                })
+            if rr["timeLeft"] <= 0:
+                players = rr.get("players", [])
 
-                # إذا خلص الوقت: لا نقاط، ينتقل الدور فقط
-                rr["turn"] = (old_turn + 1) % len(players)
-                rr["timeLeft"] = int(rr.get("timeLimit", 30))
-                start_letters_timer(room)
+                if players:
+                    old_turn = int(rr.get("turn", 0)) % len(players)
 
-            return
+                    rr["words"].append({
+                        "word": "⏱ انتهى الوقت",
+                        "player": players[old_turn].get("name", "لاعب")
+                    })
 
-        rr["timer"] = threading.Timer(1, tick)
-        rr["timer"].daemon = True
-        rr["timer"].start()
+                    rr["turn"] = (old_turn + 1) % len(players)
+                    rr["timeLeft"] = int(rr.get("timeLimit", 30))
 
-    r["timer"] = threading.Timer(1, tick)
-    r["timer"].daemon = True
-    r["timer"].start()
+                    send_letters_state(room)
+                    start_letters_timer(room)
 
+                return
 
+            send_letters_state(room)
+
+    socketio.start_background_task(run_timer)
 @socketio.on("letters_start")
 def letters_start(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
