@@ -1420,10 +1420,11 @@ def last_arabic_letter(word):
         "ى": "ي",
         "أ": "ا",
         "إ": "ا",
-        "آ": "ا"
+        "آ": "ا",
+        "ء": "ا"
     }
-    return mapping.get(chars[-1], chars[-1])
 
+    return mapping.get(chars[-1], chars[-1])
 
 def first_arabic_letter(word):
     word = (word or "").strip()
@@ -1434,7 +1435,8 @@ def first_arabic_letter(word):
     mapping = {
         "أ": "ا",
         "إ": "ا",
-        "آ": "ا"
+        "آ": "ا",
+        "ء": "ا"
     }
     return mapping.get(chars[0], chars[0])
 
