@@ -1512,14 +1512,19 @@ def letters_join(data):
         old["name"] = display_name
         old["online"] = True
     else:
+        if r.get("started"):
+            emit("letters_error", {
+                 "message": "اللعبة بدأت، تقدر تدخل وتشارك من بداية الجولة القادمة"
+             }, room=request.sid)
+            return
+
         r["players"].append({
             "pid": pid,
             "sid": request.sid,
             "name": display_name,
             "score": 0,
             "fails": 0,
-            "timeouts": 0,
-            "eliminated": False,
+            "active": True,
             "online": True
         })
 
