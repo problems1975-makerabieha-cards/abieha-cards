@@ -1457,6 +1457,8 @@ def letters_public_state(room):
         "currentWord": r.get("currentWord", ""),
         "neededLetter": r.get("neededLetter", ""),
         "turn": r.get("turn", 0),
+        "timeLeft": r.get("timeLeft", 0),
+        "timeLimit": r.get("timeLimit", 30),
         "words": r.get("words", [])
     }
 
@@ -1487,6 +1489,9 @@ def letters_join(data):
             "neededLetter": "",
             "turn": 0,
             "words": [],
+            "timeLimit": 30,
+            "timeLeft": 30,
+            "timer": None,
             "used": set()
         }
 
@@ -1514,6 +1519,66 @@ def letters_join(data):
     send_letters_state(room)
 
 
+def cancel_letters_timer(r):
+    t = r.get("timer")
+    if t:
+        try:
+            t.cancel()
+        except Exception:
+            pass
+    r["timer"] = None
+
+
+def start_letters_timer(room):
+    if room not in letters_rooms:
+        return
+
+    r = letters_rooms[room]
+    cancel_letters_timer(r)
+
+    if not r.get("started"):
+        return
+
+    r["timeLeft"] = int(r.get("timeLimit", 30))
+    send_letters_state(room)
+
+    def tick():
+        rr = letters_rooms.get(room)
+        if not rr or not rr.get("started"):
+            return
+
+        rr["timeLeft"] = max(0, int(rr.get("timeLeft", 0)) - 1)
+        send_letters_state(room)
+
+        if rr["timeLeft"] <= 0:
+            players = rr.get("players", [])
+
+            if players:
+                old_turn = int(rr.get("turn", 0)) % len(players)
+                old_player = players[old_turn]
+                old_player["timeouts"] = int(old_player.get("timeouts", 0)) + 1
+
+                rr["words"].append({
+                    "word": "⏱ انتهى الوقت",
+                    "player": old_player.get("name", "لاعب")
+                })
+
+                # إذا خلص الوقت: لا نقاط، ينتقل الدور فقط
+                rr["turn"] = (old_turn + 1) % len(players)
+                rr["timeLeft"] = int(rr.get("timeLimit", 30))
+                start_letters_timer(room)
+
+            return
+
+        rr["timer"] = threading.Timer(1, tick)
+        rr["timer"].daemon = True
+        rr["timer"].start()
+
+    r["timer"] = threading.Timer(1, tick)
+    r["timer"].daemon = True
+    r["timer"].start()
+
+
 @socketio.on("letters_start")
 def letters_start(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
@@ -1535,6 +1600,14 @@ def letters_start(data):
         emit("letters_error", {"message": "اكتب كلمة البداية"}, room=request.sid)
         return
 
+    try:
+        time_limit = int(data.get("timeLimit", 30))
+    except Exception:
+        time_limit = 30
+
+    r["timeLimit"] = max(5, min(120, time_limit))
+    r["timeLeft"] = r["timeLimit"]
+
     r["started"] = True
     r["currentWord"] = word
     r["neededLetter"] = last_arabic_letter(word)
@@ -1542,8 +1615,8 @@ def letters_start(data):
     r["words"] = [{"word": word, "player": "القائد"}]
     r["used"] = {word.strip().lower()}
 
+    start_letters_timer(room)
     send_letters_state(room)
-
 
 @socketio.on("letters_word")
 def letters_word(data):
@@ -1612,6 +1685,8 @@ def letters_word(data):
     r["used"].add(normalized_key)
     r["turn"] = (turn + 1) % len(players)
 
+    # بعد الكلمة الصحيحة يبدأ وقت اللاعب التالي من جديد
+    start_letters_timer(room)
     send_letters_state(room)
 
 
@@ -1627,21 +1702,89 @@ def letters_reset(data):
     if r.get("hostSid") != request.sid:
         return
 
+    cancel_letters_timer(r)
+
     r["started"] = False
     r["currentWord"] = ""
     r["neededLetter"] = ""
     r["turn"] = 0
     r["words"] = []
     r["used"] = set()
+    r["timeLeft"] = int(r.get("timeLimit", 30))
 
     for p in r["players"]:
         p["score"] = 0
+        p["timeouts"] = 0
 
     send_letters_state(room)
 
 
 @socketio.on("letters_leave")
 def letters_leave(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    pid = str(data.get("pid", "")).strip()
+
+    if room not in letters_rooms:
+        emit("letters_left", {"ok": True}, room=request.sid)
+        return
+
+    r = letters_rooms[room]
+    r["players"] = [p for p in r.get("players", []) if p.get("pid") != pid]
+
+    if r.get("host") == pid:
+        if r.get("players"):
+            r["host"] = r["players"][0]["pid"]
+            r["hostSid"] = r["players"][0]["sid"]
+        else:
+            cancel_letters_timer(r)
+            del letters_rooms[room]
+            emit("letters_left", {"ok": True}, room=request.sid)
+            return
+
+    if r.get("turn", 0) >= len(r.get("players", [])):
+        r["turn"] = 0
+
+    emit("letters_left", {"ok": True}, room=request.sid)
+    send_letters_state(room)
+
+
+@socketio.on("letters_kick")
+def letters_kick(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    target_pid = str(data.get("targetPid", "")).strip()
+
+    if room not in letters_rooms:
+        return
+
+    r = letters_rooms[room]
+
+    if r.get("hostSid") != request.sid:
+        return
+
+    if target_pid == r.get("host"):
+        return
+
+    target = next((p for p in r.get("players", []) if p.get("pid") == target_pid), None)
+
+    if not target:
+        return
+
+    target_sid = target.get("sid")
+    r["players"] = [p for p in r.get("players", []) if p.get("pid") != target_pid]
+
+    if target_sid:
+        emit("letters_kicked", {"room": room}, room=target_sid)
+
+    if r.get("turn", 0) >= len(r.get("players", [])):
+        r["turn"] = 0
+
+    send_letters_state(room)
+
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
     room = str(data.get("room", "ROOM1")).strip().upper()
     pid = str(data.get("pid", "")).strip()
 
