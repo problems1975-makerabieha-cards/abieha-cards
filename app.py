@@ -1520,6 +1520,7 @@ def letters_join(data):
 
 
 def cancel_letters_timer(r):
+    r["timerToken"] = int(r.get("timerToken", 0) or 0) + 1
     t = r.get("timer")
     if t:
         try:
@@ -1529,40 +1530,75 @@ def cancel_letters_timer(r):
     r["timer"] = None
 
 
-def start_letters_timer(room):
+def next_letters_turn(room):
+    if room not in letters_rooms:
+        return
+
     r = letters_rooms[room]
+    players = r.get("players", [])
 
-    # وقف أي تايمر قديم
-    if r.get("timer"):
-        r["timer"].cancel()
+    if not players:
+        cancel_letters_timer(r)
+        return
 
-    r["timeLeft"] = r.get("timeLimit", 30)
+    r["turn"] = (int(r.get("turn", 0) or 0) + 1) % len(players)
+
+    for p in players:
+        if p.get("pid") == players[r["turn"]].get("pid"):
+            p["timeouts"] = int(p.get("timeouts", 0) or 0)
+
+    start_letters_timer(room)
+    send_letters_state(room)
+
+
+def start_letters_timer(room):
+    if room not in letters_rooms:
+        return
+
+    r = letters_rooms[room]
+    cancel_letters_timer(r)
+
+    if not r.get("started"):
+        send_letters_state(room)
+        return
+
+    r["timerToken"] = int(r.get("timerToken", 0) or 0) + 1
+    token = r["timerToken"]
+    r["timeLeft"] = int(r.get("timeLimit", 30) or 30)
+
+    socketio.emit("letters_timer", {"timeLeft": r["timeLeft"]}, room="letters_" + room)
+    send_letters_state(room)
 
     def tick():
         if room not in letters_rooms:
             return
 
-        r = letters_rooms[room]
+        rr = letters_rooms[room]
 
-        r["timeLeft"] -= 1
+        if rr.get("timerToken") != token or not rr.get("started"):
+            return
 
-        socketio.emit("letters_timer", {
-            "timeLeft": r["timeLeft"]
-        }, room="letters_" + room)
+        rr["timeLeft"] = max(0, int(rr.get("timeLeft", 0) or 0) - 1)
 
-        if r["timeLeft"] <= 0:
+        socketio.emit("letters_timer", {"timeLeft": rr["timeLeft"]}, room="letters_" + room)
+        send_letters_state(room)
+
+        if rr["timeLeft"] <= 0:
+            players = rr.get("players", [])
+            if players:
+                turn = int(rr.get("turn", 0) or 0) % len(players)
+                players[turn]["timeouts"] = int(players[turn].get("timeouts", 0) or 0) + 1
+
             socketio.emit("letters_time_up", {}, room="letters_" + room)
             next_letters_turn(room)
             return
 
-        r["timer"] = threading.Timer(1, tick)
-        r["timer"].start()
-
-    socketio.emit("letters_timer", {
-        "timeLeft": r["timeLeft"]
-    }, room="letters_" + room)
+        rr["timer"] = threading.Timer(1, tick)
+        rr["timer"].daemon = True
+        rr["timer"].start()
 
     r["timer"] = threading.Timer(1, tick)
+    r["timer"].daemon = True
     r["timer"].start()
     
 @socketio.on("letters_start")
