@@ -1421,7 +1421,8 @@ def last_arabic_letter(word):
         "أ": "ا",
         "إ": "ا",
         "آ": "ا",
-        "ء": "ا"
+        "ء": "ا",
+        "ؤ": "و"
     }
 
     return mapping.get(chars[-1], chars[-1])
@@ -1436,7 +1437,8 @@ def first_arabic_letter(word):
         "أ": "ا",
         "إ": "ا",
         "آ": "ا",
-        "ء": "ا"
+        "ء": "ا",
+        "ؤ": "و"
     }
     return mapping.get(chars[0], chars[0])
 
