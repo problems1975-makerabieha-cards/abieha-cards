@@ -171,7 +171,8 @@ function renderState(state){
     playersBox.innerHTML+=`<div class="${cls}"><b>${p.name}</b><br><span class="small">${p.online===false?"🔴 غير متصل":"🟢 متصل"} | ⭐ ${p.score||0} نقطة</span>${canKick?`<button class="red" style="padding:8px;font-size:14px" onclick="kickLetters('${p.pid}')">طرد</button>`:""}</div>`;
   });
 
-  const logBox=document.getElementById("logBox");  logBox.innerHTML="";
+  const logBox=document.getElementById("logBox");
+  logBox.innerHTML="";
   (state.words||[]).slice().reverse().forEach(w=>{logBox.innerHTML+=`<div>• <b>${w.word}</b> <span class="small">(${w.player})</span></div>`});
 }
 
