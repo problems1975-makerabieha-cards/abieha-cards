@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لعبة آخر حرف</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Tahoma,sans-serif;background:radial-gradient(circle at top,#1b3b77,#061024 55%,#02050c);color:white}
+.hidden{display:none!important}
+button,input{border:0;border-radius:14px;padding:13px 16px;font-size:18px;margin:6px}
+button{cursor:pointer;font-weight:900;background:linear-gradient(180deg,#fff0a6,#ffd166);color:#071126;box-shadow:0 7px 0 #9b6a00,0 12px 22px #0008}
+button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
+.green{background:linear-gradient(180deg,#7affb2,#35dd7b);box-shadow:0 7px 0 #0b7d3b,0 12px 22px #0008}
+.red{background:linear-gradient(180deg,#ff8aa0,#ff4d6d);color:white;box-shadow:0 7px 0 #a50d28,0 12px 22px #0008}
+.blue{background:linear-gradient(180deg,#79c6ff,#2f80ff);color:white;box-shadow:0 7px 0 #06449d,0 12px 22px #0008}
+input{background:white;color:#111;min-width:190px}
+#login{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.joinBox{width:min(94%,820px);padding:20px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);box-shadow:0 24px 80px #0008}
+h1{font-size:46px;margin:0 0 25px;text-shadow:0 5px 14px #000}
+.top{height:78px;display:flex;align-items:center;justify-content:space-between;padding:12px 22px;background:rgba(7,14,30,.9);border-bottom:1px solid rgba(119,160,255,.35)}
+.badge{padding:9px 14px;border-radius:999px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16)}
+.app{display:grid;grid-template-columns:300px 1fr 330px;gap:14px;padding:14px;min-height:calc(100vh - 78px)}
+.panel,.center{border-radius:24px;background:linear-gradient(180deg,rgba(17,31,61,.96),rgba(8,14,29,.96));border:1px solid rgba(112,154,238,.35);box-shadow:0 24px 65px rgba(0,0,0,.35);padding:16px}
+.center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.card{padding:14px;margin-bottom:12px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.bigLetter{font-size:110px;color:#ffd166;text-shadow:0 0 30px #ff8c00;margin:12px 0}
+.word{font-size:44px;margin:10px 0}
+.player{padding:11px;border-radius:15px;margin:8px 0;background:#14284e;border:1px solid rgba(255,255,255,.12)}
+.turn{outline:3px solid #ffd166;box-shadow:0 0 22px rgba(255,209,102,.5)}
+.log{max-height:420px;overflow:auto;line-height:1.8}
+.small{opacity:.75;font-size:14px}
+@media(max-width:980px){.app{grid-template-columns:1fr}.top{height:auto;gap:8px;flex-wrap:wrap}}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>🔤 لعبة آخر حرف</h1>
+  <div class="joinBox">
+    <input id="nameInput" placeholder="اسم اللاعب">
+    <input id="roomInput" value="ROOM1" placeholder="الروم">
+    <input id="avatarInput" value="🎮" placeholder="ايموجي">
+    <button class="green" onclick="joinLetters()">دخول</button>
+  </div>
+</div>
+
+<div id="game" class="hidden">
+  <div class="top">
+    <div><b>🔤 آخر حرف</b></div>
+    <div class="badge">الروم: <b id="roomText">---</b></div>
+    <div class="badge">القائد: <b id="hostText">---</b></div>
+    <div class="badge">الحالة: <b id="statusText">انتظار</b></div>
+  </div>
+
+  <div class="app">
+    <aside class="panel">
+      <div class="card">
+        <h2>👤 أنت</h2>
+        <div id="meBox">---</div>
+        <button class="blue" onclick="copyRoom()">نسخ رابط الروم</button>
+        <button class="red" onclick="leaveLetters()">خروج</button>
+      </div>
+
+      <div class="card" id="hostControls">
+        <h2>👑 تحكم القائد</h2>
+        <input id="startWord" placeholder="كلمة البداية مثال: باب">
+        <button class="green" onclick="startLettersGame()">ابدأ اللعبة</button>
+        <button class="red" onclick="resetLettersGame()">تصفير</button>
+      </div>
+    </aside>
+
+    <main class="center">
+      <div class="card" style="width:min(100%,650px)">
+        <div>الكلمة الحالية</div>
+        <div class="word" id="currentWord">---</div>
+        <div>الحرف المطلوب</div>
+        <div class="bigLetter" id="neededLetter">؟</div>
+        <div>دور اللاعب</div>
+        <h2 id="turnName">---</h2>
+        <input id="wordInput" placeholder="اكتب كلمتك هنا">
+        <button class="green" onclick="sendWord()">إرسال الكلمة</button>
+        <div id="msg" style="margin-top:12px;color:#ffd166;font-weight:bold"></div>
+      </div>
+    </main>
+
+    <aside class="panel">
+      <div class="card">
+        <h2>🟢 اللاعبين</h2>
+        <div id="playersBox"></div>
+      </div>
+      <div class="card">
+        <h2>📜 الكلمات</h2>
+        <div class="log" id="logBox"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+const socket = io();
+let myPid = localStorage.getItem("letters_pid") || ("let_" + Math.random().toString(36).slice(2) + Date.now().toString(36));
+localStorage.setItem("letters_pid", myPid);
+let myName="", myRoom="ROOM1", myAvatar="🎮", isHost=false;
+
+function normRoom(r){return (r||"ROOM1").trim().toUpperCase();}
+function showMsg(t){document.getElementById("msg").innerText=t;setTimeout(()=>document.getElementById("msg").innerText="",2200)}
+
+function joinLetters(){
+  myName=document.getElementById("nameInput").value.trim();
+  myRoom=normRoom(document.getElementById("roomInput").value);
+  myAvatar=document.getElementById("avatarInput").value.trim()||"🎮";
+  if(!myName){alert("اكتب اسم اللاعب");return}
+  document.getElementById("login").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+  document.getElementById("roomText").innerText=myRoom;
+  document.getElementById("meBox").innerHTML=`${myAvatar} ${myName}<br><span class="small">${myRoom}</span>`;
+  socket.emit("letters_join",{room:myRoom,name:myName,avatar:myAvatar,pid:myPid});
+  const url=new URL(window.location.href);url.searchParams.set("room",myRoom);window.history.replaceState({},"",url.toString());
+}
+
+function copyRoom(){const url=new URL(window.location.href);url.searchParams.set("room",myRoom);navigator.clipboard.writeText(url.toString());showMsg("تم نسخ رابط الروم")}
+function startLettersGame(){if(!isHost)return showMsg("فقط القائد يبدأ");const word=document.getElementById("startWord").value.trim();if(!word)return showMsg("اكتب كلمة البداية");socket.emit("letters_start",{room:myRoom,word})}
+function resetLettersGame(){if(!isHost)return;socket.emit("letters_reset",{room:myRoom})}
+function leaveLetters(){socket.emit("letters_leave",{room:myRoom,pid:myPid})}
+function kickLetters(pid){if(!isHost)return;socket.emit("letters_kick",{room:myRoom,targetPid:pid})}
+function sendWord(){const word=document.getElementById("wordInput").value.trim();if(!word)return;socket.emit("letters_word",{room:myRoom,pid:myPid,word});document.getElementById("wordInput").value=""}
+document.getElementById("wordInput").addEventListener("keydown",e=>{if(e.key==="Enter")sendWord()});
+
+function renderState(state){
+  isHost=state.host===myPid;
+  document.getElementById("hostControls").style.display=isHost?"block":"none";
+  document.getElementById("hostText").innerText=state.hostName||"---";
+  document.getElementById("statusText").innerText=state.started?"بدأ":"انتظار";
+  document.getElementById("currentWord").innerText=state.currentWord||"---";
+  document.getElementById("neededLetter").innerText=state.neededLetter||"؟";
+  const turnPlayer=(state.players||[])[state.turn||0];
+  document.getElementById("turnName").innerText=turnPlayer?turnPlayer.name:"---";
+
+  const playersBox=document.getElementById("playersBox");
+  playersBox.innerHTML="";
+  (state.players||[]).forEach((p,i)=>{
+    const canKick=isHost&&p.pid!==myPid;
+    const cls=i===state.turn&&state.started?"player turn":"player";
+    playersBox.innerHTML+=`<div class="${cls}"><b>${p.name}</b><br><span class="small">${p.online===false?"🔴 غير متصل":"🟢 متصل"} | ⭐ ${p.score||0} نقطة</span>${canKick?`<button class="red" style="padding:8px;font-size:14px" onclick="kickLetters('${p.pid}')">طرد</button>`:""}</div>`;
+  });
+
+  const logBox=document.getElementById("logBox");
+  logBox.innerHTML="";
+  (state.words||[]).slice().reverse().forEach(w=>{logBox.innerHTML+=`<div>• <b>${w.word}</b> <span class="small">(${w.player})</span></div>`});
+}
+
+socket.on("letters_state",renderState);
+socket.on("letters_error",data=>showMsg(data.message||"خطأ"));
+socket.on("letters_left",()=>location.href="/");
+socket.on("letters_kicked",()=>{alert("تم طردك من الروم");location.href="/"});
+
+const params=new URLSearchParams(window.location.search);
+if(params.get("room")) document.getElementById("roomInput").value=params.get("room");
+</script>
+</body>
+</html>
