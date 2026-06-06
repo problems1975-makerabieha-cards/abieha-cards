@@ -1620,7 +1620,7 @@ def letters_fail_current_player(room, reason="محاولة فاشلة"):
     if reason == "انتهى الوقت":
         player["timeouts"] = int(player.get("timeouts", 0) or 0) + 1
 
-    if fails >= 3:
+    if fails >= 2:
         player["eliminated"] = True
         r["words"].append({"word": "❌ طرد من الجولة", "player": player.get("name", "لاعب")})
         socketio.emit("letters_player_eliminated", {"name": player.get("name", "لاعب")}, room="letters_" + room)
