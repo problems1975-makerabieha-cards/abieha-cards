@@ -8,42 +8,11 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 rooms = {}
 puzzle_rooms = {}
+letters_rooms = {}
 
 COLORS = ["red", "bluec", "greenc", "yellow"]
 TEAM_ORDER = ["A", "B", "C"]
 
-def get_random_puzzle_image(category="general"):
-    allowed = {"animals", "football", "actors", "artists", "cartoon", "products", "flags", "plants", "general"}
-    category = category if category in allowed else "general"
-
-    folder = os.path.join("static", "puzzle-images", category)
-
-    if not os.path.exists(folder):
-        return "https://picsum.photos/seed/default/900"
-
-    files = [
-        f for f in os.listdir(folder)
-        if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp"))
-    ]
-
-    if not files:
-        return "https://picsum.photos/seed/empty/900"
-
-    filename = random.choice(files)
-    return f"/static/puzzle-images/{category}/{filename}"
-@app.route("/")
-def home():
-    return send_file("templates/home.html")
-
-
-@app.route("/uno")
-def uno():
-    return send_file("templates/index.html")
-
-
-@app.route("/puzzle")
-def puzzle():
-    return send_file("templates/puzzle.html")
 
 def get_random_puzzle_image(category="general"):
 
@@ -78,15 +47,28 @@ def get_random_puzzle_image(category="general"):
         return f"https://picsum.photos/seed/{random.randint(1000,999999)}/900"
 
     filename = random.choice(files)
-
     return f"/static/puzzle-images/{category}/{filename}"
 
 
-@socketio.on("puzzle_join")
-def puzzle_join(data):
-    room = str(data.get("room", "ROOM1")).strip().upper()
-    name = str(data.get("name", "لاعب")).strip()
-    avatar = str(data.get("avatar", "🎮"))
+@app.route("/")
+def home():
+    return send_file("templates/home.html")
+
+
+@app.route("/uno")
+def uno():
+    return send_file("templates/index.html")
+
+
+@app.route("/puzzle")
+def puzzle():
+    return send_file("templates/puzzle.html")
+
+
+@app.route("/letters")
+def letters():
+    return send_file("templates/letters.html")
+
 
 @socketio.on("puzzle_join")
 def puzzle_join(data):
@@ -1293,6 +1275,282 @@ def make_host(data):
     send_state(room)
 
 
+
+# ===== لعبة آخر حرف =====
+
+def last_arabic_letter(word):
+    word = (word or "").strip()
+    chars = [c for c in word if c.isalpha()]
+    if not chars:
+        return ""
+
+    mapping = {
+        "ة": "ه",
+        "ى": "ي",
+        "أ": "ا",
+        "إ": "ا",
+        "آ": "ا"
+    }
+    return mapping.get(chars[-1], chars[-1])
+
+
+def first_arabic_letter(word):
+    word = (word or "").strip()
+    chars = [c for c in word if c.isalpha()]
+    if not chars:
+        return ""
+
+    mapping = {
+        "أ": "ا",
+        "إ": "ا",
+        "آ": "ا"
+    }
+    return mapping.get(chars[0], chars[0])
+
+
+def letters_public_state(room):
+    r = letters_rooms[room]
+
+    host_name = "---"
+    for p in r.get("players", []):
+        if p.get("pid") == r.get("host"):
+            host_name = p.get("name", "القائد")
+            break
+
+    return {
+        "room": room,
+        "players": r.get("players", []),
+        "host": r.get("host"),
+        "hostName": host_name,
+        "started": r.get("started", False),
+        "currentWord": r.get("currentWord", ""),
+        "neededLetter": r.get("neededLetter", ""),
+        "turn": r.get("turn", 0),
+        "words": r.get("words", [])
+    }
+
+
+def send_letters_state(room):
+    if room not in letters_rooms:
+        return
+
+    emit("letters_state", letters_public_state(room), room="letters_" + room)
+
+
+@socketio.on("letters_join")
+def letters_join(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    name = str(data.get("name", "لاعب")).strip()
+    avatar = str(data.get("avatar", "🎮")).strip()
+    pid = str(data.get("pid") or request.sid).strip()
+
+    join_room("letters_" + room)
+
+    if room not in letters_rooms:
+        letters_rooms[room] = {
+            "players": [],
+            "host": pid,
+            "hostSid": request.sid,
+            "started": False,
+            "currentWord": "",
+            "neededLetter": "",
+            "turn": 0,
+            "words": [],
+            "used": set()
+        }
+
+    r = letters_rooms[room]
+    display_name = f"{avatar} {name}"
+
+    old = next((p for p in r["players"] if p.get("pid") == pid), None)
+
+    if old:
+        old["sid"] = request.sid
+        old["name"] = display_name
+        old["online"] = True
+    else:
+        r["players"].append({
+            "pid": pid,
+            "sid": request.sid,
+            "name": display_name,
+            "score": 0,
+            "online": True
+        })
+
+    if r.get("host") == pid:
+        r["hostSid"] = request.sid
+
+    send_letters_state(room)
+
+
+@socketio.on("letters_start")
+def letters_start(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    word = str(data.get("word", "")).strip()
+
+    if room not in letters_rooms:
+        return
+
+    r = letters_rooms[room]
+
+    if r.get("hostSid") != request.sid:
+        return
+
+    if len(r.get("players", [])) < 2:
+        emit("letters_error", {"message": "لازم لاعبين على الأقل"}, room=request.sid)
+        return
+
+    if not word:
+        emit("letters_error", {"message": "اكتب كلمة البداية"}, room=request.sid)
+        return
+
+    r["started"] = True
+    r["currentWord"] = word
+    r["neededLetter"] = last_arabic_letter(word)
+    r["turn"] = 1 if len(r["players"]) > 1 else 0
+    r["words"] = [{"word": word, "player": "القائد"}]
+    r["used"] = {word.strip().lower()}
+
+    send_letters_state(room)
+
+
+@socketio.on("letters_word")
+def letters_word(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    pid = str(data.get("pid", "")).strip()
+    word = str(data.get("word", "")).strip()
+
+    if room not in letters_rooms:
+        return
+
+    r = letters_rooms[room]
+
+    if not r.get("started"):
+        emit("letters_error", {"message": "اللعبة لم تبدأ"}, room=request.sid)
+        return
+
+    players = r.get("players", [])
+    if not players:
+        return
+
+    turn = int(r.get("turn", 0)) % len(players)
+    current_player = players[turn]
+
+    if current_player.get("pid") != pid:
+        emit("letters_error", {"message": "مو دورك"}, room=request.sid)
+        return
+
+    if not word:
+        emit("letters_error", {"message": "اكتب كلمة"}, room=request.sid)
+        return
+
+    if word.strip().lower() in r.get("used", set()):
+        emit("letters_error", {"message": "الكلمة مكررة"}, room=request.sid)
+        return
+
+    needed = r.get("neededLetter", "")
+    first = first_arabic_letter(word)
+
+    if needed and first != needed:
+        emit("letters_error", {"message": f"الكلمة لازم تبدأ بحرف: {needed}"}, room=request.sid)
+        return
+
+    current_player["score"] = int(current_player.get("score", 0)) + 1
+    r["currentWord"] = word
+    r["neededLetter"] = last_arabic_letter(word)
+    r["words"].append({"word": word, "player": current_player.get("name", "لاعب")})
+    r["used"].add(word.strip().lower())
+    r["turn"] = (turn + 1) % len(players)
+
+    send_letters_state(room)
+
+
+@socketio.on("letters_reset")
+def letters_reset(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+
+    if room not in letters_rooms:
+        return
+
+    r = letters_rooms[room]
+
+    if r.get("hostSid") != request.sid:
+        return
+
+    r["started"] = False
+    r["currentWord"] = ""
+    r["neededLetter"] = ""
+    r["turn"] = 0
+    r["words"] = []
+    r["used"] = set()
+
+    for p in r["players"]:
+        p["score"] = 0
+
+    send_letters_state(room)
+
+
+@socketio.on("letters_leave")
+def letters_leave(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    pid = str(data.get("pid", "")).strip()
+
+    if room not in letters_rooms:
+        emit("letters_left", {"ok": True}, room=request.sid)
+        return
+
+    r = letters_rooms[room]
+    r["players"] = [p for p in r["players"] if p.get("pid") != pid]
+
+    if r.get("host") == pid:
+        if r["players"]:
+            r["host"] = r["players"][0]["pid"]
+            r["hostSid"] = r["players"][0]["sid"]
+        else:
+            del letters_rooms[room]
+            emit("letters_left", {"ok": True}, room=request.sid)
+            return
+
+    if r.get("turn", 0) >= len(r.get("players", [])):
+        r["turn"] = 0
+
+    emit("letters_left", {"ok": True}, room=request.sid)
+    send_letters_state(room)
+
+
+@socketio.on("letters_kick")
+def letters_kick(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    target_pid = str(data.get("targetPid", "")).strip()
+
+    if room not in letters_rooms:
+        return
+
+    r = letters_rooms[room]
+
+    if r.get("hostSid") != request.sid:
+        return
+
+    if target_pid == r.get("host"):
+        return
+
+    target = next((p for p in r["players"] if p.get("pid") == target_pid), None)
+
+    if not target:
+        return
+
+    target_sid = target.get("sid")
+    r["players"] = [p for p in r["players"] if p.get("pid") != target_pid]
+
+    if target_sid:
+        emit("letters_kicked", {"room": room}, room=target_sid)
+
+    if r.get("turn", 0) >= len(r.get("players", [])):
+        r["turn"] = 0
+
+    send_letters_state(room)
+
+
 @socketio.on("leave_room")
 def on_leave_room(data):
     room = data.get("room")
@@ -1367,6 +1625,17 @@ def on_disconnect():
                     pr["hostSid"] = None
         if changed:
             emit("puzzle_state", pr, room="puzzle_" + proom)
+
+    for lroom, lr in list(letters_rooms.items()):
+        changed = False
+        for p in lr.get("players", []):
+            if p.get("sid") == request.sid:
+                p["online"] = False
+                changed = True
+                if lr.get("hostSid") == request.sid:
+                    lr["hostSid"] = None
+        if changed:
+            send_letters_state(lroom)
 
     for room, r in list(rooms.items()):
 
