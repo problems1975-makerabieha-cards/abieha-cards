@@ -1530,52 +1530,41 @@ def cancel_letters_timer(r):
 
 
 def start_letters_timer(room):
-    if room not in letters_rooms:
-        return
-
     r = letters_rooms[room]
 
-    r["timerToken"] = int(r.get("timerToken", 0)) + 1
-    token = r["timerToken"]
+    # وقف أي تايمر قديم
+    if r.get("timer"):
+        r["timer"].cancel()
 
-    r["timeLeft"] = int(r.get("timeLimit", 30))
-    send_letters_state(room)
+    r["timeLeft"] = r.get("timeLimit", 30)
 
-    def run_timer():
-        while True:
-            socketio.sleep(1)
+    def tick():
+        if room not in letters_rooms:
+            return
 
-            rr = letters_rooms.get(room)
-            if not rr or not rr.get("started"):
-                return
+        r = letters_rooms[room]
 
-            if rr.get("timerToken") != token:
-                return
+        r["timeLeft"] -= 1
 
-            rr["timeLeft"] = int(rr.get("timeLeft", 0)) - 1
+        socketio.emit("letters_timer", {
+            "timeLeft": r["timeLeft"]
+        }, room="letters_" + room)
 
-            if rr["timeLeft"] <= 0:
-                players = rr.get("players", [])
+        if r["timeLeft"] <= 0:
+            socketio.emit("letters_time_up", {}, room="letters_" + room)
+            next_letters_turn(room)
+            return
 
-                if players:
-                    old_turn = int(rr.get("turn", 0)) % len(players)
+        r["timer"] = threading.Timer(1, tick)
+        r["timer"].start()
 
-                    rr["words"].append({
-                        "word": "⏱ انتهى الوقت",
-                        "player": players[old_turn].get("name", "لاعب")
-                    })
+    socketio.emit("letters_timer", {
+        "timeLeft": r["timeLeft"]
+    }, room="letters_" + room)
 
-                    rr["turn"] = (old_turn + 1) % len(players)
-                    rr["timeLeft"] = int(rr.get("timeLimit", 30))
-
-                    send_letters_state(room)
-                    start_letters_timer(room)
-
-                return
-
-            send_letters_state(room)
-
-    socketio.start_background_task(run_timer)
+    r["timer"] = threading.Timer(1, tick)
+    r["timer"].start()
+    
 @socketio.on("letters_start")
 def letters_start(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
