@@ -2360,6 +2360,45 @@ def categories_start(data):
 
     start_categories_timer(room)
 
+@socketio.on("categories_end_round")
+def categories_end_round(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+
+    if room not in categories_rooms:
+        return
+
+    r = categories_rooms[room]
+
+    if r.get("hostSid") != request.sid:
+        return
+
+    finish_categories_round(room, "أنهى القائد الجولة")
+
+@socketio.on("categories_add_word")
+def categories_add_word(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    category = str(data.get("category", "")).strip()
+    word = str(data.get("word", "")).strip()
+
+    if room not in categories_rooms:
+        return
+
+    r = categories_rooms[room]
+
+    if r.get("hostSid") != request.sid:
+        return
+
+    if category not in CATEGORY_KEYS:
+        emit("categories_error", {"message": "الفئة غير صحيحة"}, room=request.sid)
+        return
+
+    if len(word) < 2:
+        emit("categories_error", {"message": "الكلمة قصيرة"}, room=request.sid)
+        return
+
+    save_custom_category_word(category, word)
+
+    emit("categories_error", {"message": "✅ تم إضافة الكلمة"}, room=request.sid)
 
 @socketio.on("categories_submit")
 def categories_submit(data):
