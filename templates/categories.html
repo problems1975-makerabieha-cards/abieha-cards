@@ -138,13 +138,27 @@ table{width:100%;border-collapse:collapse;margin-top:10px;background:rgba(0,0,0,
           <select id="roundLimit"><option value="3">3 جولات</option><option value="5" selected>5 جولات</option><option value="10">10 جولات</option></select>
           <select id="timeLimit"><option value="30">30 ثانية</option><option value="45" selected>45 ثانية</option><option value="60">60 ثانية</option><option value="90">90 ثانية</option></select>
         </div>
+        <button class="secondary" onclick="endRound()">إنهاء الجولة</button>
         <button class="ok" onclick="startRound()">ابدأ الجولة / الجولة التالية</button>
         <button class="danger" onclick="resetGame()">تصفير اللعبة</button>
       </div>
       <h3>اللاعبين</h3>
       <div id="players" class="players"></div>
     </div>
+      <h3>إضافة كلمة للقاموس</h3>
 
+      <select id="newWordCategory">
+          <option value="girls">اسم بنت</option>
+          <option value="boys">اسم ولد</option>
+          <option value="animals">حيوان</option>
+          <option value="objects">جماد</option>
+          <option value="countries">بلاد</option>
+          <option value="plants">نبات</option>
+        </select>
+
+        <input id="newWordInput" placeholder="اكتب الكلمة الجديدة">
+
+        <button onclick="addNewWord()">إضافة الكلمة</button>
     <div class="card">
       <div class="meta">
         <div class="pill">الروم: <span id="roomShow">---</span></div>
@@ -240,6 +254,18 @@ function renderResults(){
   });
   if(state.finalResults){html += `<h3>🏆 الترتيب النهائي</h3><table><tr><th>المركز</th><th>اللاعب</th><th>النقاط</th></tr>`;state.finalResults.forEach((p,i)=>{html+=`<tr><td>${i+1}</td><td>${p.name}</td><td>${p.score}</td></tr>`});html+='</table>'}
   document.getElementById('results').innerHTML=html;
+}
+  function endRound(){
+  socket.emit('categories_end_round', {room: currentRoom});
+}
+  function addNewWord(){
+  socket.emit('categories_add_word', {
+    room: currentRoom,
+    category: document.getElementById('newWordCategory').value,
+    word: document.getElementById('newWordInput').value.trim()
+  });
+
+  document.getElementById('newWordInput').value = '';
 }
 </script>
 </body>
