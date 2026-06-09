@@ -2256,7 +2256,20 @@ def start_categories_timer(room):
     r["timer"].daemon = True
     r["timer"].start()
 
+@socketio.on("categories_end_round")
+def categories_end_round(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
 
+    if room not in categories_rooms:
+        return
+
+    r = categories_rooms[room]
+
+    if r.get("hostSid") != request.sid:
+        return
+
+    finish_categories_round(room, "أنهى القائد الجولة")
+    
 @socketio.on("categories_join")
 def categories_join(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
