@@ -140,6 +140,7 @@ table{width:100%;border-collapse:collapse;margin-top:10px;background:rgba(0,0,0,
         </div>
         <button class="secondary" onclick="endRound()">إنهاء الجولة</button>
         <button class="ok" onclick="startRound()">ابدأ الجولة / الجولة التالية</button>
+        <button class="secondary" onclick="endRound()">إنهاء الجولة</button>
         <button class="danger" onclick="resetGame()">تصفير اللعبة</button>
       </div>
       <h3>اللاعبين</h3>
@@ -255,7 +256,7 @@ function renderResults(){
   if(state.finalResults){html += `<h3>🏆 الترتيب النهائي</h3><table><tr><th>المركز</th><th>اللاعب</th><th>النقاط</th></tr>`;state.finalResults.forEach((p,i)=>{html+=`<tr><td>${i+1}</td><td>${p.name}</td><td>${p.score}</td></tr>`});html+='</table>'}
   document.getElementById('results').innerHTML=html;
 }
-  function endRound(){
+ function endRound(){
   socket.emit('categories_end_round', {room: currentRoom});
 }
   function addNewWord(){
