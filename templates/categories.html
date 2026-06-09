@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>اسم بنت ولد حيوان جماد بلاد نبات</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+*{box-sizing:border-box} body{margin:0;font-family:Arial,Tahoma,sans-serif;background:radial-gradient(circle at top,#243b55,#111827 55%,#05070b);color:white;min-height:100vh}
+.wrap{max-width:1200px;margin:auto;padding:18px}.card{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);border-radius:18px;padding:16px;box-shadow:0 10px 35px rgba(0,0,0,.35);backdrop-filter:blur(8px)}
+.grid{display:grid;grid-template-columns:330px 1fr;gap:16px}.title{text-align:center;font-size:28px;font-weight:900;margin:10px 0 18px;color:#fbbf24;text-shadow:0 0 16px rgba(251,191,36,.35)}
+input,select,button{width:100%;border:0;border-radius:12px;padding:12px;margin:6px 0;font-size:16px}input,select{background:#0b1220;color:white;border:1px solid rgba(255,255,255,.18)}button{cursor:pointer;font-weight:800;background:#fbbf24;color:#111827}.secondary{background:#334155;color:white}.danger{background:#ef4444;color:white}.ok{background:#22c55e;color:white}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.meta{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:12px}.pill{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:9px 14px;font-weight:800}.letter{font-size:76px;line-height:1;text-align:center;font-weight:900;color:#38bdf8;text-shadow:0 0 28px rgba(56,189,248,.55);margin:12px 0}.timer{font-size:42px;text-align:center;font-weight:900;color:#fb7185}.players{display:flex;flex-direction:column;gap:8px}.player{display:flex;justify-content:space-between;align-items:center;background:rgba(0,0,0,.28);padding:10px;border-radius:12px}.host{outline:2px solid #fbbf24}.submitted{color:#22c55e;font-weight:900}.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.field label{font-weight:800;color:#cbd5e1}.field input{margin-top:5px}.hide{display:none!important}table{width:100%;border-collapse:collapse;margin-top:10px;background:rgba(0,0,0,.18);border-radius:12px;overflow:hidden}th,td{border-bottom:1px solid rgba(255,255,255,.12);padding:9px;text-align:center}th{background:rgba(255,255,255,.1);color:#fbbf24}.bad{color:#f87171}.good{color:#4ade80}.small{font-size:13px;color:#cbd5e1}.toast{position:fixed;top:14px;left:50%;transform:translateX(-50%);background:#111827;border:1px solid #fbbf24;color:white;padding:12px 18px;border-radius:12px;display:none;z-index:9999}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.formgrid{grid-template-columns:1fr}.letter{font-size:56px}}
+</style>
+</head>
+<body>
+<div id="toast" class="toast"></div>
+<div class="wrap">
+  <div class="title">🎯 اسم بنت ولد حيوان جماد بلاد نبات</div>
+  <div class="grid">
+    <div class="card">
+      <h3>الدخول</h3>
+      <input id="name" placeholder="اسمك" />
+      <input id="room" placeholder="كود الروم" value="ROOM1" />
+      <select id="avatar">
+        <option>🎮</option><option>😎</option><option>🔥</option><option>👑</option><option>🐺</option><option>🦅</option><option>🧠</option><option>💀</option>
+      </select>
+      <button onclick="joinGame()">دخول الروم</button>
+      <button class="secondary" onclick="leaveGame()">خروج</button>
+      <hr style="border-color:rgba(255,255,255,.14)">
+      <div id="hostBox" class="hide">
+        <h3>إعدادات القائد</h3>
+        <div class="row">
+          <select id="roundLimit"><option value="3">3 جولات</option><option value="5" selected>5 جولات</option><option value="10">10 جولات</option></select>
+          <select id="timeLimit"><option value="30">30 ثانية</option><option value="45" selected>45 ثانية</option><option value="60">60 ثانية</option><option value="90">90 ثانية</option></select>
+        </div>
+        <button class="ok" onclick="startRound()">ابدأ الجولة / الجولة التالية</button>
+        <button class="danger" onclick="resetGame()">تصفير اللعبة</button>
+      </div>
+      <h3>اللاعبين</h3>
+      <div id="players" class="players"></div>
+    </div>
+
+    <div class="card">
+      <div class="meta">
+        <div class="pill">الروم: <span id="roomShow">---</span></div>
+        <div class="pill">القائد: <span id="hostShow">---</span></div>
+        <div class="pill">الجولة: <span id="roundShow">0/0</span></div>
+        <div class="pill">الحالة: <span id="statusShow">انتظار</span></div>
+      </div>
+      <div class="letter" id="letterShow">؟</div>
+      <div class="timer" id="timerShow">0</div>
+      <p class="small" style="text-align:center">اكتب كل الإجابات بنفس الحرف. البلاد مثل "السعودية" تُحسب على حرف س.</p>
+
+      <div id="answerBox" class="formgrid">
+        <div class="field"><label>اسم بنت</label><input id="girls" placeholder="مثال: سارة"></div>
+        <div class="field"><label>اسم ولد</label><input id="boys" placeholder="مثال: سعود"></div>
+        <div class="field"><label>حيوان</label><input id="animals" placeholder="مثال: سمكة"></div>
+        <div class="field"><label>جماد</label><input id="objects" placeholder="مثال: سرير"></div>
+        <div class="field"><label>بلاد</label><input id="countries" placeholder="مثال: سوريا"></div>
+        <div class="field"><label>نبات</label><input id="plants" placeholder="مثال: سبانخ"></div>
+      </div>
+      <button id="submitBtn" onclick="submitAnswers()">تسليم الإجابات</button>
+
+      <div id="results"></div>
+    </div>
+  </div>
+</div>
+<script>
+const socket = io();
+let myPid = localStorage.getItem('categories_pid');
+if(!myPid){ myPid = 'cat_' + Math.random().toString(36).slice(2) + Date.now(); localStorage.setItem('categories_pid', myPid); }
+let currentRoom = localStorage.getItem('categories_room') || 'ROOM1';
+let state = null;
+document.getElementById('room').value = currentRoom;
+
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';setTimeout(()=>t.style.display='none',2600)}
+function val(id){return document.getElementById(id).value.trim()}
+function setInputsDisabled(disabled){['girls','boys','animals','objects','countries','plants'].forEach(id=>document.getElementById(id).disabled=disabled);document.getElementById('submitBtn').disabled=disabled}
+function clearInputs(){['girls','boys','animals','objects','countries','plants'].forEach(id=>document.getElementById(id).value='')}
+function joinGame(){currentRoom=val('room')||'ROOM1';localStorage.setItem('categories_room', currentRoom);socket.emit('categories_join',{room:currentRoom,name:val('name')||'لاعب',avatar:val('avatar')||'🎮',pid:myPid})}
+function startRound(){socket.emit('categories_start',{room:currentRoom,timeLimit:val('timeLimit'),roundLimit:val('roundLimit')})}
+function resetGame(){socket.emit('categories_reset',{room:currentRoom})}
+function leaveGame(){socket.emit('categories_leave',{room:currentRoom,pid:myPid});location.href='/'}
+function kick(pid){socket.emit('categories_kick',{room:currentRoom,targetPid:pid})}
+function submitAnswers(){const answers={};['girls','boys','animals','objects','countries','plants'].forEach(k=>answers[k]=val(k));socket.emit('categories_submit',{room:currentRoom,pid:myPid,answers});}
+
+socket.on('categories_joined', d=>{myPid=d.pid;currentRoom=d.room;localStorage.setItem('categories_pid',myPid);localStorage.setItem('categories_room',currentRoom)});
+socket.on('categories_error', d=>toast(d.message||'خطأ'));
+socket.on('categories_submitted', ()=>{toast('تم تسليم إجاباتك');setInputsDisabled(true)});
+socket.on('categories_kicked', ()=>{toast('تم طردك من الروم');setTimeout(()=>location.href='/',1000)});
+socket.on('categories_left', ()=>{});
+socket.on('categories_state', s=>{state=s;render();});
+
+function statusText(st){return st==='started'?'الجولة شغالة':st==='round_finished'?'انتهت الجولة':st==='game_finished'?'انتهت اللعبة':'انتظار'}
+function render(){
+  document.getElementById('roomShow').textContent=state.room;
+  document.getElementById('hostShow').textContent=state.hostName||'---';
+  document.getElementById('roundShow').textContent=(state.round||0)+'/'+(state.roundLimit||0);
+  document.getElementById('statusShow').textContent=statusText(state.status);
+  document.getElementById('letterShow').textContent=state.letter||'؟';
+  document.getElementById('timerShow').textContent=state.timeLeft||0;
+  const isHost = state.host === myPid;
+  document.getElementById('hostBox').classList.toggle('hide', !isHost);
+
+  let plist='';
+  (state.players||[]).forEach(p=>{
+    const sub=(state.submitted||[]).includes(p.pid);
+    plist += `<div class="player ${p.pid===state.host?'host':''}"><div>${p.name} ${sub?'<span class="submitted">✓</span>':''}<div class="small">آخر جولة: ${p.lastRoundScore||0}</div></div><b>${p.score||0}</b>${isHost&&p.pid!==myPid?`<button class="danger" style="width:auto;padding:8px 10px" onclick="kick('${p.pid}')">طرد</button>`:''}</div>`;
+  });
+  document.getElementById('players').innerHTML=plist||'<div class="small">لا يوجد لاعبين</div>';
+
+  if(state.status==='started'){
+    document.getElementById('results').innerHTML='';
+    const already=(state.submitted||[]).includes(myPid);
+    setInputsDisabled(already);
+  }else{
+    setInputsDisabled(true);
+  }
+  if(state.status==='started' && !(state.submitted||[]).includes(myPid)) document.getElementById('submitBtn').disabled=false;
+  if(state.status==='round_finished' || state.status==='game_finished') renderResults();
+  if(state.status==='waiting' || state.status==='round_finished') clearInputs();
+}
+function renderResults(){
+  const labels={girls:'اسم بنت',boys:'اسم ولد',animals:'حيوان',objects:'جماد',countries:'بلاد',plants:'نبات'};
+  let html=`<h3>نتيجة الجولة</h3><p class="small">${state.message||''}</p>`;
+  (state.roundResults||[]).forEach(r=>{
+    html += `<table><tr><th colspan="4">${r.name} — ${r.roundScore} نقطة ${r.bonus?`(+${r.bonus} سرعة)`:''}</th></tr><tr><th>الفئة</th><th>الإجابة</th><th>النقاط</th><th>السبب</th></tr>`;
+    Object.keys(labels).forEach(k=>{const it=r.items[k]||{};html+=`<tr><td>${labels[k]}</td><td class="${it.ok?'good':'bad'}">${it.word||'-'}</td><td>${it.points||0}</td><td>${it.reason||''}</td></tr>`});
+    html += `</table>`;
+  });
+  if(state.finalResults){html += `<h3>🏆 الترتيب النهائي</h3><table><tr><th>المركز</th><th>اللاعب</th><th>النقاط</th></tr>`;state.finalResults.forEach((p,i)=>{html+=`<tr><td>${i+1}</td><td>${p.name}</td><td>${p.score}</td></tr>`});html+='</table>'}
+  document.getElementById('results').innerHTML=html;
+}
+</script>
+</body>
+</html>
