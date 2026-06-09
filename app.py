@@ -1934,6 +1934,7 @@ CATEGORY_CUSTOM_PATHS = {
     "countries": "static/dictionaries/custom_countries.txt",
     "plants": "static/dictionaries/custom_plants.txt",
 }
+import sqlite3
 CATEGORY_WORDS = {k: set() for k in CATEGORY_KEYS}
 ARABIC_LETTERS = list("ابتثجحخدذرزسشصضطظعغفقكلمنهوي")
 
@@ -1966,7 +1967,6 @@ def save_custom_category_word(category, word):
     if not word:
         return
 
-    os.makedirs("static/dictionaries", exist_ok=True)
     word_key = word.strip().lower()
     normalized_key = normalize_arabic_word(word_key)
 
@@ -1975,13 +1975,22 @@ def save_custom_category_word(category, word):
         CATEGORY_WORDS[category].add(normalized_key)
 
         try:
-            with open(CATEGORY_CUSTOM_PATHS[category], "a", encoding="utf-8") as f:
-                f.write(word + "\n")
+            conn = sqlite3.connect("quiz.db")
+            c = conn.cursor()
 
-            print("✅ SAVED CUSTOM WORD:", category, word)
+            c.execute("""
+                INSERT OR IGNORE INTO category_words(category, word)
+                VALUES (?, ?)
+            """, (category, word))
+
+            conn.commit()
+            conn.close()
+
+            print("✅ SAVED TO SQLITE:", category, word)
 
         except Exception as e:
             print("Custom category word save error:", category, e)
+
 
 def category_first_letter(word):
     word = normalize_arabic_word((word or "").strip())
@@ -2045,6 +2054,23 @@ def ai_check_category_word(category, word):
 
 load_category_dictionaries()
 
+def init_category_db():
+    conn = sqlite3.connect("quiz.db")
+    c = conn.cursor()
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS category_words (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        category TEXT NOT NULL,
+        word TEXT NOT NULL,
+        UNIQUE(category, word)
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
+init_category_db()
 
 def cancel_categories_timer(r):
     r["timerToken"] = int(r.get("timerToken", 0) or 0) + 1
