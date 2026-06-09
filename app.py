@@ -1973,12 +1973,15 @@ def save_custom_category_word(category, word):
     if word_key not in CATEGORY_WORDS[category] and normalized_key not in CATEGORY_WORDS[category]:
         CATEGORY_WORDS[category].add(word_key)
         CATEGORY_WORDS[category].add(normalized_key)
+
         try:
             with open(CATEGORY_CUSTOM_PATHS[category], "a", encoding="utf-8") as f:
                 f.write(word + "\n")
+
+            print("✅ SAVED CUSTOM WORD:", category, word)
+
         except Exception as e:
             print("Custom category word save error:", category, e)
-
 
 def category_first_letter(word):
     word = normalize_arabic_word((word or "").strip())
