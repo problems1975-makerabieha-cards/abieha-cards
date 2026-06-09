@@ -71,6 +71,11 @@ def letters():
     return send_file("templates/letters.html")
 
 
+@app.route("/categories")
+def categories_game():
+    return send_file("templates/categories.html")
+
+
 @socketio.on("puzzle_join")
 def puzzle_join(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
@@ -1897,6 +1902,547 @@ def letters_kick(data):
 
     send_letters_state(room)
 
+
+
+# ===== لعبة اسم بنت ولد حيوان جماد بلاد نبات =====
+categories_rooms = {}
+
+CATEGORY_DEFS = [
+    {"key": "girls", "label": "اسم بنت"},
+    {"key": "boys", "label": "اسم ولد"},
+    {"key": "animals", "label": "حيوان"},
+    {"key": "objects", "label": "جماد"},
+    {"key": "countries", "label": "بلاد"},
+    {"key": "plants", "label": "نبات"},
+]
+
+CATEGORY_LABELS = {c["key"]: c["label"] for c in CATEGORY_DEFS}
+CATEGORY_KEYS = [c["key"] for c in CATEGORY_DEFS]
+CATEGORY_BASE_PATHS = {
+    "girls": "static/dictionaries/girls.txt",
+    "boys": "static/dictionaries/boys.txt",
+    "animals": "static/dictionaries/animals.txt",
+    "objects": "static/dictionaries/objects.txt",
+    "countries": "static/dictionaries/countries.txt",
+    "plants": "static/dictionaries/plants.txt",
+}
+CATEGORY_CUSTOM_PATHS = {
+    "girls": "static/dictionaries/custom_girls.txt",
+    "boys": "static/dictionaries/custom_boys.txt",
+    "animals": "static/dictionaries/custom_animals.txt",
+    "objects": "static/dictionaries/custom_objects.txt",
+    "countries": "static/dictionaries/custom_countries.txt",
+    "plants": "static/dictionaries/custom_plants.txt",
+}
+CATEGORY_WORDS = {k: set() for k in CATEGORY_KEYS}
+ARABIC_LETTERS = list("ابتثجحخدذرزسشصضطظعغفقكلمنهوي")
+
+
+def load_category_dictionaries():
+    global CATEGORY_WORDS
+    CATEGORY_WORDS = {k: set() for k in CATEGORY_KEYS}
+    os.makedirs("static/dictionaries", exist_ok=True)
+
+    for key in CATEGORY_KEYS:
+        for path in [CATEGORY_BASE_PATHS[key], CATEGORY_CUSTOM_PATHS[key]]:
+            try:
+                if not os.path.exists(path):
+                    open(path, "a", encoding="utf-8").close()
+                with open(path, encoding="utf-8") as f:
+                    for line in f:
+                        w = line.strip()
+                        if w:
+                            CATEGORY_WORDS[key].add(w.strip().lower())
+                            CATEGORY_WORDS[key].add(normalize_arabic_word(w.strip().lower()))
+            except Exception as e:
+                print("Category dictionary load error:", key, path, e)
+
+    print("Loaded category words:", {k: len(v) for k, v in CATEGORY_WORDS.items()})
+
+
+def save_custom_category_word(category, word):
+    category = category if category in CATEGORY_KEYS else "objects"
+    word = (word or "").strip()
+    if not word:
+        return
+
+    os.makedirs("static/dictionaries", exist_ok=True)
+    word_key = word.strip().lower()
+    normalized_key = normalize_arabic_word(word_key)
+
+    if word_key not in CATEGORY_WORDS[category] and normalized_key not in CATEGORY_WORDS[category]:
+        CATEGORY_WORDS[category].add(word_key)
+        CATEGORY_WORDS[category].add(normalized_key)
+        try:
+            with open(CATEGORY_CUSTOM_PATHS[category], "a", encoding="utf-8") as f:
+                f.write(word + "\n")
+        except Exception as e:
+            print("Custom category word save error:", category, e)
+
+
+def category_first_letter(word):
+    word = normalize_arabic_word((word or "").strip())
+    if word.startswith("ال") and len(word) > 2:
+        word = word[2:]
+    return first_arabic_letter(word)
+
+
+def ai_check_category_word(category, word):
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return False
+
+    category = category if category in CATEGORY_KEYS else "objects"
+    label = CATEGORY_LABELS.get(category, category)
+    word = (word or "").strip()
+
+    if len(word) < 2 or len(word) > 30:
+        return False
+
+    if not all(("\u0600" <= c <= "\u06FF") or c.isspace() for c in word):
+        return False
+
+    prompt = (
+        f"هل الكلمة التالية تصلح لفئة ({label}) في لعبة اسم بنت اسم ولد حيوان جماد بلاد نبات؟ "
+        "اقبل فقط الكلمات العربية الحقيقية أو الأسماء المعروفة أو البلاد المعروفة. "
+        "ارفض الكلمات العشوائية أو غير المناسبة للفئة. "
+        "أجب فقط بكلمة واحدة: نعم أو لا.\n\n"
+        f"الفئة: {label}\nالكلمة: {word}"
+    )
+
+    payload = {
+        "model": os.environ.get("OPENAI_WORD_MODEL", "gpt-4.1-mini"),
+        "messages": [
+            {"role": "system", "content": "أنت مدقق إجابات لعبة عربية. أجب فقط: نعم أو لا."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0,
+        "max_tokens": 2
+    }
+
+    try:
+        req = urllib.request.Request(
+            "https://api.openai.com/v1/chat/completions",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={
+                "Authorization": "Bearer " + api_key,
+                "Content-Type": "application/json"
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=8) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        answer = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip().lower()
+        return answer.startswith("نعم") or answer.startswith("yes")
+    except Exception as e:
+        print("AI category check error:", category, word, e)
+        return False
+
+
+load_category_dictionaries()
+
+
+def cancel_categories_timer(r):
+    r["timerToken"] = int(r.get("timerToken", 0) or 0) + 1
+    t = r.get("timer")
+    if t:
+        try:
+            t.cancel()
+        except Exception:
+            pass
+    r["timer"] = None
+
+
+def categories_public_state(room, reveal=False):
+    r = categories_rooms[room]
+    host_name = "---"
+    for p in r.get("players", []):
+        if p.get("pid") == r.get("host"):
+            host_name = p.get("name", "القائد")
+            break
+
+    payload = {
+        "room": room,
+        "players": r.get("players", []),
+        "host": r.get("host"),
+        "hostName": host_name,
+        "started": r.get("started", False),
+        "status": r.get("status", "waiting"),
+        "letter": r.get("letter", ""),
+        "round": r.get("round", 0),
+        "roundLimit": r.get("roundLimit", 5),
+        "timeLeft": r.get("timeLeft", 0),
+        "timeLimit": r.get("timeLimit", 45),
+        "categories": CATEGORY_DEFS,
+        "roundResults": r.get("roundResults", []),
+        "finalResults": r.get("finalResults"),
+        "message": r.get("message", ""),
+        "submitted": list(r.get("submitted", {}).keys()),
+    }
+
+    if reveal or r.get("status") in ["round_finished", "game_finished"]:
+        payload["answers"] = r.get("answers", {})
+    else:
+        payload["answers"] = {}
+
+    return payload
+
+
+def send_categories_state(room):
+    if room not in categories_rooms:
+        return
+    socketio.emit("categories_state", categories_public_state(room), room="categories_" + room)
+
+
+def finish_categories_round(room, reason="انتهى الوقت"):
+    if room not in categories_rooms:
+        return
+
+    r = categories_rooms[room]
+    if not r.get("started") or r.get("status") != "started":
+        return
+
+    cancel_categories_timer(r)
+    players = [p for p in r.get("players", []) if not p.get("eliminated")]
+    answers = r.get("answers", {})
+    letter = r.get("letter", "")
+    results = []
+    total_added = {p.get("pid"): 0 for p in players}
+
+    # نحسب الكلمات المتكررة داخل نفس الفئة بين اللاعبين
+    repeated = {key: {} for key in CATEGORY_KEYS}
+    for pid, ans in answers.items():
+        for key in CATEGORY_KEYS:
+            w = str(ans.get(key, "")).strip().lower()
+            nw = normalize_arabic_word(w)
+            if nw:
+                repeated[key].setdefault(nw, 0)
+                repeated[key][nw] += 1
+
+    submit_order = r.get("submitOrder", [])
+    for p in players:
+        pid = p.get("pid")
+        ans = answers.get(pid, {})
+        row = {"pid": pid, "name": p.get("name", "لاعب"), "items": {}, "bonus": 0, "roundScore": 0}
+        round_score = 0
+
+        for key in CATEGORY_KEYS:
+            word = str(ans.get(key, "")).strip()
+            item = {"word": word, "ok": False, "points": 0, "reason": ""}
+
+            if not word:
+                item["reason"] = "فارغ"
+            elif not all(("\u0600" <= c <= "\u06FF") or c.isspace() for c in word):
+                item["reason"] = "غير عربي"
+            elif category_first_letter(word) != letter:
+                item["reason"] = f"لا يبدأ بحرف {letter}"
+            else:
+                word_key = word.strip().lower()
+                normalized_key = normalize_arabic_word(word_key)
+                known = word_key in CATEGORY_WORDS[key] or normalized_key in CATEGORY_WORDS[key]
+                if not known:
+                    known = ai_check_category_word(key, word)
+                    if known:
+                        save_custom_category_word(key, word)
+
+                if known:
+                    item["ok"] = True
+                    item["points"] = 10
+                    if repeated[key].get(normalized_key, 0) == 1:
+                        item["points"] += 10
+                        item["reason"] = "صحيح وفريد"
+                    else:
+                        item["reason"] = "صحيح"
+                else:
+                    item["reason"] = "غير موجود أو غير مناسب"
+
+            round_score += int(item["points"])
+            row["items"][key] = item
+
+        if pid in submit_order:
+            pos = submit_order.index(pid)
+            if pos == 0:
+                row["bonus"] = 5
+            elif pos == 1:
+                row["bonus"] = 3
+            elif pos == 2:
+                row["bonus"] = 1
+            round_score += row["bonus"]
+
+        row["roundScore"] = round_score
+        total_added[pid] = round_score
+        results.append(row)
+
+    for p in r.get("players", []):
+        pid = p.get("pid")
+        p["score"] = int(p.get("score", 0) or 0) + int(total_added.get(pid, 0) or 0)
+        p["lastRoundScore"] = int(total_added.get(pid, 0) or 0)
+
+    r["roundResults"] = sorted(results, key=lambda x: x.get("roundScore", 0), reverse=True)
+    r["status"] = "round_finished"
+    r["started"] = False
+    r["timeLeft"] = 0
+    r["message"] = reason
+
+    if int(r.get("round", 0)) >= int(r.get("roundLimit", 5)):
+        r["status"] = "game_finished"
+        final = sorted(r.get("players", []), key=lambda x: int(x.get("score", 0) or 0), reverse=True)
+        r["finalResults"] = [{"name": p.get("name"), "score": p.get("score", 0)} for p in final]
+        r["message"] = "انتهت اللعبة"
+
+    send_categories_state(room)
+
+
+def start_categories_timer(room):
+    if room not in categories_rooms:
+        return
+
+    r = categories_rooms[room]
+    cancel_categories_timer(r)
+    r["timerToken"] = int(r.get("timerToken", 0) or 0) + 1
+    token = r["timerToken"]
+    r["timeLeft"] = int(r.get("timeLimit", 45) or 45)
+    send_categories_state(room)
+
+    def tick():
+        if room not in categories_rooms:
+            return
+        rr = categories_rooms[room]
+        if rr.get("timerToken") != token or rr.get("status") != "started":
+            return
+
+        rr["timeLeft"] = max(0, int(rr.get("timeLeft", 0) or 0) - 1)
+        send_categories_state(room)
+
+        if rr["timeLeft"] <= 0:
+            finish_categories_round(room, "انتهى الوقت")
+            return
+
+        rr["timer"] = threading.Timer(1, tick)
+        rr["timer"].daemon = True
+        rr["timer"].start()
+
+    r["timer"] = threading.Timer(1, tick)
+    r["timer"].daemon = True
+    r["timer"].start()
+
+
+@socketio.on("categories_join")
+def categories_join(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    name = str(data.get("name", "لاعب")).strip()[:18]
+    avatar = str(data.get("avatar", "🎮")).strip()
+    pid = str(data.get("pid") or request.sid).strip()
+
+    join_room("categories_" + room)
+
+    if room not in categories_rooms:
+        categories_rooms[room] = {
+            "players": [],
+            "host": pid,
+            "hostSid": request.sid,
+            "started": False,
+            "status": "waiting",
+            "letter": "",
+            "round": 0,
+            "roundLimit": 5,
+            "timeLimit": 45,
+            "timeLeft": 45,
+            "timer": None,
+            "timerToken": 0,
+            "answers": {},
+            "submitted": {},
+            "submitOrder": [],
+            "roundResults": [],
+            "finalResults": None,
+            "message": "",
+        }
+
+    r = categories_rooms[room]
+    display_name = f"{avatar} {name}"
+    old = next((p for p in r["players"] if p.get("pid") == pid), None)
+
+    if old:
+        old["sid"] = request.sid
+        old["name"] = display_name
+        old["online"] = True
+    else:
+        if r.get("status") == "started":
+            emit("categories_error", {"message": "الجولة بدأت، تقدر تدخل من الجولة القادمة"}, room=request.sid)
+            return
+        r["players"].append({
+            "pid": pid,
+            "sid": request.sid,
+            "name": display_name,
+            "score": 0,
+            "lastRoundScore": 0,
+            "online": True,
+        })
+
+    if r.get("host") == pid:
+        r["hostSid"] = request.sid
+
+    emit("categories_joined", {"pid": pid, "room": room}, room=request.sid)
+    send_categories_state(room)
+
+
+@socketio.on("categories_start")
+def categories_start(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    if room not in categories_rooms:
+        return
+    r = categories_rooms[room]
+    if r.get("hostSid") != request.sid:
+        return
+    if len(r.get("players", [])) < 2:
+        emit("categories_error", {"message": "لازم لاعبين على الأقل"}, room=request.sid)
+        return
+
+    try:
+        r["timeLimit"] = max(10, min(120, int(data.get("timeLimit", r.get("timeLimit", 45)) or 45)))
+    except Exception:
+        r["timeLimit"] = 45
+
+    try:
+        r["roundLimit"] = max(1, min(20, int(data.get("roundLimit", r.get("roundLimit", 5)) or 5)))
+    except Exception:
+        r["roundLimit"] = 5
+
+    if r.get("status") == "game_finished" or int(r.get("round", 0)) >= int(r.get("roundLimit", 5)):
+        r["round"] = 0
+        r["finalResults"] = None
+        for p in r.get("players", []):
+            p["score"] = 0
+            p["lastRoundScore"] = 0
+
+    r["round"] = int(r.get("round", 0) or 0) + 1
+    r["letter"] = random.choice(ARABIC_LETTERS)
+    r["started"] = True
+    r["status"] = "started"
+    r["answers"] = {}
+    r["submitted"] = {}
+    r["submitOrder"] = []
+    r["roundResults"] = []
+    r["message"] = ""
+
+    for p in r.get("players", []):
+        p["lastRoundScore"] = 0
+
+    start_categories_timer(room)
+
+
+@socketio.on("categories_submit")
+def categories_submit(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    pid = str(data.get("pid", "")).strip()
+    answers = data.get("answers", {}) or {}
+
+    if room not in categories_rooms:
+        return
+    r = categories_rooms[room]
+    if r.get("status") != "started":
+        emit("categories_error", {"message": "الجولة غير شغالة"}, room=request.sid)
+        return
+    if pid not in [p.get("pid") for p in r.get("players", [])]:
+        emit("categories_error", {"message": "أنت مو داخل الروم"}, room=request.sid)
+        return
+    if pid in r.get("submitted", {}):
+        emit("categories_error", {"message": "أنت سلمت إجاباتك"}, room=request.sid)
+        return
+
+    clean = {}
+    for key in CATEGORY_KEYS:
+        clean[key] = str(answers.get(key, "")).strip()[:30]
+
+    r["answers"][pid] = clean
+    r["submitted"][pid] = True
+    r["submitOrder"].append(pid)
+
+    emit("categories_submitted", {"ok": True}, room=request.sid)
+
+    active_count = len(r.get("players", []))
+    if len(r.get("submitted", {})) >= active_count:
+        finish_categories_round(room, "كل اللاعبين سلموا")
+    else:
+        send_categories_state(room)
+
+
+@socketio.on("categories_reset")
+def categories_reset(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    if room not in categories_rooms:
+        return
+    r = categories_rooms[room]
+    if r.get("hostSid") != request.sid:
+        return
+    cancel_categories_timer(r)
+    r["started"] = False
+    r["status"] = "waiting"
+    r["letter"] = ""
+    r["round"] = 0
+    r["timeLeft"] = int(r.get("timeLimit", 45) or 45)
+    r["answers"] = {}
+    r["submitted"] = {}
+    r["submitOrder"] = []
+    r["roundResults"] = []
+    r["finalResults"] = None
+    r["message"] = ""
+    for p in r.get("players", []):
+        p["score"] = 0
+        p["lastRoundScore"] = 0
+    send_categories_state(room)
+
+
+@socketio.on("categories_leave")
+def categories_leave(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    pid = str(data.get("pid", "")).strip()
+    if room not in categories_rooms:
+        emit("categories_left", {"ok": True}, room=request.sid)
+        return
+    r = categories_rooms[room]
+    r["players"] = [p for p in r.get("players", []) if p.get("pid") != pid]
+    r.get("answers", {}).pop(pid, None)
+    r.get("submitted", {}).pop(pid, None)
+
+    if r.get("host") == pid:
+        if r.get("players"):
+            r["host"] = r["players"][0].get("pid")
+            r["hostSid"] = r["players"][0].get("sid")
+        else:
+            cancel_categories_timer(r)
+            del categories_rooms[room]
+            emit("categories_left", {"ok": True}, room=request.sid)
+            return
+
+    emit("categories_left", {"ok": True}, room=request.sid)
+    send_categories_state(room)
+
+
+@socketio.on("categories_kick")
+def categories_kick(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    target_pid = str(data.get("targetPid", "")).strip()
+    if room not in categories_rooms:
+        return
+    r = categories_rooms[room]
+    if r.get("hostSid") != request.sid:
+        return
+    if not target_pid or target_pid == r.get("host"):
+        return
+
+    target = next((p for p in r.get("players", []) if p.get("pid") == target_pid), None)
+    if not target:
+        return
+    target_sid = target.get("sid")
+    r["players"] = [p for p in r.get("players", []) if p.get("pid") != target_pid]
+    r.get("answers", {}).pop(target_pid, None)
+    r.get("submitted", {}).pop(target_pid, None)
+
+    if target_sid:
+        emit("categories_kicked", {"room": room}, room=target_sid)
+    send_categories_state(room)
 
 
 if __name__ == "__main__":
