@@ -203,15 +203,17 @@ function renderState(state){
 
   const mistakesBox = document.getElementById("mistakesBox");
 
-  if (mistakesBox) {
-      mistakesBox.innerHTML = "";
+    if (mistakesBox) {
+        mistakesBox.innerHTML = "";
 
-      (state.mistakesLog || []).slice().reverse().forEach(item => {
-          mistakesBox.innerHTML += `<div>• ${item}</div>`;
-      });
+        (state.mistakesLog || []).slice().reverse().forEach(item => {
+            mistakesBox.innerHTML += `<div>• ${item}</div>`;
+        });
+    }
   }
-socket.on("letters_state",renderState);
-socket.on("letters_timer", data => {
+
+  socket.on("letters_state",renderState);
+  socket.on("letters_timer", data => {
   const v = data && typeof data.timeLeft !== "undefined" ? data.timeLeft : 0;
   document.getElementById("timeLeft").innerText = v;
   document.getElementById("timeLeftCenter").innerText = v;
