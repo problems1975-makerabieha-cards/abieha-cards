@@ -1782,16 +1782,32 @@ def letters_word(data):
     word_key = word.strip().lower()
     normalized_key = normalize_arabic_word(word_key)
 
+    # فحص التكرار مع معرفة صاحب الكلمة
+    if word_key in r.get("used", set()) or normalized_key in r.get("used", set()):
+
+        old_player = r.get("wordOwners", {}).get(
+            normalized_key,
+            r.get("wordOwners", {}).get(word_key, "لاعب سابق")
+        )
+
+        msg = f"❌ كلمة مكررة: {word} - كتبها قبل: {old_player}"
+
+        r["mistakesLog"].append(msg)
+
+        socketio.emit("letters_error", {
+            "message": msg,
+            "mistakesLog": r["mistakesLog"]
+        }, room="letters_" + room)
+
+        letters_fail_current_player(room, "الكلمة مكررة")
+        return
+
     if word_key not in ARABIC_WORDS and normalized_key not in ARABIC_WORDS:
         if ai_check_arabic_word(word):
             save_custom_arabic_word(word)
         else:
             fail_and_reply("❌ الكلمة غير موجودة أو غير مفهومة")
             return
-
-    if word_key in r.get("used", set()) or normalized_key in r.get("used", set()):
-        fail_and_reply("الكلمة مكررة")
-        return
 
     needed = r.get("neededLetter", "")
     first = first_arabic_letter(word)
