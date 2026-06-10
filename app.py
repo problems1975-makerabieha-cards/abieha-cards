@@ -1489,7 +1489,7 @@ def letters_join(data):
     avatar = str(data.get("avatar", "🎮")).strip()
     pid = str(data.get("pid") or request.sid).strip()
 
-   join_room("letters_" + room)
+    join_room("letters_" + room)
 
     if room not in letters_rooms:
         letters_rooms[room] = {
@@ -1511,6 +1511,7 @@ def letters_join(data):
             "roundWinner": None,
             "roundMessage": "",
         }
+
     r = letters_rooms[room]
     display_name = f"{avatar} {name}"
 
@@ -1523,8 +1524,8 @@ def letters_join(data):
     else:
         if r.get("started"):
             emit("letters_error", {
-                 "message": "اللعبة بدأت، تقدر تدخل وتشارك من بداية الجولة القادمة"
-             }, room=request.sid)
+                "message": "اللعبة بدأت، تقدر تدخل وتشارك من بداية الجولة القادمة"
+            }, room=request.sid)
             return
 
         r["players"].append({
@@ -1541,7 +1542,6 @@ def letters_join(data):
         r["hostSid"] = request.sid
 
     send_letters_state(room)
-
 
 def cancel_letters_timer(r):
     r["timerToken"] = int(r.get("timerToken", 0) or 0) + 1
