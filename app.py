@@ -1469,10 +1469,10 @@ def letters_public_state(room):
         "timeLeft": r.get("timeLeft", 0),
         "timeLimit": r.get("timeLimit", 30),
         "words": r.get("words", []),
+        "mistakesLog": r.get("mistakesLog", []),
         "roundWinner": r.get("roundWinner"),
         "roundMessage": r.get("roundMessage", ""),
     }
-
 
 def send_letters_state(room):
     if room not in letters_rooms:
