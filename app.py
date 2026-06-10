@@ -1491,26 +1491,26 @@ def letters_join(data):
 
     join_room("letters_" + room)
 
-      if room not in letters_rooms:
-        letters_rooms[room] = {
-            "players": [],
-            "host": pid,
-            "hostSid": request.sid,
-            "started": False,
-            "currentWord": "",
-            "neededLetter": "",
-            "turn": 0,
-            "words": [],
-            "wordOwners": {},
-            "mistakesLog": [],
-            "timeLimit": 30,
-            "timeLeft": 30,
-            "timer": None,
-            "timerToken": 0,
-            "used": set(),
-            "roundWinner": None,
-            "roundMessage": "",
-        }
+        if room not in letters_rooms:
+          letters_rooms[room] = {
+              "players": [],
+              "host": pid,
+              "hostSid": request.sid,
+              "started": False,
+              "currentWord": "",
+              "neededLetter": "",
+              "turn": 0,
+              "words": [],
+              "wordOwners": {},
+              "mistakesLog": [],
+              "timeLimit": 30,
+              "timeLeft": 30,
+              "timer": None,
+              "timerToken": 0,
+              "used": set(),
+              "roundWinner": None,
+              "roundMessage": "",
+          }
     r = letters_rooms[room]
     display_name = f"{avatar} {name}"
 
