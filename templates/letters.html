@@ -197,9 +197,19 @@ function renderState(state){
 
   const logBox=document.getElementById("logBox");
   logBox.innerHTML="";
-  (state.words||[]).slice().reverse().forEach(w=>{logBox.innerHTML+=`<div>• <b>${w.word}</b> <span class="small">(${w.player})</span></div>`});
-}
+  (state.words||[]).slice().reverse().forEach(w=>{
+    logBox.innerHTML+=`<div>• <b>${w.word}</b> <span class="small">(${w.player})</span></div>`
+  });
 
+  const mistakesBox = document.getElementById("mistakesBox");
+
+  if (mistakesBox) {
+      mistakesBox.innerHTML = "";
+
+      (state.mistakesLog || []).slice().reverse().forEach(item => {
+          mistakesBox.innerHTML += `<div>• ${item}</div>`;
+      });
+  }
 socket.on("letters_state",renderState);
 socket.on("letters_timer", data => {
   const v = data && typeof data.timeLeft !== "undefined" ? data.timeLeft : 0;
