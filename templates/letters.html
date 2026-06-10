@@ -219,7 +219,18 @@ socket.on("letters_round_winner", data => {
   alert("🏆 الفائز بالجولة: " + (data.winner || "---"));
 });
 
-socket.on("letters_error",data=>showMsg(data.message||"خطأ"));
+socket.on("letters_error", (data) => {
+  showMsg(data.message || "خطأ");
+
+  if (data.mistakesLog) {
+    const box = document.getElementById("mistakesBox");
+    box.innerHTML = "";
+
+    data.mistakesLog.slice().reverse().forEach(item => {
+      box.innerHTML += `<div>${item}</div>`;
+    });
+  }
+});
 socket.on("letters_left",()=>location.href="/");
 socket.on("letters_kicked",()=>{alert("تم طردك من الروم");location.href="/"});
 
