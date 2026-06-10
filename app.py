@@ -1491,7 +1491,7 @@ def letters_join(data):
 
     join_room("letters_" + room)
 
-    if room not in letters_rooms:
+      if room not in letters_rooms:
         letters_rooms[room] = {
             "players": [],
             "host": pid,
@@ -1501,6 +1501,8 @@ def letters_join(data):
             "neededLetter": "",
             "turn": 0,
             "words": [],
+            "wordOwners": {},
+            "mistakesLog": [],
             "timeLimit": 30,
             "timeLeft": 30,
             "timer": None,
