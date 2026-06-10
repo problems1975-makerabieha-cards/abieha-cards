@@ -1725,6 +1725,13 @@ def letters_start(data):
     r["words"] = [{"word": word, "player": "القائد"}]
     r["used"] = {word.strip().lower(), normalize_arabic_word(word.strip().lower())}
 
+    r["wordOwners"] = {
+        word.strip().lower(): "القائد",
+        normalize_arabic_word(word.strip().lower()): "القائد"
+    }
+
+    r["mistakesLog"] = []
+    
     for p in r.get("players", []):
         p["fails"] = 0
         p["timeouts"] = 0
@@ -1823,6 +1830,8 @@ def letters_word(data):
     r["used"].add(word_key)
     r["used"].add(normalized_key)
 
+    r["wordOwners"][word_key] = current_player.get("name", "لاعب")
+    r["wordOwners"][normalized_key] = current_player.get("name", "لاعب")
     next_letters_turn(room)
 
 
