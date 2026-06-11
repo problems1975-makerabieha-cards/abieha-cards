@@ -1,4 +1,4 @@
-from flask import Flask, request, send_file
+from flask import Flask, request, send_file, session, redirect
 from flask_socketio import SocketIO, join_room, emit
 import random, os, threading
 import json, urllib.request
@@ -6,7 +6,50 @@ import json, urllib.request
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "abieha-final-secret")
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
+SITE_USERNAME = "abieha"
+SITE_PASSWORD = "1975h"
 
+@app.before_request
+def protect_site():
+    if request.path.startswith("/static"):
+        return
+
+    if request.path == "/site-login":
+        return
+
+    if session.get("site_logged_in"):
+        return
+
+    return redirect("/site-login")
+
+
+@app.route("/site-login", methods=["GET", "POST"])
+def site_login():
+    error = ""
+
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+
+        if username == SITE_USERNAME and password == SITE_PASSWORD:
+            session["site_logged_in"] = True
+            return redirect("/")
+        else:
+            error = "اليوزر أو الباسوورد غلط"
+
+    return f"""
+    <html dir="rtl">
+    <body style="background:#071120;color:white;font-family:Arial;text-align:center;padding-top:120px">
+        <h2>🔐 دخول الموقع</h2>
+        <form method="post">
+            <input name="username" placeholder="اليوزر" style="padding:15px;font-size:18px"><br><br>
+            <input name="password" type="password" placeholder="الباسوورد" style="padding:15px;font-size:18px"><br><br>
+            <button style="padding:15px 35px;font-size:18px">دخول</button>
+        </form>
+        <h3 style="color:red">{error}</h3>
+    </body>
+    </html>
+    """
 rooms = {}
 puzzle_rooms = {}
 letters_rooms = {}
