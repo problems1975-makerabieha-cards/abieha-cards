@@ -1465,6 +1465,11 @@ def letters_public_state(room):
         "started": r.get("started", False),
         "currentWord": r.get("currentWord", ""),
         "neededLetter": r.get("neededLetter", ""),
+        "neededCategory": r.get("neededCategory", ""),
+        "neededCategoryLabel": (
+            globals().get("CATEGORY_LABELS", {}).get(r.get("neededCategory", ""), "")
+        ),
+        "gameMode": r.get("gameMode", "normal"),
         "turn": r.get("turn", 0),
         "timeLeft": r.get("timeLeft", 0),
         "timeLimit": r.get("timeLimit", 30),
@@ -1499,6 +1504,8 @@ def letters_join(data):
             "started": False,
             "currentWord": "",
             "neededLetter": "",
+            "neededCategory": "",
+            "gameMode": "normal",
             "turn": 0,
             "words": [],
             "wordOwners": {},
@@ -1543,6 +1550,32 @@ def letters_join(data):
 
     send_letters_state(room)
 
+
+@socketio.on("letters_set_mode")
+def letters_set_mode(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    mode = str(data.get("mode", "normal")).strip()
+
+    if room not in letters_rooms:
+        return
+
+    r = letters_rooms[room]
+
+    # القائد فقط يغير نوع اللعب، وقبل بداية الجولة فقط
+    if r.get("hostSid") != request.sid:
+        return
+
+    if r.get("started"):
+        return
+
+    if mode not in ["normal", "category"]:
+        mode = "normal"
+
+    r["gameMode"] = mode
+    r["neededCategory"] = ""
+    send_letters_state(room)
+
+
 def cancel_letters_timer(r):
     r["timerToken"] = int(r.get("timerToken", 0) or 0) + 1
     t = r.get("timer")
@@ -1556,6 +1589,18 @@ def cancel_letters_timer(r):
 
 def letters_active_players(r):
     return [p for p in r.get("players", []) if not p.get("eliminated")]
+
+
+def pick_letters_category(r):
+    """يختار نوع الكلمة عشوائياً في مود حرف + نوع."""
+    if r.get("gameMode") == "category":
+        keys = list(globals().get("CATEGORY_KEYS", []))
+        if keys:
+            r["neededCategory"] = random.choice(keys)
+        else:
+            r["neededCategory"] = ""
+    else:
+        r["neededCategory"] = ""
 
 
 def finish_letters_round_if_needed(room):
@@ -1716,11 +1761,17 @@ def letters_start(data):
     r["timeLimit"] = max(5, min(120, time_limit))
     r["timeLeft"] = r["timeLimit"]
 
+    mode = str(data.get("gameMode", r.get("gameMode", "normal"))).strip()
+    if mode not in ["normal", "category"]:
+        mode = "normal"
+    r["gameMode"] = mode
+
     r["started"] = True
     r["roundWinner"] = None
     r["roundMessage"] = ""
     r["currentWord"] = word
     r["neededLetter"] = last_arabic_letter(word)
+    pick_letters_category(r)
     r["turn"] = 1 if len(r["players"]) > 1 else 0
     r["words"] = [{"word": word, "player": "القائد"}]
     r["used"] = {word.strip().lower(), normalize_arabic_word(word.strip().lower())}
@@ -1809,12 +1860,37 @@ def letters_word(data):
         letters_fail_current_player(room, "الكلمة مكررة")
         return
 
-    if word_key not in ARABIC_WORDS and normalized_key not in ARABIC_WORDS:
-        if ai_check_arabic_word(word):
-            save_custom_arabic_word(word)
-        else:
-            fail_and_reply("❌ الكلمة غير موجودة أو غير مفهومة")
+    if r.get("gameMode") == "category":
+        cat = r.get("neededCategory", "")
+        category_keys = globals().get("CATEGORY_KEYS", [])
+        category_words = globals().get("CATEGORY_WORDS", {})
+        category_labels = globals().get("CATEGORY_LABELS", {})
+
+        if cat not in category_keys:
+            fail_and_reply("خطأ في نوع الكلمة")
             return
+
+        known_category = (
+            word_key in category_words.get(cat, set())
+            or normalized_key in category_words.get(cat, set())
+        )
+
+        if not known_category:
+            known_category = ai_check_category_word(cat, word)
+            if known_category:
+                save_custom_category_word(cat, word)
+
+        if not known_category:
+            label = category_labels.get(cat, cat)
+            fail_and_reply(f"❌ الكلمة ليست من النوع المطلوب: {label}")
+            return
+    else:
+        if word_key not in ARABIC_WORDS and normalized_key not in ARABIC_WORDS:
+            if ai_check_arabic_word(word):
+                save_custom_arabic_word(word)
+            else:
+                fail_and_reply("❌ الكلمة غير موجودة أو غير مفهومة")
+                return
 
     needed = r.get("neededLetter", "")
     first = first_arabic_letter(word)
@@ -1826,6 +1902,7 @@ def letters_word(data):
     current_player["score"] = int(current_player.get("score", 0)) + 1
     r["currentWord"] = word
     r["neededLetter"] = last_arabic_letter(word)
+    pick_letters_category(r)
     r["words"].append({"word": word, "player": current_player.get("name", "لاعب")})
     r["used"].add(word_key)
     r["used"].add(normalized_key)
@@ -1852,6 +1929,7 @@ def letters_reset(data):
     r["started"] = False
     r["currentWord"] = ""
     r["neededLetter"] = ""
+    r["neededCategory"] = ""
     r["turn"] = 0
     r["words"] = []
     r["used"] = set()
