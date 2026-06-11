@@ -9,13 +9,13 @@
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,Tahoma,sans-serif;background:radial-gradient(circle at top,#1b3b77,#061024 55%,#02050c);color:white}
 .hidden{display:none!important}
-button,input{border:0;border-radius:14px;padding:13px 16px;font-size:18px;margin:6px}
+button,input,select{border:0;border-radius:14px;padding:13px 16px;font-size:18px;margin:6px}
 button{cursor:pointer;font-weight:900;background:linear-gradient(180deg,#fff0a6,#ffd166);color:#071126;box-shadow:0 7px 0 #9b6a00,0 12px 22px #0008}
 button:active{transform:translateY(4px);box-shadow:0 3px 0 #9b6a00}
 .green{background:linear-gradient(180deg,#7affb2,#35dd7b);box-shadow:0 7px 0 #0b7d3b,0 12px 22px #0008}
 .red{background:linear-gradient(180deg,#ff8aa0,#ff4d6d);color:white;box-shadow:0 7px 0 #a50d28,0 12px 22px #0008}
 .blue{background:linear-gradient(180deg,#79c6ff,#2f80ff);color:white;box-shadow:0 7px 0 #06449d,0 12px 22px #0008}
-input{background:white;color:#111;min-width:190px}
+input,select{background:white;color:#111;min-width:190px}
 #login{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .joinBox{width:min(94%,820px);padding:20px;border-radius:28px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);box-shadow:0 24px 80px #0008}
 h1{font-size:46px;margin:0 0 25px;text-shadow:0 5px 14px #000}
@@ -25,7 +25,7 @@ h1{font-size:46px;margin:0 0 25px;text-shadow:0 5px 14px #000}
 .panel,.center{border-radius:24px;background:linear-gradient(180deg,rgba(17,31,61,.96),rgba(8,14,29,.96));border:1px solid rgba(112,154,238,.35);box-shadow:0 24px 65px rgba(0,0,0,.35);padding:16px}
 .center{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
 .card{padding:14px;margin-bottom:12px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
-.bigLetter{font-size:110px;color:#ffd166;text-shadow:0 0 30px #ff8c00;margin:12px 0}
+.bigLetter{font-size:64px;color:#ffd166;text-shadow:0 0 30px #ff8c00;margin:12px 0;line-height:1.25}
 .word{font-size:44px;margin:10px 0}
 .player{padding:11px;border-radius:15px;margin:8px 0;background:#14284e;border:1px solid rgba(255,255,255,.12)}
 .turn{outline:3px solid #ffd166;box-shadow:0 0 22px rgba(255,209,102,.5)}
@@ -89,6 +89,10 @@ h1{font-size:46px;margin:0 0 25px;text-shadow:0 5px 14px #000}
         <input id="startWord" placeholder="كلمة البداية مثال: باب">
 
         <input id="turnTimeLimit" type="number" min="5" max="120" value="30" placeholder="وقت اللاعب بالثواني">
+        <select id="lettersGameMode" onchange="setLettersMode()">
+          <option value="normal">شامل الكلمات</option>
+          <option value="category">حرف + نوع الكلمة</option>
+        </select>
         <button class="green" onclick="startLettersGame()">ابدأ اللعبة</button>
         <button class="red" onclick="resetLettersGame()">تصفير</button>
       </div>
@@ -159,7 +163,15 @@ function startLettersGame(){
   socket.emit("letters_start",{
     room:myRoom,
     word:word,
-    timeLimit:parseInt(document.getElementById("turnTimeLimit").value || "30")
+    timeLimit:parseInt(document.getElementById("turnTimeLimit").value || "30"),
+    gameMode:document.getElementById("lettersGameMode").value
+  });
+}
+function setLettersMode(){
+  if(!isHost)return;
+  socket.emit("letters_set_mode",{
+    room:myRoom,
+    mode:document.getElementById("lettersGameMode").value
   });
 }
 function resetLettersGame(){if(!isHost)return;socket.emit("letters_reset",{room:myRoom})}
@@ -179,7 +191,14 @@ function renderState(state){
   document.getElementById("timeLeftCenter").innerText =
       state.timeLeft || 0;
   document.getElementById("currentWord").innerText=state.currentWord||"---";
-  document.getElementById("neededLetter").innerText=state.neededLetter||"؟";
+  if(document.getElementById("lettersGameMode") && state.gameMode){
+    document.getElementById("lettersGameMode").value = state.gameMode;
+  }
+  if(state.gameMode === "category" && state.neededCategoryLabel){
+    document.getElementById("neededLetter").innerText = state.neededCategoryLabel + " بحرف " + (state.neededLetter || "؟");
+  } else {
+    document.getElementById("neededLetter").innerText=state.neededLetter||"؟";
+  }
   const turnPlayer=(state.players||[])[state.turn||0];
   document.getElementById("turnName").innerText = state.roundWinner
     ? ("🏆 الفائز: " + state.roundWinner)
@@ -224,7 +243,7 @@ socket.on("letters_time_up", () => {
 });
 
 socket.on("letters_player_eliminated", data => {
-  showMsg("❌ " + (data.name || "لاعب") + " طلع من الجولة بعد 3 محاولات فاشلة");
+  showMsg("❌ " + (data.name || "لاعب") + " طلع من الجولة بعد محاولتين فاشلتين");
 });
 
 socket.on("letters_round_winner", data => {
