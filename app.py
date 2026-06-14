@@ -2677,6 +2677,318 @@ def categories_kick(data):
         emit("categories_kicked", {"room": room}, room=target_sid)
     send_categories_state(room)
 
+# ==============================
+# Scramble Game - سرقة الحروف
+# Add this code to your Flask-SocketIO app.py
+# Requires: from flask import request
+# Requires: from flask_socketio import emit, join_room
+# Requires global: socketio
+# ==============================
+
+import random
+import threading
+import time
+
+scramble_rooms = {}
+
+SCRAMBLE_WORDS = [
+    "الكويت", "مدرسة", "برمجة", "كمبيوتر", "سيارة", "طائرة", "مستشفى",
+    "حديقة", "بحر", "قلم", "كتاب", "لاعب", "ملعب", "هاتف", "شاشة",
+    "قائد", "غرفة", "نقاط", "سؤال", "نجاح", "خسارة", "بطولة"
+]
+
+
+def scramble_word(word):
+    letters = list(word)
+    if len(letters) <= 2:
+        return " ".join(letters)
+    for _ in range(20):
+        random.shuffle(letters)
+        shuffled = "".join(letters)
+        if shuffled != word:
+            return " ".join(letters)
+    return " ".join(letters)
+
+
+def normalize_scramble_answer(text):
+    return (text or "").strip().replace(" ", "").replace("ـ", "")
+
+
+def scramble_public_state(room):
+    r = scramble_rooms[room]
+    players = []
+    for p in r["players"]:
+        players.append({
+            "pid": p["pid"],
+            "name": p["name"],
+            "avatar": p.get("avatar", "🎮"),
+            "points": p.get("points", 0),
+            "alive": p.get("alive", True),
+            "isHost": p["pid"] == r.get("host")
+        })
+
+    return {
+        "room": room,
+        "players": players,
+        "host": r.get("host"),
+        "started": r.get("started", False),
+        "timeLimit": r.get("timeLimit", 20),
+        "timeLeft": r.get("timeLeft", 0),
+        "startPoints": r.get("startPoints", 10),
+        "round": r.get("round", 0),
+        "scrambled": r.get("scrambled", ""),
+        "winnerPid": r.get("winnerPid"),
+        "winnerName": r.get("winnerName", ""),
+        "mustSteal": r.get("mustSteal", False),
+        "message": r.get("message", ""),
+        "gameOver": r.get("gameOver", False),
+        "finalWinner": r.get("finalWinner", ""),
+    }
+
+
+def send_scramble_state(room):
+    if room in scramble_rooms:
+        socketio.emit("scramble_state", scramble_public_state(room), room="scramble_" + room)
+
+
+def get_scramble_player(room, pid):
+    for p in scramble_rooms[room]["players"]:
+        if p["pid"] == pid:
+            return p
+    return None
+
+
+def alive_scramble_players(room):
+    return [p for p in scramble_rooms[room]["players"] if p.get("alive", True) and p.get("points", 0) > 0]
+
+
+def start_scramble_round(room):
+    if room not in scramble_rooms:
+        return
+
+    r = scramble_rooms[room]
+    alive = alive_scramble_players(room)
+    if len(alive) <= 1:
+        r["gameOver"] = True
+        r["started"] = False
+        r["finalWinner"] = alive[0]["name"] if alive else "لا يوجد فائز"
+        r["message"] = "🏆 انتهت اللعبة"
+        send_scramble_state(room)
+        return
+
+    word = random.choice(SCRAMBLE_WORDS)
+    r["answer"] = word
+    r["scrambled"] = scramble_word(word)
+    r["round"] = r.get("round", 0) + 1
+    r["winnerPid"] = None
+    r["winnerName"] = ""
+    r["mustSteal"] = False
+    r["message"] = "اكتب الكلمة الصحيحة بأسرع وقت"
+    r["timeLeft"] = r.get("timeLimit", 20)
+    r["timerToken"] = str(time.time()) + str(random.random())
+    token = r["timerToken"]
+    send_scramble_state(room)
+
+    def timer_loop():
+        while True:
+            time.sleep(1)
+            if room not in scramble_rooms:
+                return
+            rr = scramble_rooms[room]
+            if rr.get("timerToken") != token:
+                return
+            if not rr.get("started") or rr.get("mustSteal") or rr.get("gameOver"):
+                return
+            rr["timeLeft"] -= 1
+            if rr["timeLeft"] <= 0:
+                rr["message"] = "انتهى الوقت. الكلمة كانت: " + rr.get("answer", "")
+                rr["timerToken"] = None
+                send_scramble_state(room)
+                time.sleep(2)
+                if room in scramble_rooms and scramble_rooms[room].get("started"):
+                    start_scramble_round(room)
+                return
+            send_scramble_state(room)
+
+    threading.Thread(target=timer_loop, daemon=True).start()
+
+
+@socketio.on("scramble_join")
+def scramble_join(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    name = str(data.get("name", "لاعب")).strip()[:20]
+    avatar = str(data.get("avatar", "🎮")).strip()[:4]
+    pid = str(data.get("pid") or request.sid).strip()
+
+    join_room("scramble_" + room)
+
+    if room not in scramble_rooms:
+        scramble_rooms[room] = {
+            "players": [],
+            "host": pid,
+            "hostSid": request.sid,
+            "started": False,
+            "startPoints": 10,
+            "timeLimit": 20,
+            "timeLeft": 0,
+            "round": 0,
+            "answer": "",
+            "scrambled": "",
+            "winnerPid": None,
+            "winnerName": "",
+            "mustSteal": False,
+            "gameOver": False,
+            "finalWinner": "",
+            "message": "بانتظار القائد يبدأ اللعبة",
+            "timerToken": None,
+        }
+
+    r = scramble_rooms[room]
+
+    existing = get_scramble_player(room, pid)
+    if existing:
+        existing["sid"] = request.sid
+        existing["name"] = name
+        existing["avatar"] = avatar
+    else:
+        if r.get("started"):
+            emit("scramble_error", {"message": "اللعبة بدأت، انتظر الجولة القادمة"}, room=request.sid)
+            send_scramble_state(room)
+            return
+        r["players"].append({
+            "pid": pid,
+            "sid": request.sid,
+            "name": name,
+            "avatar": avatar,
+            "points": r.get("startPoints", 10),
+            "alive": True,
+        })
+
+    send_scramble_state(room)
+
+
+@socketio.on("scramble_start")
+def scramble_start(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    if room not in scramble_rooms:
+        return
+
+    r = scramble_rooms[room]
+    if r.get("hostSid") != request.sid:
+        return
+
+    try:
+        start_points = int(data.get("startPoints", 10))
+    except Exception:
+        start_points = 10
+    if start_points not in [5, 10, 15]:
+        start_points = 10
+
+    try:
+        time_limit = int(data.get("timeLimit", 20))
+    except Exception:
+        time_limit = 20
+    time_limit = max(5, min(time_limit, 60))
+
+    if len(r.get("players", [])) < 2:
+        emit("scramble_error", {"message": "لازم لاعبين على الأقل"}, room=request.sid)
+        return
+
+    r["startPoints"] = start_points
+    r["timeLimit"] = time_limit
+    r["started"] = True
+    r["gameOver"] = False
+    r["finalWinner"] = ""
+    r["round"] = 0
+    for p in r["players"]:
+        p["points"] = start_points
+        p["alive"] = True
+
+    start_scramble_round(room)
+
+
+@socketio.on("scramble_answer")
+def scramble_answer(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    pid = str(data.get("pid") or request.sid).strip()
+    answer = normalize_scramble_answer(data.get("answer", ""))
+
+    if room not in scramble_rooms:
+        return
+    r = scramble_rooms[room]
+
+    if not r.get("started") or r.get("mustSteal") or r.get("winnerPid") or r.get("gameOver"):
+        return
+
+    p = get_scramble_player(room, pid)
+    if not p or not p.get("alive") or p.get("points", 0) <= 0:
+        return
+
+    correct = normalize_scramble_answer(r.get("answer", ""))
+    if answer == correct:
+        r["winnerPid"] = pid
+        r["winnerName"] = p["name"]
+        r["mustSteal"] = True
+        r["timerToken"] = None
+        r["message"] = "✅ " + p["name"] + " جاوب صح. اختر لاعب تسرق منه نقطة"
+        send_scramble_state(room)
+    else:
+        emit("scramble_error", {"message": "إجابة خطأ"}, room=request.sid)
+
+
+@socketio.on("scramble_steal")
+def scramble_steal(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    winner_pid = str(data.get("pid") or request.sid).strip()
+    target_pid = str(data.get("targetPid", "")).strip()
+
+    if room not in scramble_rooms:
+        return
+    r = scramble_rooms[room]
+
+    if not r.get("mustSteal") or r.get("winnerPid") != winner_pid:
+        return
+    if target_pid == winner_pid:
+        return
+
+    winner = get_scramble_player(room, winner_pid)
+    target = get_scramble_player(room, target_pid)
+    if not winner or not target or not target.get("alive") or target.get("points", 0) <= 0:
+        return
+
+    target["points"] -= 1
+    winner["points"] += 1
+
+    if target["points"] <= 0:
+        target["points"] = 0
+        target["alive"] = False
+        r["message"] = "💀 " + target["name"] + " خرج من اللعبة. " + winner["name"] + " سرق نقطة"
+    else:
+        r["message"] = "🏴‍☠️ " + winner["name"] + " سرق نقطة من " + target["name"]
+
+    r["mustSteal"] = False
+    send_scramble_state(room)
+    time.sleep(2)
+    if room in scramble_rooms and scramble_rooms[room].get("started"):
+        start_scramble_round(room)
+
+
+@socketio.on("scramble_reset")
+def scramble_reset(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    if room not in scramble_rooms:
+        return
+    r = scramble_rooms[room]
+    if r.get("hostSid") != request.sid:
+        return
+    r["started"] = False
+    r["gameOver"] = False
+    r["timerToken"] = None
+    r["scrambled"] = ""
+    r["message"] = "تمت إعادة اللعبة"
+    send_scramble_state(room)
+
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
