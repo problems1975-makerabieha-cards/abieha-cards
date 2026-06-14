@@ -2887,6 +2887,8 @@ def scramble_join(data):
             "gameOver": False,
             "finalWinner": "",
             "message": "بانتظار القائد يبدأ اللعبة",
+            "wordCategory": "general",
+            "wordsPool": [],
             "timerToken": None,
         }
 
