@@ -3,8 +3,6 @@ from flask_socketio import SocketIO, join_room, emit
 import random, os, threading
 import json, urllib.request
 
-ONLINE_SCRAMBLE_WORDS_URL = "https://raw.githubusercontent.com/probelalkhan/arabic_words/master/arabic_words.txt"
-online_scramble_words_cache = []
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "abieha-final-secret")
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
@@ -2736,57 +2734,39 @@ def normalize_scramble_answer(text):
     return (text or "").strip().replace(" ", "").replace("ـ", "")
 
 
-def get_words_from_ai(category):
+def get_words_from_ai(category, used_words=None):
     category = clean_scramble_category(category)
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    used_words = used_words or set()
 
     if not api_key:
-        return list(SCRAMBLE_FALLBACK_WORDS.get(category, SCRAMBLE_FALLBACK_WORDS["general"]))
-def get_online_scramble_words():
-    global online_scramble_words_cache
+        fallback = list(SCRAMBLE_FALLBACK_WORDS.get(category, SCRAMBLE_FALLBACK_WORDS["general"]))
+        return [w for w in fallback if normalize_scramble_answer(w).lower() not in used_words]
 
-    if online_scramble_words_cache:
-        return online_scramble_words_cache[:]
+    blocked_words = "\n".join(list(used_words)[-80:])
 
-    try:
-        with urllib.request.urlopen(ONLINE_SCRAMBLE_WORDS_URL, timeout=10) as resp:
-            text = resp.read().decode("utf-8")
-
-        words = []
-        seen = set()
-
-        for line in text.splitlines():
-            w = line.strip()
-            key = normalize_scramble_answer(w).lower()
-
-            if 3 <= len(key) <= 12 and key not in seen:
-                seen.add(key)
-                words.append(w)
-
-        online_scramble_words_cache = words
-        return words[:]
-
-    except Exception as e:
-        print("ONLINE WORDS ERROR:", e)
-        return []
     prompt = f"""
-اعطني 60 كلمة فقط من فئة: {SCRAMBLE_CATEGORY_NAMES.get(category, "كلمات عامة")}.
+اعطني 200 كلمة فقط من فئة: {SCRAMBLE_CATEGORY_NAMES.get(category, "كلمات عامة")}.
 الشروط:
 - اكتب بالعربي قدر الإمكان.
 - كل كلمة أو اسم في سطر منفصل.
 - بدون شرح وبدون ترقيم وبدون رموز.
 - لا تكرر الكلمات.
 - لا تكتب كلمات طويلة جداً.
+- لا تستخدم أي كلمة من قائمة الكلمات المستخدمة سابقاً.
+
+الكلمات المستخدمة سابقاً:
+{blocked_words}
 """
 
     payload = {
         "model": os.environ.get("OPENAI_WORD_MODEL", "gpt-4.1-mini"),
         "messages": [
-            {"role": "system", "content": "أنت مولد كلمات للعبة حروف عربية. أخرج قائمة فقط، كل عنصر في سطر."},
+            {"role": "system", "content": "أنت مولد كلمات للعبة ترتيب حروف عربية. أخرج قائمة فقط، كل عنصر في سطر، بدون ترقيم."},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.9,
-        "max_tokens": 700
+        "temperature": 0.95,
+        "max_tokens": 1600
     }
 
     try:
@@ -2799,30 +2779,32 @@ def get_online_scramble_words():
             },
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=15) as resp:
             data = json.loads(resp.read().decode("utf-8"))
 
         text = data.get("choices", [{}])[0].get("message", {}).get("content", "") or ""
         words = []
         seen = set()
+
         for line in text.splitlines():
             w = line.strip()
             w = w.replace("-", "").replace("•", "").replace("*", "").strip()
             w = "".join(ch for ch in w if not ch.isdigit()).strip()
             w = w.strip(".،:؛/\\|[]{}()\"'")
             key = normalize_scramble_answer(w).lower()
-            if 2 <= len(key) <= 22 and key not in seen:
+
+            if 2 <= len(key) <= 22 and key not in seen and key not in used_words:
                 seen.add(key)
                 words.append(w)
 
         if words:
-            return words[:60]
+            return words[:200]
 
     except Exception as e:
         print("AI scramble words error:", e)
 
-    return list(SCRAMBLE_FALLBACK_WORDS.get(category, SCRAMBLE_FALLBACK_WORDS["general"]))
-
+    fallback = list(SCRAMBLE_FALLBACK_WORDS.get(category, SCRAMBLE_FALLBACK_WORDS["general"]))
+    return [w for w in fallback if normalize_scramble_answer(w).lower() not in used_words]
 
 def scramble_public_state(room):
     r = scramble_rooms[room]
@@ -2948,18 +2930,35 @@ def start_scramble_round(room):
         )
 
         r["message"] = "🏆 انتهت الجولات. الفائز: " + r["finalWinner"]
-
         send_scramble_state(room)
         return
 
     category = clean_scramble_category(r.get("wordCategory", "general"))
     r["wordCategory"] = category
 
-    if not r.get("wordsPool"):
-        r["wordsPool"] = get_online_scramble_words()
+    # الكلمات المستخدمة تحفظ داخل الغرفة حتى لا تتكرر بنفس اللعبة
+    used_words = r.setdefault("usedWords", set())
 
     if not r.get("wordsPool"):
-        r["wordsPool"] = get_words_from_ai(category)
+        r["wordsPool"] = get_words_from_ai(category, used_words)
+
+    # إذا رجع AI كلمات مكررة فقط، نفرغ القائمة ونحاول مرة ثانية
+    r["wordsPool"] = [
+        w for w in r.get("wordsPool", [])
+        if normalize_scramble_answer(w).lower() not in used_words
+    ]
+
+    if not r.get("wordsPool"):
+        fallback = list(SCRAMBLE_FALLBACK_WORDS.get(category, SCRAMBLE_FALLBACK_WORDS["general"]))
+        r["wordsPool"] = [
+            w for w in fallback
+            if normalize_scramble_answer(w).lower() not in used_words
+        ]
+
+    # إذا خلصت كل الكلمات الاحتياطية، نبدأ دورة جديدة فقط للضرورة
+    if not r.get("wordsPool"):
+        used_words.clear()
+        r["wordsPool"] = get_words_from_ai(category, used_words)
 
     if not r.get("wordsPool"):
         r["wordsPool"] = list(SCRAMBLE_FALLBACK_WORDS["general"])
@@ -2970,6 +2969,8 @@ def start_scramble_round(room):
         r["wordsPool"].remove(word)
     except Exception:
         pass
+
+    used_words.add(normalize_scramble_answer(word).lower())
 
     r["answer"] = word
     r["scrambled"] = scramble_word(word)
@@ -3014,6 +3015,8 @@ def start_scramble_round(room):
             send_scramble_state(room)
 
     threading.Thread(target=timer_loop, daemon=True).start()
+
+
 @socketio.on("scramble_join")
 def scramble_join(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
@@ -3034,6 +3037,7 @@ def scramble_join(data):
             "roundMode": "auto",
             "wordCategory": "general",
             "wordsPool": [],
+            "usedWords": set(),
             "timeLeft": 0,
             "round": 0,
             "answer": "",
@@ -3108,6 +3112,7 @@ def scramble_start(data):
     r["roundMode"] = str(data.get("roundMode", "auto")) if str(data.get("roundMode", "auto")) in ["auto", "manual"] else "auto"
     r["wordCategory"] = clean_scramble_category(data.get("wordCategory", "general"))
     r["wordsPool"] = []
+    r["usedWords"] = set()
     r["started"] = True
     r["gameOver"] = False
     r["finalWinner"] = ""
@@ -3253,6 +3258,8 @@ def scramble_reset(data):
     r["timerToken"] = None
     r["scrambled"] = ""
     r["answer"] = ""
+    r["wordsPool"] = []
+    r["usedWords"] = set()
     r["winnerPid"] = None
     r["winnerName"] = ""
     r["mustSteal"] = False
