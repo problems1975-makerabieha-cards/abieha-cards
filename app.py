@@ -121,7 +121,7 @@ def categories_game():
 
 @app.route("/scramble")
 def scramble_page():
-    return render_template("scramble.html")
+    return send_file("templates/scramble.html")
 
 @socketio.on("puzzle_join")
 def puzzle_join(data):
