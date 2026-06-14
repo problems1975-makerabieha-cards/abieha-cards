@@ -71,9 +71,17 @@
       </select>
 
       <select id="roundMode">
-        <option value="auto" selected>تلقائي بعد 5 ثواني</option>
+        <option value="auto" selected>تلقائي</option>
         <option value="manual">يدوي بواسطة القائد</option>
-      </select>
+    </select>
+
+    <select id="autoDelay">
+        <option value="5">5 ثواني</option>
+        <option value="10" selected>10 ثواني</option>
+        <option value="15">15 ثانية</option>
+        <option value="20">20 ثانية</option>
+        <option value="30">30 ثانية</option>
+    </select>
 
       <select id="wordCategory">
         <option value="general" selected>كلمات عامة</option>
@@ -145,8 +153,9 @@ function startGame(){
     timeLimit:document.getElementById("timeLimit").value,
     roundMode:document.getElementById("roundMode").value,
     roundLimit:document.getElementById("roundLimit").value,
+    autoDelay:document.getElementById("autoDelay").value,
     wordCategory:document.getElementById("wordCategory").value
-  });
+});
 }
 
 function nextRound(){
