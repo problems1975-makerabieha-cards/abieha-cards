@@ -2850,7 +2850,7 @@ def alive_scramble_players(room):
     return [p for p in scramble_rooms[room].get("players", []) if p.get("alive", True) and p.get("points", 0) > 0]
 
 
-def finish_scramble_round(room, delay=5):
+def finish_scramble_round(room, delay=10):
     if room not in scramble_rooms:
         return
 
@@ -2959,7 +2959,7 @@ def start_scramble_round(room):
                 rr["message"] = "انتهى الوقت. الكلمة كانت: " + rr.get("answer", "")
                 rr["timerToken"] = None
                 send_scramble_state(room)
-                finish_scramble_round(room, delay=5)
+                finish_scramble_round(room, delay=10)
                 return
 
             send_scramble_state(room)
@@ -3156,7 +3156,7 @@ def scramble_steal(data):
         r["mustSteal"] = False
         r["message"] = "🛡️ " + target.get("name", "لاعب") + " استخدم الدرع ومنع السرقة"
         send_scramble_state(room)
-        finish_scramble_round(room, delay=5)
+        finish_scramble_round(room, delay=10)
         return
 
     steal_amount = 1
@@ -3188,7 +3188,7 @@ def scramble_steal(data):
 
     r["mustSteal"] = False
     send_scramble_state(room)
-    finish_scramble_round(room, delay=5)
+    finish_scramble_round(room, delay=10)
 
 
 @socketio.on("scramble_reset")
