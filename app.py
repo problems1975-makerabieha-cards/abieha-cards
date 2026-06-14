@@ -2771,7 +2771,11 @@ def scramble_public_state(room):
             "avatar": p.get("avatar", "🎮"),
             "points": p.get("points", 0),
             "alive": p.get("alive", True),
-            "isHost": p["pid"] == r.get("host")
+            "isHost": p["pid"] == r.get("host"),
+
+            "shield": p.get("shield", 0),
+            "revenge": p.get("revenge", ""),
+            "winStreak": p.get("winStreak", 0)
         })
 
     return {
