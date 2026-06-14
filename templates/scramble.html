@@ -54,6 +54,7 @@
 
     <div id="hostBox" class="card hidden">
       <h3>إعدادات القائد</h3>
+      <input id="roundLimit" type="number" min="1" max="50" value="10" placeholder="عدد الجولات">
 
       <select id="startPoints">
         <option value="5">5 نقاط</option>
@@ -86,7 +87,6 @@
         <option value="cars">سيارات</option>
         <option value="animals">حيوانات</option>
       </select>
-
       <br>
       <button onclick="startGame()">ابدأ اللعبة</button>
       <button class="good" onclick="nextRound()">الجولة التالية</button>
@@ -144,6 +144,7 @@ function startGame(){
     startPoints:document.getElementById("startPoints").value,
     timeLimit:document.getElementById("timeLimit").value,
     roundMode:document.getElementById("roundMode").value,
+    roundLimit:document.getElementById("roundLimit").value,
     wordCategory:document.getElementById("wordCategory").value
   });
 }
