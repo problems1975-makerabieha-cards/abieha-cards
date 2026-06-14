@@ -2896,6 +2896,7 @@ def scramble_start(data):
 
     r["startPoints"] = start_points
     r["timeLimit"] = time_limit
+    r["roundMode"] = str(data.get("roundMode", "auto"))
     r["started"] = True
     r["gameOver"] = False
     r["finalWinner"] = ""
@@ -2982,10 +2983,17 @@ def scramble_steal(data):
     r["mustSteal"] = False
     send_scramble_state(room)
 
-    time.sleep(2)
+    if r.get("roundMode", "auto") == "auto":
 
-    if room in scramble_rooms and scramble_rooms[room].get("started"):
-        start_scramble_round(room)
+        time.sleep(5)
+
+        if room in scramble_rooms and scramble_rooms[room].get("started"):
+            start_scramble_round(room)
+
+    else:
+
+        r["message"] = "⏳ بانتظار القائد لبدء الجولة التالية"
+        send_scramble_state(room)
         
 @socketio.on("scramble_reset")
 def scramble_reset(data):
@@ -3019,6 +3027,25 @@ def scramble_leave(data):
 
     send_scramble_state(room)
 
+@socketio.on("scramble_next_round")
+def scramble_next_round(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+
+    if room not in scramble_rooms:
+        return
+
+    r = scramble_rooms[room]
+
+    if r.get("hostSid") != request.sid:
+        return
+
+    if not r.get("started"):
+        return
+
+    if r.get("mustSteal"):
+        return
+
+    start_scramble_round(room)
 
 @socketio.on("scramble_kick")
 def scramble_kick(data):
