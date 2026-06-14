@@ -43,13 +43,14 @@
   <div id="gameBox" class="hidden">
     <div class="card">
       <div>الغرفة: <b id="roomTitle"></b></div>
+      <button class="leave" onclick="leaveGame()">خروج</button>
       <div class="small">الفئة: <b id="categoryTitle">---</b> | الجولة: <b id="roundTitle">0</b></div>
       <div class="msg" id="message"></div>
       <div class="timer" id="timer">0</div>
       <div class="word" id="scrambled">---</div>
       <input id="answer" placeholder="اكتب الكلمة الصحيحة" onkeydown="if(event.key==='Enter') sendAnswer()">
       <button onclick="sendAnswer()">إرسال</button>
-      <button class="leave" onclick="leaveGame()">خروج</button>
+      
     </div>
 
     <div id="hostBox" class="card hidden">
