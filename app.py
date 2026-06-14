@@ -2830,6 +2830,7 @@ def scramble_public_state(room):
         "finalWinner": r.get("finalWinner", ""),
         "wordCategory": r.get("wordCategory", "general"),
         "roundMode": r.get("roundMode", "auto"),
+        "roundLimit": r.get("roundLimit", 10),
     }
 
 
@@ -2874,6 +2875,7 @@ def start_scramble_round(room):
 
     r = scramble_rooms[room]
     alive = alive_scramble_players(room)
+
     if len(alive) <= 1:
         r["gameOver"] = True
         r["started"] = False
@@ -2882,6 +2884,26 @@ def start_scramble_round(room):
         r["timeLeft"] = 0
         r["finalWinner"] = alive[0].get("name", "لاعب") if alive else "لا يوجد فائز"
         r["message"] = "🏆 انتهت اللعبة"
+        send_scramble_state(room)
+        return
+
+    r["round"] = int(r.get("round", 0) or 0) + 1
+
+    if r["round"] > int(r.get("roundLimit", 10) or 10):
+        r["gameOver"] = True
+        r["started"] = False
+        r["mustSteal"] = False
+        r["timerToken"] = None
+        r["timeLeft"] = 0
+
+        best = sorted(
+            r.get("players", []),
+            key=lambda p: int(p.get("points", 0) or 0),
+            reverse=True
+        )
+
+        r["finalWinner"] = best[0].get("name", "لاعب") if best else "لا يوجد فائز"
+        r["message"] = "🏆 انتهت الجولات. الفائز: " + r["finalWinner"]
         send_scramble_state(room)
         return
 
@@ -2902,40 +2924,47 @@ def start_scramble_round(room):
 
     r["answer"] = word
     r["scrambled"] = scramble_word(word)
-    r["round"] = int(r.get("round", 0) or 0) + 1
     r["winnerPid"] = None
     r["winnerName"] = ""
     r["mustSteal"] = False
     r["message"] = "اكتب الكلمة الصحيحة بأسرع وقت"
+
     if r["round"] % 5 == 0:
         r["message"] += " 🔥 هذه جولة الضربة المزدوجة"
+
     r["timeLeft"] = int(r.get("timeLimit", 20) or 20)
     r["timerToken"] = str(time.time()) + str(random.random())
     token = r["timerToken"]
+
     send_scramble_state(room)
 
     def timer_loop():
         while True:
             time.sleep(1)
+
             if room not in scramble_rooms:
                 return
+
             rr = scramble_rooms[room]
+
             if rr.get("timerToken") != token:
                 return
+
             if not rr.get("started") or rr.get("mustSteal") or rr.get("gameOver"):
                 return
+
             rr["timeLeft"] = max(0, int(rr.get("timeLeft", 0) or 0) - 1)
+
             if rr["timeLeft"] <= 0:
                 rr["message"] = "انتهى الوقت. الكلمة كانت: " + rr.get("answer", "")
                 rr["timerToken"] = None
                 send_scramble_state(room)
                 finish_scramble_round(room, delay=5)
                 return
+
             send_scramble_state(room)
 
     threading.Thread(target=timer_loop, daemon=True).start()
-
-
 @socketio.on("scramble_join")
 def scramble_join(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
@@ -3034,6 +3063,12 @@ def scramble_start(data):
     r["gameOver"] = False
     r["finalWinner"] = ""
     r["round"] = 0
+    try:
+        round_limit = int(data.get("roundLimit", 10))
+    except Exception:
+        round_limit = 10
+
+    r["roundLimit"] = max(1, min(round_limit, 50))
     r["winnerPid"] = None
     r["winnerName"] = ""
     r["mustSteal"] = False
