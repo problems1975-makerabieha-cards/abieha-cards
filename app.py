@@ -3170,7 +3170,7 @@ def scramble_answer(data):
         r["winnerName"] = p.get("name", "لاعب")
         r["mustSteal"] = True
         r["timerToken"] = None
-        r["message"] = "✅ " + p.get("name", "لاعب") + " جاوب صح. اختر لاعب تسرق منه نقطة"
+        r["message"] = "✅ " + p.get("name", "لاعب") + " جاوب صح. الكلمة الصحيحة: " + r.get("answer", "") + " | اختر لاعب تسرق منه نقطة"
         if p.get("shield", 0) > 0:
             r["message"] += " 🛡️ حصل على درع"
         if p.get("revenge"):
