@@ -2930,7 +2930,7 @@ def start_scramble_round(room):
             r.get("players", []),
             key=lambda p: int(p.get("points", 0) or 0),
             reverse=True
-         )
+        )
 
         r["finalScores"] = [
             {
@@ -2952,7 +2952,7 @@ def start_scramble_round(room):
         send_scramble_state(room)
         return
 
-       category = clean_scramble_category(r.get("wordCategory", "general"))
+    category = clean_scramble_category(r.get("wordCategory", "general"))
     r["wordCategory"] = category
 
     if not r.get("wordsPool"):
@@ -2965,10 +2965,12 @@ def start_scramble_round(room):
         r["wordsPool"] = list(SCRAMBLE_FALLBACK_WORDS["general"])
 
     word = random.choice(r["wordsPool"])
+
     try:
         r["wordsPool"].remove(word)
     except Exception:
         pass
+
     r["answer"] = word
     r["scrambled"] = scramble_word(word)
     r["winnerPid"] = None
