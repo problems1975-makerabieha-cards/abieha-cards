@@ -53,6 +53,7 @@ def site_login():
 rooms = {}
 puzzle_rooms = {}
 letters_rooms = {}
+scramble_rooms = {}
 
 COLORS = ["red", "bluec", "greenc", "yellow"]
 TEAM_ORDER = ["A", "B", "C"]
