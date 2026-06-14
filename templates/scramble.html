@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>سرقة الحروف</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <style>
+    body{margin:0;font-family:Arial;background:#111;color:white;text-align:center}
+    .wrap{max-width:900px;margin:auto;padding:18px}
+    .card{background:#1e1e1e;border:1px solid #333;border-radius:18px;padding:16px;margin:12px 0;box-shadow:0 0 20px #0006}
+    input,select,button{font-size:18px;border-radius:12px;border:0;padding:12px;margin:5px}
+    input,select{background:#fff;color:#111;min-width:180px}
+    button{background:#e2b44b;color:#111;font-weight:bold;cursor:pointer}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .word{font-size:48px;letter-spacing:10px;font-weight:bold;color:#ffd15c;margin:20px 0;direction:rtl}
+    .players{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-top:10px}
+    .player{background:#292929;border-radius:14px;padding:12px;border:1px solid #444}
+    .dead{opacity:.45;text-decoration:line-through}
+    .me{border-color:#ffd15c;box-shadow:0 0 12px #ffd15c55}
+    .msg{font-size:22px;color:#8ff;margin:10px 0;min-height:28px}
+    .timer{font-size:36px;color:#ff6666;font-weight:bold}
+    .hidden{display:none}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏴‍☠️ سرقة الحروف</h1>
+
+  <div id="joinBox" class="card">
+    <h2>دخول الغرفة</h2>
+    <input id="room" placeholder="رمز الغرفة" value="ROOM1">
+    <input id="name" placeholder="اسم اللاعب">
+    <input id="avatar" placeholder="الرمز" value="🎮">
+    <button onclick="joinGame()">دخول</button>
+  </div>
+
+  <div id="gameBox" class="hidden">
+    <div class="card">
+      <div>الغرفة: <b id="roomTitle"></b></div>
+      <div class="msg" id="message"></div>
+      <div class="timer" id="timer">0</div>
+      <div class="word" id="scrambled">---</div>
+      <input id="answer" placeholder="اكتب الكلمة الصحيحة" onkeydown="if(event.key==='Enter') sendAnswer()">
+      <button onclick="sendAnswer()">إرسال</button>
+    </div>
+
+    <div id="hostBox" class="card hidden">
+      <h3>إعدادات القائد</h3>
+      <select id="startPoints">
+        <option value="5">5 نقاط</option>
+        <option value="10" selected>10 نقاط</option>
+        <option value="15">15 نقطة</option>
+      </select>
+      <select id="timeLimit">
+        <option value="10">10 ثواني</option>
+        <option value="20" selected>20 ثانية</option>
+        <option value="30">30 ثانية</option>
+      </select>
+      <button onclick="startGame()">ابدأ اللعبة</button>
+      <button onclick="resetGame()">إعادة</button>
+    </div>
+
+    <div id="stealBox" class="card hidden">
+      <h2>اختر لاعب تسرق منه نقطة</h2>
+      <div id="stealTargets" class="players"></div>
+    </div>
+
+    <div class="card">
+      <h2>اللاعبون</h2>
+      <div id="players" class="players"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const socket = io();
+let ROOM = "";
+let PID = localStorage.getItem("scramble_pid") || (Date.now()+"_"+Math.random().toString(16).slice(2));
+localStorage.setItem("scramble_pid", PID);
+let isHost = false;
+let lastState = null;
+
+function joinGame(){
+  ROOM = document.getElementById("room").value.trim().toUpperCase() || "ROOM1";
+  const name = document.getElementById("name").value.trim() || "لاعب";
+  const avatar = document.getElementById("avatar").value.trim() || "🎮";
+  socket.emit("scramble_join", {room:ROOM, name, avatar, pid:PID});
+  document.getElementById("joinBox").classList.add("hidden");
+  document.getElementById("gameBox").classList.remove("hidden");
+  document.getElementById("roomTitle").innerText = ROOM;
+}
+
+function startGame(){
+  socket.emit("scramble_start", {
+    room:ROOM,
+    startPoints:document.getElementById("startPoints").value,
+    timeLimit:document.getElementById("timeLimit").value
+  });
+}
+
+function resetGame(){ socket.emit("scramble_reset", {room:ROOM}); }
+
+function sendAnswer(){
+  const answer = document.getElementById("answer").value.trim();
+  if(!answer) return;
+  socket.emit("scramble_answer", {room:ROOM, pid:PID, answer});
+  document.getElementById("answer").value = "";
+}
+
+function steal(targetPid){
+  socket.emit("scramble_steal", {room:ROOM, pid:PID, targetPid});
+}
+
+socket.on("scramble_state", (s)=>{
+  lastState = s;
+  isHost = s.players.some(p => p.pid === PID && p.isHost);
+  document.getElementById("hostBox").classList.toggle("hidden", !isHost);
+  document.getElementById("message").innerText = s.gameOver ? ("🏆 الفائز: " + s.finalWinner) : (s.message || "");
+  document.getElementById("timer").innerText = s.timeLeft || 0;
+  document.getElementById("scrambled").innerText = s.scrambled || "---";
+
+  const playersBox = document.getElementById("players");
+  playersBox.innerHTML = "";
+  s.players.forEach(p=>{
+    const div = document.createElement("div");
+    div.className = "player" + (!p.alive ? " dead" : "") + (p.pid===PID ? " me" : "");
+    div.innerHTML = `<div style="font-size:30px">${p.avatar}</div><b>${p.name}</b>${p.isHost?' 👑':''}<br>النقاط: <b>${p.points}</b>`;
+    playersBox.appendChild(div);
+  });
+
+  const canSteal = s.mustSteal && s.winnerPid === PID;
+  document.getElementById("stealBox").classList.toggle("hidden", !canSteal);
+  const targets = document.getElementById("stealTargets");
+  targets.innerHTML = "";
+  if(canSteal){
+    s.players.filter(p => p.pid !== PID && p.alive && p.points > 0).forEach(p=>{
+      const btn = document.createElement("button");
+      btn.innerText = `${p.avatar} ${p.name} - ${p.points}`;
+      btn.onclick = ()=>steal(p.pid);
+      targets.appendChild(btn);
+    });
+  }
+});
+
+socket.on("scramble_error", (e)=> alert(e.message || "خطأ"));
+</script>
+</body>
+</html>
