@@ -65,6 +65,7 @@
           <option value="30">30 جولة</option>
           <option value="40">40 جولة</option>
        </select>
+      </div>
 
       <select id="startPoints">
         <option value="5">5 نقاط</option>
@@ -232,12 +233,12 @@ socket.on("scramble_state", (s)=>{
     playersBox.appendChild(div);
   });
 
-  const canSteal = s.mustSteal && (s.winnerPid === PID || isHost);
+  const canSteal = s.mustSteal && (String(s.winnerPid) === String(PID) || isHost);
   document.getElementById("stealBox").classList.toggle("hidden", !canSteal);
 
   const stealTitle = document.getElementById("stealTitle");
   if(canSteal){
-    stealTitle.innerText = s.winnerPid === PID
+    stealTitle.innerText = String(s.winnerPid) === String(PID)
       ? "اختر لاعب تسرق منه نقطة"
       : "القائد يختار بدلاً من الفائز";
   }
@@ -246,16 +247,19 @@ socket.on("scramble_state", (s)=>{
   targets.innerHTML = "";
 
   if(canSteal){
-    const winnerPid = s.winnerPid;
-    const winner = s.players.find(p => p.pid === winnerPid);
+    const winnerPid = String(s.winnerPid);
+    const winner = s.players.find(p => String(p.pid) === winnerPid);
+
     s.players
-      .filter(p => p.pid !== winnerPid && p.alive && p.points > 0)
+      .filter(p => String(p.pid) !== winnerPid && p.alive && Number(p.points) > 0)
       .forEach(p=>{
         const btn = document.createElement("button");
         let note = "";
-        if(s.round && s.round % 5 === 0) note += " 🔥x2";
-        if(winner && winner.revenge === p.pid) note += " انتقامx2";
-        if(p.shield > 0) note += " 🛡️";
+
+        if(s.round && Number(s.round) % 5 === 0) note += " 🔥x2";
+        if(winner && String(winner.revenge || "") === String(p.pid)) note += " انتقامx2";
+        if(Number(p.shield || 0) > 0) note += " 🛡️";
+
         btn.innerText = `${p.avatar} ${p.name} - ${p.points}${note}`;
         btn.onclick = ()=>steal(p.pid);
         targets.appendChild(btn);
