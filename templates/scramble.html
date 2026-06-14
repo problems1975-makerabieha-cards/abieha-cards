@@ -18,12 +18,14 @@
     .player{background:#292929;border-radius:14px;padding:12px;border:1px solid #444}
     .dead{opacity:.45;text-decoration:line-through}
     .me{border-color:#ffd15c;box-shadow:0 0 12px #ffd15c55}
-    .msg{font-size:22px;color:#8ff;margin:10px 0;min-height:28px}
+    .msg{font-size:22px;color:#8ff;margin:10px 0;min-height:28px;line-height:1.6}
     .timer{font-size:36px;color:#ff6666;font-weight:bold}
     .hidden{display:none}
     .danger{background:#d94b4b;color:white}
     .leave{background:#555;color:white}
-    .next{background:#49b66d;color:white}
+    .good{background:#48b36a;color:white}
+    .small{font-size:14px;opacity:.8;margin-top:6px}
+    .badge{display:inline-block;background:#333;border:1px solid #555;border-radius:999px;padding:4px 9px;margin:3px;font-size:14px}
   </style>
 </head>
 <body>
@@ -41,6 +43,7 @@
   <div id="gameBox" class="hidden">
     <div class="card">
       <div>الغرفة: <b id="roomTitle"></b></div>
+      <div class="small">الفئة: <b id="categoryTitle">---</b> | الجولة: <b id="roundTitle">0</b></div>
       <div class="msg" id="message"></div>
       <div class="timer" id="timer">0</div>
       <div class="word" id="scrambled">---</div>
@@ -51,24 +54,45 @@
 
     <div id="hostBox" class="card hidden">
       <h3>إعدادات القائد</h3>
+
       <select id="startPoints">
         <option value="5">5 نقاط</option>
         <option value="10" selected>10 نقاط</option>
         <option value="15">15 نقطة</option>
       </select>
+
       <select id="timeLimit">
         <option value="10">10 ثواني</option>
         <option value="20" selected>20 ثانية</option>
         <option value="30">30 ثانية</option>
+        <option value="45">45 ثانية</option>
+        <option value="60">60 ثانية</option>
       </select>
+
       <select id="roundMode">
-        <option value="auto" selected>انتقال تلقائي بعد 5 ثواني</option>
-        <option value="manual">انتقال يدوي من القائد</option>
+        <option value="auto" selected>تلقائي بعد 5 ثواني</option>
+        <option value="manual">يدوي بواسطة القائد</option>
       </select>
+
+      <select id="wordCategory">
+        <option value="general" selected>كلمات عامة</option>
+        <option value="countries">دول</option>
+        <option value="football">لاعبين كرة</option>
+        <option value="movies">أفلام</option>
+        <option value="anime">شخصيات أنمي</option>
+        <option value="famous">مشاهير</option>
+        <option value="brands">شركات وماركات</option>
+        <option value="games">ألعاب</option>
+        <option value="cars">سيارات</option>
+        <option value="animals">حيوانات</option>
+      </select>
+
       <br>
       <button onclick="startGame()">ابدأ اللعبة</button>
-      <button class="next" id="nextRoundBtn" onclick="nextRound()">الجولة التالية</button>
+      <button class="good" onclick="nextRound()">الجولة التالية</button>
       <button onclick="resetGame()">إعادة</button>
+
+      <div class="small">كل 5 جولات = سرقة نقطتين 🔥 | 3 إجابات متتالية = درع 🛡️</div>
     </div>
 
     <div id="stealBox" class="card hidden">
@@ -91,6 +115,19 @@ localStorage.setItem("scramble_pid", PID);
 let isHost = false;
 let lastState = null;
 
+const categoryNames = {
+  general:"كلمات عامة",
+  countries:"دول",
+  football:"لاعبين كرة",
+  movies:"أفلام",
+  anime:"شخصيات أنمي",
+  famous:"مشاهير",
+  brands:"شركات وماركات",
+  games:"ألعاب",
+  cars:"سيارات",
+  animals:"حيوانات"
+};
+
 function joinGame(){
   ROOM = document.getElementById("room").value.trim().toUpperCase() || "ROOM1";
   const name = document.getElementById("name").value.trim() || "لاعب";
@@ -103,15 +140,16 @@ function joinGame(){
 
 function startGame(){
   socket.emit("scramble_start", {
-    room: ROOM,
-    startPoints: document.getElementById("startPoints").value,
-    timeLimit: document.getElementById("timeLimit").value,
-    roundMode: document.getElementById("roundMode").value
+    room:ROOM,
+    startPoints:document.getElementById("startPoints").value,
+    timeLimit:document.getElementById("timeLimit").value,
+    roundMode:document.getElementById("roundMode").value,
+    wordCategory:document.getElementById("wordCategory").value
   });
 }
 
 function nextRound(){
-  socket.emit("scramble_next_round", {room: ROOM});
+  socket.emit("scramble_next_round", {room:ROOM});
 }
 
 function resetGame(){
@@ -131,17 +169,11 @@ function steal(targetPid){
 
 function kickPlayer(targetPid){
   if(!confirm("طرد اللاعب؟")) return;
-  socket.emit("scramble_kick", {
-    room: ROOM,
-    targetPid: targetPid
-  });
+  socket.emit("scramble_kick", {room: ROOM, targetPid: targetPid});
 }
 
 function leaveGame(){
-  socket.emit("scramble_leave", {
-    room: ROOM,
-    pid: PID
-  });
+  socket.emit("scramble_leave", {room: ROOM, pid: PID});
   window.location.href = "/";
 }
 
@@ -153,11 +185,8 @@ socket.on("scramble_state", (s)=>{
   document.getElementById("message").innerText = s.gameOver ? ("🏆 الفائز: " + s.finalWinner) : (s.message || "");
   document.getElementById("timer").innerText = s.timeLeft || 0;
   document.getElementById("scrambled").innerText = s.scrambled || "---";
-
-  const nextBtn = document.getElementById("nextRoundBtn");
-  if(nextBtn){
-    nextBtn.disabled = !isHost || !!s.mustSteal || !!s.gameOver || !s.started;
-  }
+  document.getElementById("categoryTitle").innerText = categoryNames[s.wordCategory] || s.wordCategory || "---";
+  document.getElementById("roundTitle").innerText = s.round || 0;
 
   const playersBox = document.getElementById("players");
   playersBox.innerHTML = "";
@@ -165,9 +194,17 @@ socket.on("scramble_state", (s)=>{
   s.players.forEach(p=>{
     const div = document.createElement("div");
     div.className = "player" + (!p.alive ? " dead" : "") + (p.pid===PID ? " me" : "");
+    const badges = `
+      ${p.isHost ? '<span class="badge">👑 قائد</span>' : ''}
+      ${p.shield > 0 ? '<span class="badge">🛡️ درع</span>' : ''}
+      ${p.revenge ? '<span class="badge">🔥 انتقام</span>' : ''}
+      ${p.winStreak > 0 ? `<span class="badge">سلسلة ${p.winStreak}/3</span>` : ''}
+    `;
     div.innerHTML = `
       <div style="font-size:30px">${p.avatar}</div>
-      <b>${p.name}</b>${p.isHost ? ' 👑' : ''}
+      <b>${p.name}</b>
+      <br>
+      ${badges}
       <br>
       النقاط: <b>${p.points}</b>
       ${isHost && p.pid !== PID ? `<br><button class="danger" onclick="kickPlayer('${p.pid}')">🚫 طرد</button>` : ''}
@@ -190,11 +227,16 @@ socket.on("scramble_state", (s)=>{
 
   if(canSteal){
     const winnerPid = s.winnerPid;
+    const winner = s.players.find(p => p.pid === winnerPid);
     s.players
       .filter(p => p.pid !== winnerPid && p.alive && p.points > 0)
       .forEach(p=>{
         const btn = document.createElement("button");
-        btn.innerText = `${p.avatar} ${p.name} - ${p.points}`;
+        let note = "";
+        if(s.round && s.round % 5 === 0) note += " 🔥x2";
+        if(winner && winner.revenge === p.pid) note += " انتقامx2";
+        if(p.shield > 0) note += " 🛡️";
+        btn.innerText = `${p.avatar} ${p.name} - ${p.points}${note}`;
         btn.onclick = ()=>steal(p.pid);
         targets.appendChild(btn);
       });
@@ -202,6 +244,11 @@ socket.on("scramble_state", (s)=>{
 });
 
 socket.on("scramble_error", (e)=> alert(e.message || "خطأ"));
+socket.on("scramble_kicked", ()=>{
+  alert("تم طردك من الغرفة");
+  window.location.href = "/";
+});
+socket.on("scramble_left", ()=>{});
 </script>
 </body>
 </html>
