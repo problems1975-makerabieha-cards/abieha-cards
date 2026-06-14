@@ -23,6 +23,7 @@
     .hidden{display:none}
     .danger{background:#d94b4b;color:white}
     .leave{background:#555;color:white}
+    .next{background:#49b66d;color:white}
   </style>
 </head>
 <body>
@@ -60,7 +61,13 @@
         <option value="20" selected>20 ثانية</option>
         <option value="30">30 ثانية</option>
       </select>
+      <select id="roundMode">
+        <option value="auto" selected>انتقال تلقائي بعد 5 ثواني</option>
+        <option value="manual">انتقال يدوي من القائد</option>
+      </select>
+      <br>
       <button onclick="startGame()">ابدأ اللعبة</button>
+      <button class="next" id="nextRoundBtn" onclick="nextRound()">الجولة التالية</button>
       <button onclick="resetGame()">إعادة</button>
     </div>
 
@@ -96,10 +103,15 @@ function joinGame(){
 
 function startGame(){
   socket.emit("scramble_start", {
-    room:ROOM,
-    startPoints:document.getElementById("startPoints").value,
-    timeLimit:document.getElementById("timeLimit").value
+    room: ROOM,
+    startPoints: document.getElementById("startPoints").value,
+    timeLimit: document.getElementById("timeLimit").value,
+    roundMode: document.getElementById("roundMode").value
   });
+}
+
+function nextRound(){
+  socket.emit("scramble_next_round", {room: ROOM});
 }
 
 function resetGame(){
@@ -141,6 +153,11 @@ socket.on("scramble_state", (s)=>{
   document.getElementById("message").innerText = s.gameOver ? ("🏆 الفائز: " + s.finalWinner) : (s.message || "");
   document.getElementById("timer").innerText = s.timeLeft || 0;
   document.getElementById("scrambled").innerText = s.scrambled || "---";
+
+  const nextBtn = document.getElementById("nextRoundBtn");
+  if(nextBtn){
+    nextBtn.disabled = !isHost || !!s.mustSteal || !!s.gameOver || !s.started;
+  }
 
   const playersBox = document.getElementById("players");
   playersBox.innerHTML = "";
