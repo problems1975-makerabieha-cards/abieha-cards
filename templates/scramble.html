@@ -21,6 +21,8 @@
     .msg{font-size:22px;color:#8ff;margin:10px 0;min-height:28px}
     .timer{font-size:36px;color:#ff6666;font-weight:bold}
     .hidden{display:none}
+    .danger{background:#d94b4b;color:white}
+    .leave{background:#555;color:white}
   </style>
 </head>
 <body>
@@ -43,6 +45,7 @@
       <div class="word" id="scrambled">---</div>
       <input id="answer" placeholder="اكتب الكلمة الصحيحة" onkeydown="if(event.key==='Enter') sendAnswer()">
       <button onclick="sendAnswer()">إرسال</button>
+      <button class="leave" onclick="leaveGame()">خروج</button>
     </div>
 
     <div id="hostBox" class="card hidden">
@@ -62,7 +65,7 @@
     </div>
 
     <div id="stealBox" class="card hidden">
-      <h2>اختر لاعب تسرق منه نقطة</h2>
+      <h2 id="stealTitle">اختر لاعب تسرق منه نقطة</h2>
       <div id="stealTargets" class="players"></div>
     </div>
 
@@ -99,7 +102,9 @@ function startGame(){
   });
 }
 
-function resetGame(){ socket.emit("scramble_reset", {room:ROOM}); }
+function resetGame(){
+  socket.emit("scramble_reset", {room:ROOM});
+}
 
 function sendAnswer(){
   const answer = document.getElementById("answer").value.trim();
@@ -112,9 +117,26 @@ function steal(targetPid){
   socket.emit("scramble_steal", {room:ROOM, pid:PID, targetPid});
 }
 
+function kickPlayer(targetPid){
+  if(!confirm("طرد اللاعب؟")) return;
+  socket.emit("scramble_kick", {
+    room: ROOM,
+    targetPid: targetPid
+  });
+}
+
+function leaveGame(){
+  socket.emit("scramble_leave", {
+    room: ROOM,
+    pid: PID
+  });
+  window.location.href = "/";
+}
+
 socket.on("scramble_state", (s)=>{
   lastState = s;
   isHost = s.players.some(p => p.pid === PID && p.isHost);
+
   document.getElementById("hostBox").classList.toggle("hidden", !isHost);
   document.getElementById("message").innerText = s.gameOver ? ("🏆 الفائز: " + s.finalWinner) : (s.message || "");
   document.getElementById("timer").innerText = s.timeLeft || 0;
@@ -122,24 +144,43 @@ socket.on("scramble_state", (s)=>{
 
   const playersBox = document.getElementById("players");
   playersBox.innerHTML = "";
+
   s.players.forEach(p=>{
     const div = document.createElement("div");
     div.className = "player" + (!p.alive ? " dead" : "") + (p.pid===PID ? " me" : "");
-    div.innerHTML = `<div style="font-size:30px">${p.avatar}</div><b>${p.name}</b>${p.isHost?' 👑':''}<br>النقاط: <b>${p.points}</b>`;
+    div.innerHTML = `
+      <div style="font-size:30px">${p.avatar}</div>
+      <b>${p.name}</b>${p.isHost ? ' 👑' : ''}
+      <br>
+      النقاط: <b>${p.points}</b>
+      ${isHost && p.pid !== PID ? `<br><button class="danger" onclick="kickPlayer('${p.pid}')">🚫 طرد</button>` : ''}
+    `;
     playersBox.appendChild(div);
   });
 
-  const canSteal = s.mustSteal && s.winnerPid === PID;
+  const canSteal = s.mustSteal && (s.winnerPid === PID || isHost);
   document.getElementById("stealBox").classList.toggle("hidden", !canSteal);
+
+  const stealTitle = document.getElementById("stealTitle");
+  if(canSteal){
+    stealTitle.innerText = s.winnerPid === PID
+      ? "اختر لاعب تسرق منه نقطة"
+      : "القائد يختار بدلاً من الفائز";
+  }
+
   const targets = document.getElementById("stealTargets");
   targets.innerHTML = "";
+
   if(canSteal){
-    s.players.filter(p => p.pid !== PID && p.alive && p.points > 0).forEach(p=>{
-      const btn = document.createElement("button");
-      btn.innerText = `${p.avatar} ${p.name} - ${p.points}`;
-      btn.onclick = ()=>steal(p.pid);
-      targets.appendChild(btn);
-    });
+    const winnerPid = s.winnerPid;
+    s.players
+      .filter(p => p.pid !== winnerPid && p.alive && p.points > 0)
+      .forEach(p=>{
+        const btn = document.createElement("button");
+        btn.innerText = `${p.avatar} ${p.name} - ${p.points}`;
+        btn.onclick = ()=>steal(p.pid);
+        targets.appendChild(btn);
+      });
   }
 });
 
