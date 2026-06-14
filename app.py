@@ -3,6 +3,8 @@ from flask_socketio import SocketIO, join_room, emit
 import random, os, threading
 import json, urllib.request
 
+ONLINE_SCRAMBLE_WORDS_URL = "https://raw.githubusercontent.com/probelalkhan/arabic_words/master/arabic_words.txt"
+online_scramble_words_cache = []
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "abieha-final-secret")
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
@@ -2740,7 +2742,33 @@ def get_words_from_ai(category):
 
     if not api_key:
         return list(SCRAMBLE_FALLBACK_WORDS.get(category, SCRAMBLE_FALLBACK_WORDS["general"]))
+def get_online_scramble_words():
+    global online_scramble_words_cache
 
+    if online_scramble_words_cache:
+        return online_scramble_words_cache[:]
+
+    try:
+        with urllib.request.urlopen(ONLINE_SCRAMBLE_WORDS_URL, timeout=10) as resp:
+            text = resp.read().decode("utf-8")
+
+        words = []
+        seen = set()
+
+        for line in text.splitlines():
+            w = line.strip()
+            key = normalize_scramble_answer(w).lower()
+
+            if 3 <= len(key) <= 12 and key not in seen:
+                seen.add(key)
+                words.append(w)
+
+        online_scramble_words_cache = words
+        return words[:]
+
+    except Exception as e:
+        print("ONLINE WORDS ERROR:", e)
+        return []
     prompt = f"""
 اعطني 60 كلمة فقط من فئة: {SCRAMBLE_CATEGORY_NAMES.get(category, "كلمات عامة")}.
 الشروط:
@@ -2924,8 +2952,11 @@ def start_scramble_round(room):
         send_scramble_state(room)
         return
 
-    category = clean_scramble_category(r.get("wordCategory", "general"))
+       category = clean_scramble_category(r.get("wordCategory", "general"))
     r["wordCategory"] = category
+
+    if not r.get("wordsPool"):
+        r["wordsPool"] = get_online_scramble_words()
 
     if not r.get("wordsPool"):
         r["wordsPool"] = get_words_from_ai(category)
@@ -2938,7 +2969,6 @@ def start_scramble_round(room):
         r["wordsPool"].remove(word)
     except Exception:
         pass
-
     r["answer"] = word
     r["scrambled"] = scramble_word(word)
     r["winnerPid"] = None
