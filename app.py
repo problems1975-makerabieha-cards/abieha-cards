@@ -2939,20 +2939,30 @@ def scramble_answer(data):
 @socketio.on("scramble_steal")
 def scramble_steal(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
-    winner_pid = str(data.get("pid") or request.sid).strip()
+    sender_pid = str(data.get("pid") or request.sid).strip()
     target_pid = str(data.get("targetPid", "")).strip()
 
     if room not in scramble_rooms:
         return
+
     r = scramble_rooms[room]
 
-    if not r.get("mustSteal") or r.get("winnerPid") != winner_pid:
+    winner_pid = str(r.get("winnerPid", "")).strip()
+    host_pid = str(r.get("host", "")).strip()
+
+    # يسمح فقط للفائز أو قائد الغرفة
+    if not r.get("mustSteal"):
         return
+
+    if sender_pid != winner_pid and sender_pid != host_pid:
+        return
+
     if target_pid == winner_pid:
         return
 
     winner = get_scramble_player(room, winner_pid)
     target = get_scramble_player(room, target_pid)
+
     if not winner or not target or not target.get("alive") or target.get("points", 0) <= 0:
         return
 
@@ -2964,15 +2974,19 @@ def scramble_steal(data):
         target["alive"] = False
         r["message"] = "💀 " + target["name"] + " خرج من اللعبة. " + winner["name"] + " سرق نقطة"
     else:
-        r["message"] = "🏴‍☠️ " + winner["name"] + " سرق نقطة من " + target["name"]
+        if sender_pid == host_pid and sender_pid != winner_pid:
+            r["message"] = "👑 القائد اختار بدلاً من الفائز: " + winner["name"] + " سرق نقطة من " + target["name"]
+        else:
+            r["message"] = "🏴‍☠️ " + winner["name"] + " سرق نقطة من " + target["name"]
 
     r["mustSteal"] = False
     send_scramble_state(room)
+
     time.sleep(2)
+
     if room in scramble_rooms and scramble_rooms[room].get("started"):
         start_scramble_round(room)
-
-
+        
 @socketio.on("scramble_reset")
 def scramble_reset(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
