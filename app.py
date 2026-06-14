@@ -2828,6 +2828,7 @@ def scramble_public_state(room):
         "message": r.get("message", ""),
         "gameOver": r.get("gameOver", False),
         "finalWinner": r.get("finalWinner", ""),
+        "finalScores": r.get("finalScores", []),
         "wordCategory": r.get("wordCategory", "general"),
         "roundMode": r.get("roundMode", "auto"),
         "roundLimit": r.get("roundLimit", 10),
@@ -2895,15 +2896,31 @@ def start_scramble_round(room):
         r["mustSteal"] = False
         r["timerToken"] = None
         r["timeLeft"] = 0
+        r["scrambled"] = "🏆"
 
-        best = sorted(
+        final_scores = sorted(
             r.get("players", []),
             key=lambda p: int(p.get("points", 0) or 0),
             reverse=True
+         )
+
+        r["finalScores"] = [
+            {
+                "name": p.get("name", "لاعب"),
+                "avatar": p.get("avatar", "🎮"),
+                "points": int(p.get("points", 0) or 0)
+            }
+            for p in final_scores
+        ]
+
+        r["finalWinner"] = (
+            r["finalScores"][0]["name"]
+            if r["finalScores"]
+            else "لا يوجد فائز"
         )
 
-        r["finalWinner"] = best[0].get("name", "لاعب") if best else "لا يوجد فائز"
         r["message"] = "🏆 انتهت الجولات. الفائز: " + r["finalWinner"]
+
         send_scramble_state(room)
         return
 
