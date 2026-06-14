@@ -2688,14 +2688,19 @@ def categories_kick(data):
 import random
 import threading
 import time
+import os
+import json
 
 scramble_rooms = {}
 
-SCRAMBLE_WORDS = [
-    "الكويت", "مدرسة", "برمجة", "كمبيوتر", "سيارة", "طائرة", "مستشفى",
-    "حديقة", "بحر", "قلم", "كتاب", "لاعب", "ملعب", "هاتف", "شاشة",
-    "قائد", "غرفة", "نقاط", "سؤال", "نجاح", "خسارة", "بطولة"
-]
+SCRAMBLE_FALLBACK_WORDS = {
+    "general": ["الكويت", "مدرسة", "برمجة", "كمبيوتر", "سيارة", "طائرة", "مستشفى"],
+    "countries": ["الكويت", "السعودية", "قطر", "البحرين", "الإمارات", "عمان", "مصر"],
+    "football": ["ميسي", "رونالدو", "نيمار", "مبابي", "صلاح", "هالاند"],
+    "movies": ["تايتنك", "أفاتار", "الجوكر", "باتمان", "سبايدرمان"],
+    "anime": ["ناروتو", "لوفي", "زورو", "غوكو", "ايتاتشي"],
+    "famous": ["محمد عبده", "عبدالحسين", "طارق العلي", "حسين الجسمي"],
+}
 
 
 def scramble_word(word):
@@ -2712,6 +2717,48 @@ def scramble_word(word):
 
 def normalize_scramble_answer(text):
     return (text or "").strip().replace(" ", "").replace("ـ", "")
+
+
+def get_words_from_ai(category):
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+        category_names = {
+            "general": "كلمات عربية عامة",
+            "countries": "أسماء دول عربية وعالمية",
+            "football": "أسماء لاعبين كرة قدم مشهورين",
+            "movies": "أسماء أفلام مشهورة",
+            "anime": "أسماء شخصيات أنمي مشهورة",
+            "famous": "أسماء مشاهير عرب وعالميين"
+        }
+
+        prompt = f"""
+اعطني 50 كلمة فقط من فئة: {category_names.get(category, "كلمات عامة")}
+كل كلمة في سطر منفصل
+بدون ترقيم
+بدون شرح
+"""
+
+        res = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role":"user","content":prompt}]
+        )
+
+        text = res.choices[0].message.content or ""
+
+        words = []
+        for line in text.splitlines():
+            line = line.strip()
+            if line:
+                words.append(line)
+
+        return words
+
+    except Exception as e:
+        print("AI words error:", e)
+        return []
+
 
 
 def scramble_public_state(room):
