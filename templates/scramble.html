@@ -47,8 +47,14 @@
       <div class="small">الفئة: <b id="categoryTitle">---</b> | الجولة: <b id="roundTitle">0</b></div>
       <div class="msg" id="message"></div>
       <div class="timer" id="timer">0</div>
+
       <div class="word" id="scrambled">---</div>
-      <input id="answer" placeholder="اكتب الكلمة الصحيحة" onkeydown="if(event.key==='Enter') sendAnswer()">
+
+      <div id="correctAnswerBox"
+      style="display:none;font-size:38px;font-weight:bold;color:#7CFF7C;margin:15px 0">
+      </div>
+
+      <input id="answer" placeholder="اكتب الكلمة الصحيحة">
       <button onclick="sendAnswer()">إرسال</button>
       
     </div>
@@ -230,7 +236,6 @@ function leaveGame(){
   socket.emit("scramble_leave", {room: ROOM, pid: PID});
   window.location.href = "/";
 }
-
 socket.on("scramble_state", (s)=>{
   lastState = s;
   isHost = s.players.some(p => p.pid === PID && p.isHost);
@@ -239,9 +244,18 @@ socket.on("scramble_state", (s)=>{
   document.getElementById("message").innerText = s.gameOver ? ("🏆 الفائز: " + s.finalWinner) : (s.message || "");
   document.getElementById("timer").innerText = s.timeLeft || 0;
   document.getElementById("scrambled").innerText = s.scrambled || "---";
+
+  const answerBox = document.getElementById("correctAnswerBox");
+
+  if (s.showAnswer) {
+    answerBox.style.display = "block";
+    answerBox.innerHTML = "✅ الإجابة الصحيحة: " + s.correctAnswer;
+  } else {
+    answerBox.style.display = "none";
+  }
+
   document.getElementById("categoryTitle").innerText = categoryNames[s.wordCategory] || s.wordCategory || "---";
   document.getElementById("roundTitle").innerText = s.round || 0;
-
   const playersBox = document.getElementById("players");
   playersBox.innerHTML = "";
 
