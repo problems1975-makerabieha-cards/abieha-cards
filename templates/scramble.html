@@ -123,17 +123,49 @@
       <h2>اللاعبون</h2>
       <div id="players" class="players"></div>
     </div>
-  </div>
-</div>
+    </div>
+    </div>
 
-<script>
+    <!-- شاشة الفائز -->
+    <div id="winnerScreen" class="hidden" style="
+    display:none;
+    position:fixed;
+    inset:0;
+    background:radial-gradient(circle,#2b1b00,#050505 70%);
+    z-index:9999;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    color:white;
+    ">
+      <div style="
+        background:#111;
+        border:3px solid #ffd15c;
+        border-radius:30px;
+        padding:35px;
+        width:min(90%,600px);
+        box-shadow:0 0 60px #ffd15c88;
+      ">
+        <div style="font-size:70px">🏆</div>
+        <h1 id="winnerName" style="color:#ffd15c;font-size:42px"></h1>
+        <h2>النتائج النهائية</h2>
+        <div id="finalScores"></div>
+        <button onclick="closeWinner()">إغلاق</button>
+      </div>
+    </div>
+
+    <script>
 const socket = io();
 let ROOM = "";
 let PID = localStorage.getItem("scramble_pid") || (Date.now()+"_"+Math.random().toString(16).slice(2));
 localStorage.setItem("scramble_pid", PID);
 let isHost = false;
 let lastState = null;
-
+function closeWinner(){
+  document.getElementById("winnerScreen").style.display = "none";
+  document.getElementById("winnerScreen").classList.add("hidden");
+}
+      
 const categoryNames = {
   general:"كلمات عامة",
   countries:"دول",
@@ -265,6 +297,33 @@ socket.on("scramble_state", (s)=>{
         targets.appendChild(btn);
       });
   }
+
+  if(s.gameOver){
+    document.getElementById("winnerScreen").classList.remove("hidden");
+    document.getElementById("winnerScreen").style.display = "flex";
+
+    document.getElementById("winnerName").innerText =
+      s.finalWinner || "لا يوجد فائز";
+
+    const box = document.getElementById("finalScores");
+    box.innerHTML = "";
+
+    (s.finalScores || []).forEach((p, i)=>{
+      box.innerHTML += `
+        <div style="
+          background:#222;
+          margin:8px;
+          padding:12px;
+          border-radius:12px;
+          font-size:22px">
+          ${i+1}️⃣ ${p.avatar}
+          <b>${p.name}</b>
+          — ${p.points} نقطة
+        </div>
+      `;
+    });
+  }
+
 });
 
 socket.on("scramble_error", (e)=> alert(e.message || "خطأ"));
