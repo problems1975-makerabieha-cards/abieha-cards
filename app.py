@@ -2841,6 +2841,8 @@ def scramble_public_state(room):
         "finalScores": r.get("finalScores", []),
         "wordCategory": r.get("wordCategory", "general"),
         "roundMode": r.get("roundMode", "auto"),
+        "showAnswer": r.get("showAnswer", False),
+        "correctAnswer": r.get("correctAnswer", ""),
         "roundLimit": r.get("roundLimit", 10),
     }
 
@@ -2891,6 +2893,8 @@ def start_scramble_round(room):
         r["gameOver"] = True
         r["started"] = False
         r["mustSteal"] = False
+        r["showAnswer"] = False
+        r["correctAnswer"] = ""
         r["timerToken"] = None
         r["timeLeft"] = 0
         r["finalWinner"] = alive[0].get("name", "لاعب") if alive else "لا يوجد فائز"
@@ -3168,6 +3172,8 @@ def scramble_answer(data):
 
         r["winnerPid"] = pid
         r["winnerName"] = p.get("name", "لاعب")
+        r["showAnswer"] = True
+        r["correctAnswer"] = r["answer"]
         r["mustSteal"] = True
         r["timerToken"] = None
         r["message"] = "✅ " + p.get("name", "لاعب") + " جاوب صح. الكلمة الصحيحة: " + r.get("answer", "") + " | اختر لاعب تسرق منه نقطة"
