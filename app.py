@@ -2988,7 +2988,40 @@ def scramble_reset(data):
     r["message"] = "تمت إعادة اللعبة"
     send_scramble_state(room)
 
+@socketio.on("scramble_leave")
+def scramble_leave(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    pid = str(data.get("pid", "")).strip()
 
+    if room not in scramble_rooms:
+        return
+
+    r = scramble_rooms[room]
+    r["players"] = [p for p in r["players"] if p.get("pid") != pid]
+
+    if r.get("host") == pid and r["players"]:
+        r["host"] = r["players"][0]["pid"]
+        r["hostSid"] = r["players"][0].get("sid")
+
+    send_scramble_state(room)
+
+
+@socketio.on("scramble_kick")
+def scramble_kick(data):
+    room = str(data.get("room", "ROOM1")).strip().upper()
+    target_pid = str(data.get("targetPid", "")).strip()
+
+    if room not in scramble_rooms:
+        return
+
+    r = scramble_rooms[room]
+
+    if r.get("hostSid") != request.sid:
+        return
+
+    r["players"] = [p for p in r["players"] if p.get("pid") != target_pid]
+
+    send_scramble_state(room)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
