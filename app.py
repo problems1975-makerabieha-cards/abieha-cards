@@ -118,6 +118,9 @@ def letters():
 def categories_game():
     return send_file("templates/categories.html")
 
+@app.route("/scramble")
+def scramble_page():
+    return render_template("scramble.html")
 
 @socketio.on("puzzle_join")
 def puzzle_join(data):
