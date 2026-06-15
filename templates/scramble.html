@@ -151,12 +151,19 @@
         background:#111;
         border:3px solid #ffd15c;
         border-radius:30px;
-        padding:35px;
-        width:min(90%,600px);
+        padding:20px;
+        width:min(90vw,600px);
+        max-height:85vh;
+        overflow-y:auto;
+        box-sizing:border-box;
         box-shadow:0 0 60px #ffd15c88;
-      ">
+        ">
         <div style="font-size:70px">🏆</div>
-        <h1 id="winnerName" style="color:#ffd15c;font-size:42px"></h1>
+        <h1 id="winnerName" style="
+        color:#ffd15c;
+        font-size:clamp(24px,5vw,42px);
+        word-break:break-word;
+        "></h1>
         <h2>النتائج النهائية</h2>
         <div id="finalScores"></div>
         <button onclick="closeWinner()">إغلاق</button>
@@ -330,9 +337,11 @@ socket.on("scramble_state", (s)=>{
         <div style="
           background:#222;
           margin:8px;
-          padding:12px;
+          padding:10px;
           border-radius:12px;
-          font-size:22px">
+          font-size:clamp(14px,3vw,22px);
+          word-break:break-word;
+        ">
           ${i+1}️⃣ ${p.avatar}
           <b>${p.name}</b>
           — ${p.points} نقطة
