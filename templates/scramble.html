@@ -54,8 +54,10 @@
       style="display:none;font-size:38px;font-weight:bold;color:#7CFF7C;margin:15px 0">
       </div>
 
-      <input id="answer" placeholder="اكتب الكلمة الصحيحة">
-      <button onclick="sendAnswer()">إرسال</button>
+      <input id="answer"
+       placeholder="اكتب الكلمة الصحيحة"
+       onkeydown="if(event.key==='Enter'){sendAnswer();}">
+       <button onclick="sendAnswer()">إرسال</button>
       
     </div>
 
