@@ -2734,14 +2734,13 @@ def normalize_scramble_answer(text):
     return (text or "").strip().replace(" ", "").replace("ـ", "")
 
 
-def get_words_from_ai(category, used_words=None):
+def get_words_from_ai(category):
     category = clean_scramble_category(category)
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
-    used_words = used_words or set()
 
-   if not api_key:
-       print("❌ OPENAI_API_KEY missing")
-       return []
+    if not api_key:
+        print("❌ OPENAI_API_KEY missing")
+        return []
 
     blocked_words = "\n".join(list(used_words)[-80:])
 
