@@ -2722,15 +2722,16 @@ def normalize_scramble_answer(text):
     return (text or "").strip().replace(" ", "").replace("ـ", "")
 
 
-def get_words_from_ai(category):
+def get_words_from_ai(category, used_words=None):
     category = clean_scramble_category(category)
+    used_words = used_words or set()
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
 
     if not api_key:
         print("❌ OPENAI_API_KEY missing")
         return []
 
-    blocked_words = "\n".join(list(used_words)[-80:])
+    blocked_words = "\n".join(list(used_words)[-120:])
 
     prompt = f"""
 اعطني 200 كلمة فقط من فئة: {SCRAMBLE_CATEGORY_NAMES.get(category, "كلمات عامة")}.
@@ -2766,7 +2767,7 @@ def get_words_from_ai(category):
             },
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read().decode("utf-8"))
 
         text = data.get("choices", [{}])[0].get("message", {}).get("content", "") or ""
@@ -2777,7 +2778,7 @@ def get_words_from_ai(category):
             w = line.strip()
             w = w.replace("-", "").replace("•", "").replace("*", "").strip()
             w = "".join(ch for ch in w if not ch.isdigit()).strip()
-            w = w.strip(".،:؛/\\|[]{}()\"'")
+            w = w.strip(".،:؛/\|[]{}()\"'")
             key = normalize_scramble_answer(w).lower()
 
             if 2 <= len(key) <= 22 and key not in seen and key not in used_words:
@@ -2785,13 +2786,15 @@ def get_words_from_ai(category):
                 words.append(w)
 
         if words:
+            print("✅ AI SCRAMBLE WORDS:", len(words))
             return words[:200]
 
     except Exception as e:
         print("AI scramble words error:", e)
 
-        print("❌ AI did not return words")
-        return []
+    print("❌ AI did not return words")
+    return []
+
 def scramble_public_state(room):
     r = scramble_rooms[room]
     players = []
@@ -2873,6 +2876,11 @@ def start_scramble_round(room):
         return
 
     r = scramble_rooms[room]
+
+    # نخفي الإجابة القديمة أول ما تبدأ جولة جديدة
+    r["showAnswer"] = False
+    r["correctAnswer"] = ""
+
     alive = alive_scramble_players(room)
 
     if len(alive) <= 1:
@@ -2894,6 +2902,8 @@ def start_scramble_round(room):
         r["gameOver"] = True
         r["started"] = False
         r["mustSteal"] = False
+        r["showAnswer"] = False
+        r["correctAnswer"] = ""
         r["timerToken"] = None
         r["timeLeft"] = 0
         r["scrambled"] = "🏆"
@@ -2926,24 +2936,30 @@ def start_scramble_round(room):
     category = clean_scramble_category(r.get("wordCategory", "general"))
     r["wordCategory"] = category
 
-     # الكلمات المستخدمة تحفظ داخل الغرفة حتى لا تتكرر بنفس اللعبة
-       used_words = r.setdefault("usedWords", set())
+    # الكلمات المستخدمة تحفظ داخل الغرفة حتى لا تتكرر بنفس اللعبة
+    used_words = r.setdefault("usedWords", set())
 
     if not r.get("wordsPool"):
         r["wordsPool"] = get_words_from_ai(category, used_words)
 
+    # حذف أي كلمة سبق استخدامها بنفس اللعبة
     r["wordsPool"] = [
         w for w in r.get("wordsPool", [])
         if normalize_scramble_answer(w).lower() not in used_words
     ]
 
     if not r.get("wordsPool"):
-        r["message"] = "❌ لم يتم جلب كلمات من AI. تأكد من OPENAI_API_KEY"
+        r["message"] = "❌ لم يتم جلب كلمات من AI. تأكد من OPENAI_API_KEY في Render"
+        r["timeLeft"] = 0
         send_scramble_state(room)
         return
 
     word = random.choice(r["wordsPool"])
-    r["wordsPool"].remove(word)
+    try:
+        r["wordsPool"].remove(word)
+    except Exception:
+        pass
+
     used_words.add(normalize_scramble_answer(word).lower())
 
     r["answer"] = word
@@ -2980,6 +2996,8 @@ def start_scramble_round(room):
             rr["timeLeft"] = max(0, int(rr.get("timeLeft", 0) or 0) - 1)
 
             if rr["timeLeft"] <= 0:
+                rr["showAnswer"] = True
+                rr["correctAnswer"] = rr.get("answer", "")
                 rr["message"] = "انتهى الوقت. الكلمة كانت: " + rr.get("answer", "")
                 rr["timerToken"] = None
                 send_scramble_state(room)
@@ -2989,7 +3007,6 @@ def start_scramble_round(room):
             send_scramble_state(room)
 
     threading.Thread(target=timer_loop, daemon=True).start()
-
 
 @socketio.on("scramble_join")
 def scramble_join(data):
@@ -3022,6 +3039,8 @@ def scramble_join(data):
             "gameOver": False,
             "finalWinner": "",
             "message": "بانتظار القائد يبدأ اللعبة",
+            "showAnswer": False,
+            "correctAnswer": "",
             "timerToken": None,
         }
 
@@ -3099,6 +3118,8 @@ def scramble_start(data):
     r["roundLimit"] = max(1, min(round_limit, 50))
     r["winnerPid"] = None
     r["winnerName"] = ""
+    r["showAnswer"] = False
+    r["correctAnswer"] = ""
     r["mustSteal"] = False
     r["timerToken"] = None
 
@@ -3238,6 +3259,8 @@ def scramble_reset(data):
     r["usedWords"] = set()
     r["winnerPid"] = None
     r["winnerName"] = ""
+    r["showAnswer"] = False
+    r["correctAnswer"] = ""
     r["mustSteal"] = False
     r["timeLeft"] = 0
     r["message"] = "تمت إعادة اللعبة"
