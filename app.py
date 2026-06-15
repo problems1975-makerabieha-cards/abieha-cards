@@ -2727,6 +2727,9 @@ def get_words_from_ai(category, used_words=None):
     used_words = used_words or set()
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
 
+    print("OPENAI KEY EXISTS:", bool(api_key))
+    print("OPENAI KEY LENGTH:", len(api_key))
+
     if not api_key:
         print("❌ OPENAI_API_KEY missing")
         return []
@@ -2790,7 +2793,8 @@ def get_words_from_ai(category, used_words=None):
             return words[:200]
 
     except Exception as e:
-        print("AI scramble words error:", e)
+    print("AI scramble words error:", repr(e))
+    return []
 
     print("❌ AI did not return words")
     return []
