@@ -2728,36 +2728,31 @@ def get_words_from_ai(category, used_words=None):
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
 
     print("OPENAI KEY EXISTS:", bool(api_key))
-    print("OPENAI KEY LENGTH:", len(api_key))
 
     if not api_key:
         print("❌ OPENAI_API_KEY missing")
         return []
 
-    blocked_words = "\n".join(list(used_words)[-120:])
+    blocked_words = "\n".join(list(used_words)[-80:])
 
     prompt = f"""
-اعطني 200 كلمة فقط من فئة: {SCRAMBLE_CATEGORY_NAMES.get(category, "كلمات عامة")}.
+اعطني 30 كلمة فقط من فئة: {SCRAMBLE_CATEGORY_NAMES.get(category, "كلمات عامة")}.
 الشروط:
-- اكتب بالعربي قدر الإمكان.
 - كل كلمة أو اسم في سطر منفصل.
-- بدون شرح وبدون ترقيم وبدون رموز.
+- بدون شرح وبدون ترقيم.
 - لا تكرر الكلمات.
-- لا تكتب كلمات طويلة جداً.
-- لا تستخدم أي كلمة من قائمة الكلمات المستخدمة سابقاً.
-
-الكلمات المستخدمة سابقاً:
+- لا تستخدم الكلمات التالية:
 {blocked_words}
 """
 
     payload = {
-        "model": os.environ.get("OPENAI_WORD_MODEL", "gpt-4.1-mini"),
+        "model": os.environ.get("OPENAI_WORD_MODEL", "gpt-4o-mini"),
         "messages": [
-            {"role": "system", "content": "أنت مولد كلمات للعبة ترتيب حروف عربية. أخرج قائمة فقط، كل عنصر في سطر، بدون ترقيم."},
+            {"role": "system", "content": "أنت مولد كلمات للعبة ترتيب حروف عربية. أخرج كلمات فقط، كل كلمة في سطر."},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.95,
-        "max_tokens": 1600
+        "temperature": 0.6,
+        "max_tokens": 400
     }
 
     try:
@@ -2770,10 +2765,13 @@ def get_words_from_ai(category, used_words=None):
             },
             method="POST"
         )
-        with urllib.request.urlopen(req, timeout=20) as resp:
+
+        with urllib.request.urlopen(req, timeout=35) as resp:
             data = json.loads(resp.read().decode("utf-8"))
 
         text = data.get("choices", [{}])[0].get("message", {}).get("content", "") or ""
+        print("AI RESPONSE:", text[:300])
+
         words = []
         seen = set()
 
@@ -2781,24 +2779,19 @@ def get_words_from_ai(category, used_words=None):
             w = line.strip()
             w = w.replace("-", "").replace("•", "").replace("*", "").strip()
             w = "".join(ch for ch in w if not ch.isdigit()).strip()
-            w = w.strip(".،:؛/\|[]{}()\"'")
+            w = w.strip(".،:؛/\\|[]{}()\"'")
             key = normalize_scramble_answer(w).lower()
 
             if 2 <= len(key) <= 22 and key not in seen and key not in used_words:
                 seen.add(key)
                 words.append(w)
 
-        if words:
-            print("✅ AI SCRAMBLE WORDS:", len(words))
-            return words[:200]
+        print("✅ AI SCRAMBLE WORDS:", len(words))
+        return words
 
     except Exception as e:
         print("AI scramble words error:", repr(e))
         return []
-
-    print("❌ AI did not return words")
-    return []
-
 def scramble_public_state(room):
     r = scramble_rooms[room]
     players = []
