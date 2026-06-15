@@ -2793,8 +2793,8 @@ def get_words_from_ai(category, used_words=None):
             return words[:200]
 
     except Exception as e:
-    print("AI scramble words error:", repr(e))
-    return []
+        print("AI scramble words error:", repr(e))
+        return []
 
     print("❌ AI did not return words")
     return []
