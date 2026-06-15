@@ -2685,18 +2685,6 @@ import time
 
 SCRAMBLE_ALLOWED_CATEGORIES = {"general", "countries", "football", "movies", "anime", "famous", "brands", "games", "cars", "animals"}
 
-SCRAMBLE_FALLBACK_WORDS = {
-    "general": ["الكويت", "مدرسة", "برمجة", "كمبيوتر", "سيارة", "طائرة", "مستشفى", "حديقة", "كتاب", "هاتف", "شاشة", "بطولة", "قائد", "غرفة", "نجاح"],
-    "countries": ["الكويت", "السعودية", "قطر", "البحرين", "الإمارات", "عمان", "مصر", "العراق", "الأردن", "المغرب", "تونس", "اليابان", "البرازيل", "الأرجنتين"],
-    "football": ["ميسي", "رونالدو", "نيمار", "مبابي", "صلاح", "هالاند", "مودريتش", "بنزيما", "فان دايك", "دي بروين", "سواريز", "انييستا"],
-    "movies": ["تايتنك", "أفاتار", "الجوكر", "باتمان", "سبايدرمان", "العراب", "الماتريكس", "غلادييتر", "فروزن"],
-    "anime": ["ناروتو", "لوفي", "زورو", "غوكو", "ايتاتشي", "ساسكي", "تانجيرو", "ايرين", "ليفاي", "كاكاشي"],
-    "famous": ["محمد عبده", "عبدالحسين", "طارق العلي", "حسين الجسمي", "راشد الماجد", "أحلام", "عادل إمام"],
-    "brands": ["ابل", "سامسونج", "تويوتا", "نايكي", "اديداس", "بيبسي", "كوكاكولا", "سوني", "هواوي"],
-    "games": ["ماينكرافت", "فورتنايت", "فيفا", "ببجي", "روبلوكس", "ماريو", "تيكن", "كول اوف ديوتي"],
-    "cars": ["تويوتا", "نيسان", "مرسيدس", "بي ام دبليو", "لكزس", "فورد", "شفروليه", "هوندا", "بورش"],
-    "animals": ["أسد", "نمر", "ذئب", "حصان", "جمل", "غزال", "دلفين", "صقر", "فهد", "فيل"],
-}
 
 SCRAMBLE_CATEGORY_NAMES = {
     "general": "كلمات عربية عامة",
@@ -2802,9 +2790,8 @@ def get_words_from_ai(category):
     except Exception as e:
         print("AI scramble words error:", e)
 
-    fallback = list(SCRAMBLE_FALLBACK_WORDS.get(category, SCRAMBLE_FALLBACK_WORDS["general"]))
-    return [w for w in fallback if normalize_scramble_answer(w).lower() not in used_words]
-
+        print("❌ AI did not return words")
+        return []
 def scramble_public_state(room):
     r = scramble_rooms[room]
     players = []
@@ -2940,32 +2927,23 @@ def start_scramble_round(room):
     r["wordCategory"] = category
 
      # الكلمات المستخدمة تحفظ داخل الغرفة حتى لا تتكرر بنفس اللعبة
-    used_words = r.setdefault("usedWords", set())
+       used_words = r.setdefault("usedWords", set())
 
     if not r.get("wordsPool"):
         r["wordsPool"] = get_words_from_ai(category, used_words)
 
-    # إذا رجع AI كلمات مكررة فقط، نفرغ القائمة ونحاول مرة ثانية
     r["wordsPool"] = [
         w for w in r.get("wordsPool", [])
         if normalize_scramble_answer(w).lower() not in used_words
     ]
 
     if not r.get("wordsPool"):
-        r["wordsPool"] = get_words_from_ai(category)
-
-    if not r.get("wordsPool"):
-        r["message"] = "❌ لم يتم جلب كلمات من ChatGPT. تأكد من OPENAI_API_KEY"
+        r["message"] = "❌ لم يتم جلب كلمات من AI. تأكد من OPENAI_API_KEY"
         send_scramble_state(room)
         return
 
     word = random.choice(r["wordsPool"])
-
-    try:
-        r["wordsPool"].remove(word)
-    except Exception:
-        pass
-
+    r["wordsPool"].remove(word)
     used_words.add(normalize_scramble_answer(word).lower())
 
     r["answer"] = word
