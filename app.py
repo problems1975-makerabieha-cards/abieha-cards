@@ -2939,11 +2939,11 @@ def start_scramble_round(room):
     category = clean_scramble_category(r.get("wordCategory", "general"))
     r["wordCategory"] = category
 
-    # الكلمات المستخدمة تحفظ داخل الغرفة حتى لا تتكرر بنفس اللعبة
+     # الكلمات المستخدمة تحفظ داخل الغرفة حتى لا تتكرر بنفس اللعبة
     used_words = r.setdefault("usedWords", set())
 
-       if not r.get("wordsPool"):
-           r["wordsPool"] = get_words_from_ai(category, used_words)
+    if not r.get("wordsPool"):
+        r["wordsPool"] = get_words_from_ai(category, used_words)
 
     # إذا رجع AI كلمات مكررة فقط، نفرغ القائمة ونحاول مرة ثانية
     r["wordsPool"] = [
