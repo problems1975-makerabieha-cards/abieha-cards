@@ -2739,9 +2739,9 @@ def get_words_from_ai(category, used_words=None):
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
     used_words = used_words or set()
 
-    if not api_key:
-        fallback = list(SCRAMBLE_FALLBACK_WORDS.get(category, SCRAMBLE_FALLBACK_WORDS["general"]))
-        return [w for w in fallback if normalize_scramble_answer(w).lower() not in used_words]
+   if not api_key:
+       print("❌ OPENAI_API_KEY missing")
+       return []
 
     blocked_words = "\n".join(list(used_words)[-80:])
 
@@ -2953,11 +2953,12 @@ def start_scramble_round(room):
     ]
 
     if not r.get("wordsPool"):
-        fallback = list(SCRAMBLE_FALLBACK_WORDS.get(category, SCRAMBLE_FALLBACK_WORDS["general"]))
-        r["wordsPool"] = [
-            w for w in fallback
-            if normalize_scramble_answer(w).lower() not in used_words
-        ]
+    r["wordsPool"] = get_words_from_ai(category)
+
+    if not r.get("wordsPool"):
+        r["message"] = "❌ لم يتم جلب كلمات من ChatGPT. تأكد من OPENAI_API_KEY"
+        send_scramble_state(room)
+        return
 
     # إذا خلصت كل الكلمات الاحتياطية، نبدأ دورة جديدة فقط للضرورة
     if not r.get("wordsPool"):
