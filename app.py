@@ -2943,7 +2943,7 @@ def start_scramble_round(room):
     used_words = r.setdefault("usedWords", set())
 
        if not r.get("wordsPool"):
-        r["wordsPool"] = get_words_from_ai(category, used_words)
+           r["wordsPool"] = get_words_from_ai(category, used_words)
 
     # إذا رجع AI كلمات مكررة فقط، نفرغ القائمة ونحاول مرة ثانية
     r["wordsPool"] = [
