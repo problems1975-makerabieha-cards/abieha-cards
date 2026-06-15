@@ -2942,7 +2942,7 @@ def start_scramble_round(room):
     # الكلمات المستخدمة تحفظ داخل الغرفة حتى لا تتكرر بنفس اللعبة
     used_words = r.setdefault("usedWords", set())
 
-    if not r.get("wordsPool"):
+       if not r.get("wordsPool"):
         r["wordsPool"] = get_words_from_ai(category, used_words)
 
     # إذا رجع AI كلمات مكررة فقط، نفرغ القائمة ونحاول مرة ثانية
@@ -2952,20 +2952,12 @@ def start_scramble_round(room):
     ]
 
     if not r.get("wordsPool"):
-    r["wordsPool"] = get_words_from_ai(category)
+        r["wordsPool"] = get_words_from_ai(category)
 
     if not r.get("wordsPool"):
         r["message"] = "❌ لم يتم جلب كلمات من ChatGPT. تأكد من OPENAI_API_KEY"
         send_scramble_state(room)
         return
-
-    # إذا خلصت كل الكلمات الاحتياطية، نبدأ دورة جديدة فقط للضرورة
-    if not r.get("wordsPool"):
-        used_words.clear()
-        r["wordsPool"] = get_words_from_ai(category, used_words)
-
-    if not r.get("wordsPool"):
-        r["wordsPool"] = list(SCRAMBLE_FALLBACK_WORDS["general"])
 
     word = random.choice(r["wordsPool"])
 
