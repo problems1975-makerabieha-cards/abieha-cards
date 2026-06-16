@@ -95,6 +95,24 @@ h1{font-size:46px;margin:0 0 25px;text-shadow:0 5px 14px #000}
         </select>
         <button class="green" onclick="startLettersGame()">ابدأ اللعبة</button>
         <button class="red" onclick="resetLettersGame()">تصفير</button>
+        <hr>
+
+        <h3>➕ إضافة كلمة جديدة</h3>
+
+        <select id="newWordCategory">
+          <option value="boys">اسم ولد</option>
+          <option value="girls">اسم بنت</option>
+          <option value="animals">حيوان</option>
+          <option value="plants">نبات</option>
+          <option value="countries">دولة</option>
+          <option value="objects">جماد</option>
+        </select>
+
+        <input id="newWordInput" placeholder="اكتب الكلمة الجديدة">
+
+        <button class="green" onclick="addLettersWord()">
+          إضافة الكلمة
+        </button>
       </div>
     </aside>
 
@@ -231,6 +249,22 @@ function renderState(state){
     }
   }
 
+  function addLettersWord(){
+  if(!isHost) return showMsg("فقط القائد");
+
+  const category = document.getElementById("newWordCategory").value;
+  const word = document.getElementById("newWordInput").value.trim();
+
+  if(!word) return showMsg("اكتب كلمة");
+
+  socket.emit("letters_add_word", {
+    room: myRoom,
+    category: category,
+    word: word
+  });
+
+  document.getElementById("newWordInput").value = "";
+}
   socket.on("letters_state",renderState);
   socket.on("letters_timer", data => {
   const v = data && typeof data.timeLeft !== "undefined" ? data.timeLeft : 0;
