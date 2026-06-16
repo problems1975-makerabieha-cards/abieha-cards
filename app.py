@@ -2733,25 +2733,31 @@ def get_words_from_ai(category, used_words=None):
         print("❌ OPENAI_API_KEY missing")
         return []
 
-    blocked_words = "\n".join(list(used_words)[-80:])
+    blocked_words = "\n".join(list(used_words)[-120:])
+
+    import time
+    seed = str(time.time())
 
     prompt = f"""
-اعطني 30 كلمة فقط من فئة: {SCRAMBLE_CATEGORY_NAMES.get(category, "كلمات عامة")}.
+اعطني 30 كلمة جديدة ومختلفة جداً من فئة: {SCRAMBLE_CATEGORY_NAMES.get(category, "كلمات عربية عامة")}.
+رقم تنويع الطلب: {seed}
+
 الشروط:
 - كل كلمة أو اسم في سطر منفصل.
 - بدون شرح وبدون ترقيم.
 - لا تكرر الكلمات.
-- لا تستخدم الكلمات التالية:
+- لا تستخدم الكلمات المشهورة جداً مثل: الكويت، مدرسة، سيارة، هاتف، كتاب، كمبيوتر.
+- لا تستخدم الكلمات التالية نهائياً:
 {blocked_words}
 """
 
     payload = {
         "model": os.environ.get("OPENAI_WORD_MODEL", "gpt-4o-mini"),
         "messages": [
-            {"role": "system", "content": "أنت مولد كلمات للعبة ترتيب حروف عربية. أخرج كلمات فقط، كل كلمة في سطر."},
+            {"role": "system", "content": "أنت مولد كلمات متنوع للعبة ترتيب حروف عربية. لا تعيد نفس القائمة. أخرج كلمات فقط، كل كلمة في سطر."},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.6,
+        "temperature": 1.2,
         "max_tokens": 400
     }
 
