@@ -1597,7 +1597,22 @@ def letters_join(data):
 
     send_letters_state(room)
 
+@socketio.on("letters_add_word")
+def letters_add_word(data):
+    category = str(data.get("category", "objects")).strip()
+    word = str(data.get("word", "")).strip()
 
+    if not word:
+        return
+
+    save_custom_category_word(category, word)
+
+    emit(
+        "letters_error",
+        {"message": f"✅ تمت إضافة الكلمة: {word}"},
+        room=request.sid
+    )
+    
 @socketio.on("letters_set_mode")
 def letters_set_mode(data):
     room = str(data.get("room", "ROOM1")).strip().upper()
