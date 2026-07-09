@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تتحداني - الهوست</title>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+*{box-sizing:border-box} body{margin:0;font-family:Arial,Tahoma,sans-serif;background:linear-gradient(180deg,#160b31,#070711 70%);color:white;min-height:100vh;text-align:center}.wrap{width:min(96%,1180px);margin:0 auto;padding:18px}.panel{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:28px;padding:24px;box-shadow:0 25px 80px rgba(0,0,0,.45)}h1{font-size:54px;margin:10px 0 4px}.sub{opacity:.85;font-size:19px}.setup{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:18px}input,select,button{font-size:22px;padding:14px 18px;border-radius:16px;border:0}input,select{background:white;color:#111;min-width:130px}button{background:#ffd43b;color:#111;font-weight:900;cursor:pointer;transition:.15s}button:hover{transform:scale(1.04)}.pin{font-size:78px;color:#ffd43b;font-weight:900;letter-spacing:8px}.links{font-size:20px;margin:8px}.links a{color:#ffd43b}.top{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:center;margin-top:18px}.timer{font-size:70px;font-weight:900;color:#00ff9d}.round{font-size:28px}.category{font-size:22px;color:#ffd43b}.question{font-size:44px;font-weight:900;margin:18px}.qimg{max-width:92%;max-height:360px;border-radius:24px;box-shadow:0 20px 60px rgba(0,0,0,.45);display:none}.answer{font-size:34px;color:#ffd43b;font-weight:900;margin:14px}.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px;margin-top:18px}.box{background:rgba(0,0,0,.22);border-radius:22px;padding:16px}.players,.answered{display:flex;flex-direction:column;gap:8px}.row{display:flex;justify-content:space-between;gap:12px;align-items:center;background:rgba(255,255,255,.09);padding:12px 14px;border-radius:15px;font-size:21px}.answered .row{background:rgba(0,210,130,.18)}.podium{display:none;margin-top:20px}.podiumCards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:end}.pod{border-radius:24px;padding:22px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15)}.pod.first{background:linear-gradient(180deg,#ffd43b,#a66b00);color:#111;transform:scale(1.06)}.pod.second{background:linear-gradient(180deg,#d7d7d7,#6f6f6f)}.pod.third{background:linear-gradient(180deg,#cd7f32,#7b3d11)}.medal{font-size:58px}.podName{font-size:30px;font-weight:900}.podScore{font-size:24px}@media(max-width:850px){h1{font-size:38px}.top,.grid,.podiumCards{grid-template-columns:1fr}.pin{font-size:52px}.question{font-size:30px}.timer{font-size:55px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="panel">
+    <h1>تتحداني 🎮</h1>
+    <div class="sub">شاشة الهوست مثل كاهوت</div>
+
+    <div id="setup" class="setup">
+      <label>الجولات <input id="roundLimit" type="number" value="10" min="1" max="50"></label>
+      <label>الوقت <input id="timeLimit" type="number" value="25" min="5" max="90"></label>
+      <label>الفئة
+        <select id="category">
+          <option value="random">🎲 عشوائي (كل الفئات)</option>
+          <option value="general">معلومات عامة</option>
+          <option value="football">⚽ كرة قدم</option>
+          <option value="movies">🎬 أفلام ومسلسلات</option>
+          <option value="games">🎮 ألعاب</option>
+          <option value="countries">🌍 دول ومدن</option>
+          <option value="islamic">🕌 إسلاميات</option>
+          <option value="animals">🐼 حيوانات</option>
+          <option value="food">🍔 أكلات</option>
+          <option value="cars">🚗 سيارات</option>
+          <option value="brands">🏷️ شعارات وماركات</option>
+          <option value="history">🏺 تاريخ</option>
+          <option value="science">🔬 علوم خفيفة</option>
+          <option value="technology">💻 تقنية</option>
+          <option value="geography">🗺️ جغرافيا</option>
+          <option value="flags">🚩 أعلام</option>
+          <option value="famous">👑 مشاهير</option>
+        </select>
+      </label>
+      <button onclick="createRoom()">إنشاء لعبة</button>
+    </div>
+
+    <div id="game" style="display:none">
+      <div>كود دخول اللاعبين</div>
+      <div class="pin" id="pinText"></div>
+      <div class="setup" style="margin-top:15px">
+        <button onclick="window.open('/tatahadani-play','_blank')">🎮 دخول اللاعبين</button>
+      </div>
+      <div class="setup">
+        <button onclick="startGame()">Start</button>
+        <button onclick="nextQuestion()">Next</button>
+        <button onclick="resetGame()">Reset</button>
+      </div>
+
+      <div class="top">
+        <div class="round" id="roundText">الجولة: 0/0</div>
+        <div class="timer" id="timerText"></div>
+        <div class="category" id="categoryText"></div>
+      </div>
+
+      <div id="statusText" class="sub"></div>
+      <img id="qImg" class="qimg">
+      <div id="questionText" class="question">بانتظار اللاعبين</div>
+      <div id="answerText" class="answer"></div>
+
+      <div id="podiumBox" class="podium">
+        <h2>🏆 التتويج</h2>
+        <div class="podiumCards" id="podiumCards"></div>
+      </div>
+
+      <div class="grid">
+        <div class="box">
+          <h2>نتائج الجولة</h2>
+          <div id="answeredBox" class="answered"></div>
+        </div>
+        <div class="box">
+          <h2>ترتيب اللاعبين</h2>
+          <div id="playersBox" class="players"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const socket = io();
+let pin = "";
+
+function createRoom(){
+  socket.emit("arabquiz_host_create", {
+    roundLimit: document.getElementById("roundLimit").value,
+    timeLimit: document.getElementById("timeLimit").value,
+    category: document.getElementById("category").value
+  });
+}
+
+socket.on("arabquiz_host_created", data=>{
+  pin = data.pin;
+  document.getElementById("setup").style.display = "none";
+  document.getElementById("game").style.display = "block";
+  document.getElementById("pinText").innerText = pin;
+});
+
+socket.on("arabquiz_host_state", state=>{
+  pin = state.pin;
+  document.getElementById("pinText").innerText = state.pin;
+  document.getElementById("statusText").innerText = statusArabic(state.status, state.message);
+  document.getElementById("timerText").innerText = state.timeLeft || "";
+  document.getElementById("roundText").innerText = "الجولة: " + state.round + "/" + state.roundLimit;
+  document.getElementById("categoryText").innerText = "الفئة: " + (state.categoryLabel || "عام");
+
+  if(state.question && state.status !== "finished"){
+    document.getElementById("questionText").innerText = state.question.question;
+    if(state.question.image){
+      document.getElementById("qImg").src = state.question.image;
+      document.getElementById("qImg").style.display = "inline-block";
+    }else{
+      document.getElementById("qImg").style.display = "none";
+    }
+  }else if(state.status === "finished"){
+    document.getElementById("questionText").innerText = "انتهت اللعبة";
+    document.getElementById("qImg").style.display = "none";
+  }else{
+    document.getElementById("questionText").innerText = "بانتظار اللاعبين";
+    document.getElementById("qImg").style.display = "none";
+  }
+
+  document.getElementById("answerText").innerText = state.correctAnswer ? "الجواب: " + state.correctAnswer : "";
+  renderAnswered(state.answered || []);
+  renderPlayers(state.players || []);
+
+  if(state.status === "finished") renderPodium(state.podium || []);
+  else document.getElementById("podiumBox").style.display = "none";
+});
+
+function statusArabic(status,msg){
+  if(status === "lobby") return "اللوبي - ينتظر اللاعبين";
+  if(status === "question") return "السؤال شغال";
+  if(status === "result") return msg || "نتيجة الجولة";
+  if(status === "finished") return "انتهت اللعبة - شوف التتويج";
+  return status || "";
+}
+function startGame(){ socket.emit("arabquiz_host_start", {pin, roundLimit: roundLimit.value, timeLimit: timeLimit.value, category: category.value}); }
+function nextQuestion(){ socket.emit("arabquiz_host_next", {pin}); }
+function resetGame(){ socket.emit("arabquiz_host_reset", {pin}); }
+
+function renderPlayers(players){
+  const box = document.getElementById("playersBox"); box.innerHTML = "";
+  if(!players.length){ box.innerHTML = '<div class="row"><span>لا يوجد لاعبين</span><span>0</span></div>'; return; }
+  players.forEach((p,i)=>{
+    const div = document.createElement("div"); div.className = "row";
+    const medal = i===0?'🏆 ':i===1?'🥈 ':i===2?'🥉 ':'';
+    div.innerHTML = `<span>${medal}${i+1}. ${escapeHtml(p.name)}</span><b>${p.score} نقطة</b>`;
+    box.appendChild(div);
+  });
+}
+function renderAnswered(answered){
+  const box = document.getElementById("answeredBox"); box.innerHTML = "";
+  if(!answered.length){ box.innerHTML = '<div class="row"><span>ماكو إجابات صحيحة للحين</span><span></span></div>'; return; }
+  answered.forEach(a=>{
+    const div = document.createElement("div"); div.className = "row";
+    div.innerHTML = `<span>${a.place}) ${escapeHtml(a.name)}</span><b>+${a.points} <small>(${a.base}+${a.bonus})</small></b>`;
+    box.appendChild(div);
+  });
+}
+function renderPodium(podium){
+  const box = document.getElementById("podiumBox"); const cards = document.getElementById("podiumCards");
+  box.style.display = "block"; cards.innerHTML = "";
+  const classes = ["first","second","third"], medals=["🏆","🥈","🥉"];
+  podium.forEach((p,i)=>{
+    const div = document.createElement("div"); div.className = "pod " + classes[i];
+    div.innerHTML = `<div class="medal">${medals[i]}</div><div class="podName">${escapeHtml(p.name)}</div><div class="podScore">${p.score} نقطة</div>`;
+    cards.appendChild(div);
+  });
+}
+function escapeHtml(s){return String(s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+</script>
+</body>
+</html>
