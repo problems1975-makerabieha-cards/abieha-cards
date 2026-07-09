@@ -192,6 +192,17 @@ function renderPodium(podium){
   });
 }
 function escapeHtml(s){return String(s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+  function kickPlayer(pid,name){
+
+    if(!confirm("هل تريد طرد " + name + " ؟"))
+        return;
+
+    socket.emit("arabquiz_kick_player",{
+        pin:pin,
+        pid:pid
+    });
+
+}
 </script>
 </body>
 </html>
