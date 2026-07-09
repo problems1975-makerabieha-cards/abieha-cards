@@ -156,7 +156,19 @@ function renderPlayers(players){
   players.forEach((p,i)=>{
     const div = document.createElement("div"); div.className = "row";
     const medal = i===0?'🏆 ':i===1?'🥈 ':i===2?'🥉 ':'';
-    div.innerHTML = `<span>${medal}${i+1}. ${escapeHtml(p.name)}</span><b>${p.score} نقطة</b>`;
+    div.innerHTML = `
+    <span>${medal}${i+1}. ${escapeHtml(p.name)}</span>
+
+    <div style="display:flex;align-items:center;gap:8px">
+        <b>${p.score} نقطة</b>
+
+        <button
+            style="background:#e53935;color:white;padding:6px 12px;border-radius:10px;font-size:16px"
+            onclick="kickPlayer('${p.pid}','${escapeHtml(p.name)}')">
+            ❌ طرد
+        </button>
+    </div>
+    `;
     box.appendChild(div);
   });
 }
