@@ -3537,6 +3537,18 @@ def arabquiz_make_tiles(q):
         return tiles
 
     chars = [c for c in answer if c != " "]
+
+    extra_letters = list("ابتثجحخدذرزسشصضطظعغفقكلمنهوي")
+
+    while len(chars) < len(answer.replace(" ", "")) + 6:
+        chars.append(random.choice(extra_letters))
+
+    random.shuffle(chars)
+
+    tiles = [
+        {"id": i, "text": c}
+        for i, c in enumerate(chars)
+    ]
     tiles = [{"id": i, "text": c} for i, c in enumerate(chars)]
     random.shuffle(tiles)
     return tiles
