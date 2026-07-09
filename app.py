@@ -1,7 +1,7 @@
 from flask import Flask, request, send_file, session, redirect
 from flask_socketio import SocketIO, join_room, emit
 import random, os, threading
-import json, urllib.request, urllib.parse
+import json, urllib.request, urllib.parse, urllib.parse
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "abieha-final-secret")
@@ -3391,6 +3391,7 @@ arabquiz_rooms = {}
 arabquiz_lock = threading.Lock()
 
 TATAHADANI_CATEGORIES = {
+    "random": "عشوائي - كل الفئات",
     "general": "معلومات عامة",
     "football": "كرة قدم",
     "movies": "أفلام ومسلسلات",
@@ -3401,7 +3402,22 @@ TATAHADANI_CATEGORIES = {
     "food": "أكلات",
     "cars": "سيارات",
     "brands": "شعارات وماركات",
+    "history": "تاريخ",
+    "science": "علوم خفيفة",
+    "technology": "تقنية",
+    "geography": "جغرافيا",
+    "flags": "أعلام",
+    "famous": "مشاهير",
 }
+
+TATAHADANI_RANDOM_CATEGORIES = [
+    "football", "movies", "games", "countries", "islamic",
+    "animals", "food", "cars", "brands", "history",
+    "science", "technology", "geography", "flags", "famous"
+]
+
+TATAHADANI_USED_PATH = "static/tatahadani_used.json"
+TATAHADANI_USED_LIMIT = 500
 
 TATAHADANI_FALLBACK_QUESTIONS = {
     "general": [
@@ -3445,6 +3461,30 @@ TATAHADANI_FALLBACK_QUESTIONS = {
     "brands": [
         {"question": "شركة شعارها التفاحة", "answer": "آبل", "type": "letters", "image": "https://source.unsplash.com/900x500/?apple,logo"},
         {"question": "رتب اسم الماركة", "answer": "ستاربكس", "type": "letters", "image": "https://source.unsplash.com/900x500/?starbucks,logo"},
+    ],
+    "history": [
+        {"question": "من بنى الأهرامات؟", "answer": "الفراعنة", "type": "letters", "image": "https://source.unsplash.com/900x500/?pyramids"},
+        {"question": "رتب الجملة", "answer": "التاريخ ذاكرة الشعوب", "type": "words", "tiles": ["الشعوب", "ذاكرة", "التاريخ"], "image": ""},
+    ],
+    "science": [
+        {"question": "ما الغاز الذي نتنفسه؟", "answer": "الأكسجين", "type": "letters", "image": ""},
+        {"question": "ما العضو الذي يضخ الدم؟", "answer": "القلب", "type": "letters", "image": ""},
+    ],
+    "technology": [
+        {"question": "شركة صنعت الآيفون", "answer": "آبل", "type": "letters", "image": "https://source.unsplash.com/900x500/?iphone"},
+        {"question": "رتب اسم التطبيق", "answer": "تيك توك", "type": "words", "tiles": ["توك", "تيك"], "image": ""},
+    ],
+    "geography": [
+        {"question": "أكبر قارة في العالم", "answer": "آسيا", "type": "letters", "image": "https://source.unsplash.com/900x500/?asia,map"},
+        {"question": "نهر مشهور في مصر", "answer": "النيل", "type": "letters", "image": "https://source.unsplash.com/900x500/?nile"},
+    ],
+    "flags": [
+        {"question": "رتب اسم الدولة صاحبة هذا العلم", "answer": "الكويت", "type": "letters", "image": "https://source.unsplash.com/900x500/?kuwait,flag"},
+        {"question": "علم أحمر وأبيض وورقة قيقب", "answer": "كندا", "type": "letters", "image": "https://source.unsplash.com/900x500/?canada,flag"},
+    ],
+    "famous": [
+        {"question": "مخترع المصباح الكهربائي", "answer": "إديسون", "type": "letters", "image": ""},
+        {"question": "رتب اسم الشخصية", "answer": "ألبرت أينشتاين", "type": "words", "tiles": ["أينشتاين", "ألبرت"], "image": ""},
     ],
 }
 
@@ -3510,29 +3550,85 @@ def arabquiz_new_pin():
     return str(random.randint(1000000, 9999999))
 
 
-def tatahadani_pick_fallback(category, used_answers=None):
+def tatahadani_load_global_used():
+    try:
+        if os.path.exists(TATAHADANI_USED_PATH):
+            with open(TATAHADANI_USED_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return {
+                "answers": list(data.get("answers", []))[-TATAHADANI_USED_LIMIT:],
+                "questions": list(data.get("questions", []))[-TATAHADANI_USED_LIMIT:],
+            }
+    except Exception as e:
+        print("TATAHADANI USED LOAD ERROR:", e)
+    return {"answers": [], "questions": []}
+
+
+def tatahadani_save_global_used(answer="", question=""):
+    try:
+        os.makedirs(os.path.dirname(TATAHADANI_USED_PATH), exist_ok=True)
+        data = tatahadani_load_global_used()
+        a = arabquiz_clean_answer(answer)
+        q = arabquiz_clean_answer(question)
+        if a and a not in data["answers"]:
+            data["answers"].append(a)
+        if q and q not in data["questions"]:
+            data["questions"].append(q)
+        data["answers"] = data["answers"][-TATAHADANI_USED_LIMIT:]
+        data["questions"] = data["questions"][-TATAHADANI_USED_LIMIT:]
+        with open(TATAHADANI_USED_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+    except Exception as e:
+        print("TATAHADANI USED SAVE ERROR:", e)
+
+
+def tatahadani_resolve_category(r):
+    selected = r.get("category", "random")
+    if selected != "random":
+        return selected if selected in TATAHADANI_CATEGORIES else "general"
+
+    last = r.get("lastCategory", "")
+    choices = [c for c in TATAHADANI_RANDOM_CATEGORIES if c != last]
+    if not choices:
+        choices = list(TATAHADANI_RANDOM_CATEGORIES)
+    picked = random.choice(choices)
+    r["lastCategory"] = picked
+    return picked
+
+
+def tatahadani_pick_fallback(category, used_answers=None, used_questions=None):
     used_answers = used_answers or set()
+    used_questions = used_questions or set()
     pool = list(TATAHADANI_FALLBACK_QUESTIONS.get(category) or TATAHADANI_FALLBACK_QUESTIONS["general"])
     random.shuffle(pool)
     for q in pool:
-        if arabquiz_clean_answer(q.get("answer")) not in used_answers:
+        a = arabquiz_clean_answer(q.get("answer"))
+        qq = arabquiz_clean_answer(q.get("question"))
+        if a not in used_answers and qq not in used_questions:
             return dict(q)
     return dict(random.choice(pool))
 
 
-def tatahadani_ai_question(category="general", used_answers=None):
+def tatahadani_ai_question(category="general", used_answers=None, used_questions=None):
     api_key = os.environ.get("OPENAI_API_KEY", "").strip()
-    if not api_key:
-        return tatahadani_pick_fallback(category, used_answers)
-
     used_answers = used_answers or set()
+    used_questions = used_questions or set()
+    global_used = tatahadani_load_global_used()
+    used_answers = set(used_answers) | set(global_used.get("answers", []))
+    used_questions = set(used_questions) | set(global_used.get("questions", []))
+
+    if not api_key:
+        return tatahadani_pick_fallback(category, used_answers, used_questions)
+
     category_label = TATAHADANI_CATEGORIES.get(category, TATAHADANI_CATEGORIES["general"])
-    used_text = ", ".join(list(used_answers)[-80:])
+    used_text = ", ".join(list(used_answers)[-120:])
+    used_q_text = " | ".join(list(used_questions)[-80:])
 
     prompt = f"""
 أنت مولد أسئلة للعبة عربية اسمها تتحداني، نفس أسلوب كاهوت.
 المطلوب توليد سؤال واحد فقط باللغة العربية من فئة: {category_label}.
-لا تكرر إجابات مستخدمة سابقاً: {used_text}
+ممنوع تكرار هذه الإجابات نهائياً: {used_text}
+ممنوع تكرار نفس فكرة أو نص هذه الأسئلة: {used_q_text}
 
 القواعد:
 - أرجع JSON فقط بدون شرح.
@@ -3543,6 +3639,8 @@ def tatahadani_ai_question(category="general", used_answers=None):
 - image: رابط صورة مباشر اختياري، وإذا غير متأكد اجعله فارغاً.
 - image_query: كلمات بحث إنجليزية للصورة مثل football player أو Kuwait city.
 - السؤال لا يكون صعب جداً ولا طويل.
+- نوّع نوع الأسئلة ولا تعلّق على موضوع واحد.
+- إذا الفئة علوم، خليها علوم خفيفة ومشهورة وليست معادلات صعبة.
 
 مثال:
 {{"question":"ما عاصمة الكويت؟","answer":"مدينة الكويت","type":"words","tiles":["الكويت","مدينة"],"image":"","image_query":"Kuwait City skyline"}}
@@ -3573,7 +3671,11 @@ def tatahadani_ai_question(category="general", used_answers=None):
 
         answer = str(q.get("answer", "")).strip()
         if len(answer) < 2:
-            return tatahadani_pick_fallback(category, used_answers)
+            return tatahadani_pick_fallback(category, used_answers, used_questions)
+
+        question_text = str(q.get("question", "")).strip()
+        if arabquiz_clean_answer(answer) in used_answers or arabquiz_clean_answer(question_text) in used_questions:
+            return tatahadani_pick_fallback(category, used_answers, used_questions)
 
         qtype = q.get("type", "letters")
         if qtype not in ["letters", "words"]:
@@ -3586,7 +3688,7 @@ def tatahadani_ai_question(category="general", used_answers=None):
             image = f"https://source.unsplash.com/900x500/?{safe_query}"
 
         out = {
-            "question": str(q.get("question", "")).strip() or "رتب الإجابة",
+            "question": question_text or "رتب الإجابة",
             "answer": answer,
             "type": qtype,
             "image": image,
@@ -3604,7 +3706,7 @@ def tatahadani_ai_question(category="general", used_answers=None):
 
     except Exception as e:
         print("TATAHADANI AI QUESTION ERROR:", repr(e))
-        return tatahadani_pick_fallback(category, used_answers)
+        return tatahadani_pick_fallback(category, used_answers, used_questions)
 
 
 def arabquiz_host_state(pin):
@@ -3616,8 +3718,9 @@ def arabquiz_host_state(pin):
     return {
         "pin": pin,
         "status": r.get("status", "lobby"),
-        "category": r.get("category", "general"),
-        "categoryLabel": TATAHADANI_CATEGORIES.get(r.get("category", "general"), "عام"),
+        "category": r.get("category", "random"),
+        "categoryLabel": TATAHADANI_CATEGORIES.get(r.get("activeCategory", r.get("category", "random")), "عام"),
+        "selectedCategoryLabel": TATAHADANI_CATEGORIES.get(r.get("category", "random"), "عام"),
         "round": r.get("round", 0),
         "roundLimit": r.get("roundLimit", 10),
         "timeLeft": r.get("timeLeft", 0),
@@ -3685,10 +3788,14 @@ def arabquiz_next_question(pin):
         arabquiz_emit_all(pin)
         return
 
-    category = r.get("category", "general")
+    category = tatahadani_resolve_category(r)
+    r["activeCategory"] = category
     used_answers = r.setdefault("usedAnswers", set())
-    q = tatahadani_ai_question(category, used_answers)
+    used_questions = r.setdefault("usedQuestions", set())
+    q = tatahadani_ai_question(category, used_answers, used_questions)
     used_answers.add(arabquiz_clean_answer(q.get("answer", "")))
+    used_questions.add(arabquiz_clean_answer(q.get("question", "")))
+    tatahadani_save_global_used(q.get("answer", ""), q.get("question", ""))
 
     r["round"] = int(r.get("round", 0)) + 1
     r["current"] = q
@@ -3735,7 +3842,7 @@ def arabquiz_host_create(data):
     data = data or {}
     pin = arabquiz_new_pin()
     host_sid = request.sid
-    category = str(data.get("category", "general") or "general").strip()
+    category = str(data.get("category", "random") or "random").strip()
     if category not in TATAHADANI_CATEGORIES:
         category = "general"
 
@@ -3797,7 +3904,7 @@ def arabquiz_host_start(data):
     data = data or {}
     pin = str(data.get("pin", "")).strip()
     pid = request.sid
-    category = str(data.get("category", "general") or "general").strip()
+    category = str(data.get("category", "random") or "random").strip()
     if category not in TATAHADANI_CATEGORIES:
         category = "general"
 
@@ -3814,6 +3921,9 @@ def arabquiz_host_start(data):
         r["round"] = 0
         r["status"] = "question"
         r["usedAnswers"] = set()
+        r["usedQuestions"] = set()
+        r["activeCategory"] = ""
+        r["lastCategory"] = ""
         r["questionKey"] = 0
         r["timerToken"] = random.randint(100000, 999999)
         for p in r.get("players", {}).values():
@@ -3915,6 +4025,9 @@ def arabquiz_host_reset(data):
         r["timerToken"] = random.randint(100000, 999999)
         r["questionKey"] = 0
         r["usedAnswers"] = set()
+        r["usedQuestions"] = set()
+        r["activeCategory"] = ""
+        r["lastCategory"] = ""
         for p in r.get("players", {}).values():
             p["score"] = 0
 
