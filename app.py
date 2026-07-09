@@ -3632,13 +3632,22 @@ def tatahadani_ai_question(category="general", used_answers=None, used_questions
     if not api_key:
         return tatahadani_pick_fallback(category, used_answers, used_questions)
 
-    category_label = TATAHADANI_CATEGORIES.get(category, TATAHADANI_CATEGORIES["general"])
+    if category == "flags":
+        category_label = (
+            "أعلام الدول والرايات الوطنية فقط. "
+            "اسأل فقط عن علم دولة. "
+            "ممنوع السؤال عن الشعراء أو الأمراء أو الملوك أو المشاهير أو الشخصيات. "
+            "الإجابة لازم تكون اسم دولة فقط مثل: الكويت، قطر، اليابان، البرازيل."
+        )
+    else:
+        category_label = TATAHADANI_CATEGORIES.get(category, TATAHADANI_CATEGORIES["general"])
     used_text = ", ".join(list(used_answers)[-120:])
     used_q_text = " | ".join(list(used_questions)[-80:])
 
     prompt = f"""
 أنت مولد أسئلة للعبة عربية اسمها تتحداني، نفس أسلوب كاهوت.
 المطلوب توليد سؤال واحد فقط باللغة العربية من فئة: {category_label}.
+إذا كانت الفئة أعلام الدول، لا تستخدم كلمة "أعلام" بمعنى شخصيات أبداً.
 ممنوع تكرار هذه الإجابات نهائياً: {used_text}
 ممنوع تكرار نفس فكرة أو نص هذه الأسئلة: {used_q_text}
 
