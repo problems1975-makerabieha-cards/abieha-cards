@@ -3751,7 +3751,17 @@ def arabquiz_host_state(pin):
         } if q else None
     }
 
+def answer_hint(answer):
+    answer = str(answer or "").strip()
+    words = [w for w in answer.split() if w]
 
+    letters_count = len(answer.replace(" ", ""))
+
+    if len(words) > 1:
+        return f"الإجابة من {len(words)} كلمات - عدد الحروف {letters_count}"
+    else:
+        return f"الإجابة من {letters_count} حروف"
+        
 def arabquiz_player_state(pin, pid):
     r = arabquiz_rooms[pin]
     q = r.get("current")
@@ -3765,20 +3775,30 @@ def arabquiz_player_state(pin, pid):
         "timeLeft": r.get("timeLeft", 0),
         "timeLimit": r.get("timeLimit", 25),
 
-        # 👇 أضف هذا الجزء
         "question": {
             "question": q.get("question", ""),
             "image": q.get("image", ""),
             "type": q.get("type", "letters")
         } if q else None,
 
+        # 👇 أضف هذا السطر
+        "hint": answer_hint(q.get("answer", "")) if q else "",
+
         "answered": answered,
         "showAnswer": r.get("showAnswer", False),
         "correctAnswer": q.get("answer", "") if q and r.get("showAnswer") else "",
         "tiles": r.get("tiles", []) if q and r.get("status") == "question" and not answered else [],
         "questionKey": r.get("questionKey", 0),
-        "players": sorted(list(r.get("players", {}).values()), key=lambda x: int(x.get("score", 0)), reverse=True),
-        "podium": sorted(list(r.get("players", {}).values()), key=lambda x: int(x.get("score", 0)), reverse=True)[:3] if r.get("status") == "finished" else [],
+        "players": sorted(
+            list(r.get("players", {}).values()),
+            key=lambda x: int(x.get("score", 0)),
+            reverse=True
+        ),
+        "podium": sorted(
+            list(r.get("players", {}).values()),
+            key=lambda x: int(x.get("score", 0)),
+            reverse=True
+        )[:3] if r.get("status") == "finished" else [],
         "message": r.get("message", "")
     }
 def arabquiz_emit_all(pin):
