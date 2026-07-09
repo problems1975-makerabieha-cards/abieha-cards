@@ -24,7 +24,20 @@
   <div id="roundText" class="sub"></div>
   <div id="timeText" class="timer"></div>
   <div id="messageText" class="msg">انتظر السؤال</div>
-  <div id="answerBox" class="answerBox"></div>
+  <img id="playerQImg"
+     style="max-width:100%;
+            max-height:240px;
+            border-radius:18px;
+            display:none;
+            margin:10px auto;">
+
+   <div id="playerQuestionText"
+        style="font-size:28px;
+               font-weight:bold;
+               margin:15px">
+   </div>
+
+<div id="answerBox" class="answerBox"></div>
   <div class="tiles" id="tilesBox"></div>
   <div>
     <button onclick="backspace()">مسح</button>
@@ -72,7 +85,19 @@ socket.on("arabquiz_player_state", state=>{
   document.getElementById("roundText").innerText = "الجولة: " + state.round + "/" + state.roundLimit;
   document.getElementById("timeText").innerText = state.timeLeft || "";
   answeredCurrent = !!state.answered;
+  if(state.question){
+    document.getElementById("playerQuestionText").innerText = state.question.question;
 
+    if(state.question.image){
+      document.getElementById("playerQImg").src = state.question.image;
+      document.getElementById("playerQImg").style.display = "block";
+    }else{
+      document.getElementById("playerQImg").style.display = "none";
+    }
+    }else{
+    document.getElementById("playerQuestionText").innerText = "";
+    document.getElementById("playerQImg").style.display = "none";
+  }
   if(state.status === "lobby") setMsg("انتظر الهوست يبدأ");
   else if(state.status === "question") setMsg(state.answered ? "تم إرسال إجابتك ✅" : "رتب الجواب");
   else if(state.status === "result") setMsg("انتهت الجولة");
