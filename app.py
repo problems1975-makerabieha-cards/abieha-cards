@@ -4012,7 +4012,34 @@ def arabquiz_player_answer(data):
 
     arabquiz_emit_all(pin)
 
+@socketio.on("arabquiz_kick_player")
+def arabquiz_kick_player(data):
 
+    pin = data["pin"]
+    target = data["pid"]
+    host = request.sid
+
+    if pin not in arabquiz_rooms:
+        return
+
+    room = arabquiz_rooms[pin]
+
+    if room["host"] != host:
+        return
+
+    if target not in room["players"]:
+        return
+
+    socketio.emit(
+        "arabquiz_kicked",
+        room=target
+    )
+
+    socketio.server.disconnect(target)
+
+    del room["players"][target]
+
+    emit_all(pin)
 @socketio.on("arabquiz_host_reset")
 def arabquiz_host_reset(data):
     data = data or {}
