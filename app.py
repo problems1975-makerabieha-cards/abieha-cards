@@ -3764,6 +3764,14 @@ def arabquiz_player_state(pin, pid):
         "roundLimit": r.get("roundLimit", 10),
         "timeLeft": r.get("timeLeft", 0),
         "timeLimit": r.get("timeLimit", 25),
+
+        # 👇 أضف هذا الجزء
+        "question": {
+            "question": q.get("question", ""),
+            "image": q.get("image", ""),
+            "type": q.get("type", "letters")
+        } if q else None,
+
         "answered": answered,
         "showAnswer": r.get("showAnswer", False),
         "correctAnswer": q.get("answer", "") if q and r.get("showAnswer") else "",
@@ -3773,8 +3781,6 @@ def arabquiz_player_state(pin, pid):
         "podium": sorted(list(r.get("players", {}).values()), key=lambda x: int(x.get("score", 0)), reverse=True)[:3] if r.get("status") == "finished" else [],
         "message": r.get("message", "")
     }
-
-
 def arabquiz_emit_all(pin):
     if pin not in arabquiz_rooms:
         return
