@@ -59,7 +59,14 @@ socket.on("arabquiz_player_joined", data=>{
   document.getElementById("pinText").innerText = pin;
 });
 socket.on("arabquiz_wrong", data=>{ document.getElementById("messageText").innerText = "غلط، جرّب مرة ثانية"; });
+socket.on("arabquiz_kicked",()=>{
 
+    alert("تم طردك من الغرفة");
+
+    location.href="/tatahadani-play";
+
+});
+  
 socket.on("arabquiz_player_state", state=>{
   document.getElementById("pinText").innerText = state.pin;
   document.getElementById("roundText").innerText = "الجولة: " + state.round + "/" + state.roundLimit;
