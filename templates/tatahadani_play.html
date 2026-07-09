@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>تتحداني - لاعب</title>
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#111,#1b263b);color:#fff;font-family:Arial,Tahoma,sans-serif;text-align:center}.box{max-width:650px;margin:18px auto;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.13);border-radius:24px;padding:20px;box-shadow:0 12px 35px #0008}h1{font-size:38px}input,button{font-size:24px;padding:15px;margin:8px;border-radius:16px;border:0;width:90%;max-width:360px}button{background:#ffd23f;font-weight:900;cursor:pointer;color:#111}.meta{font-size:22px;opacity:.9}.timer{font-size:64px;color:#00ff9d;font-weight:900}.msg{font-size:30px;font-weight:900;margin:16px}.answerBox{min-height:72px;background:white;color:#111;font-size:36px;font-weight:900;border-radius:18px;padding:15px;margin:15px;word-break:break-word}.tiles{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}.tile{width:auto;min-width:62px;background:#2f80ed;color:#fff;font-size:32px;padding:16px 20px;border-radius:18px}.tile.used{opacity:.25;pointer-events:none}.wrong{color:#ff5252;font-size:22px;font-weight:800}.answer{font-size:28px;color:#ffd23f;font-weight:900}.hidden{display:none}.actions button{width:auto;min-width:120px;background:#fff}
+</style>
+</head>
+<body>
+<div id="joinBox" class="box">
+  <h1>🎮 تتحداني</h1>
+  <input id="pinInput" placeholder="كود اللعبة" inputmode="numeric">
+  <input id="nameInput" placeholder="اسمك">
+  <button onclick="joinGame()">دخول</button>
+  <div id="joinError" class="wrong"></div>
+</div>
+<div id="gameBox" class="box hidden">
+  <div class="meta">PIN: <b id="pinText"></b></div>
+  <div class="meta" id="roundText"></div>
+  <div class="timer" id="timeText">0</div>
+  <div id="messageText" class="msg">انتظر السؤال</div>
+  <div id="answerBox" class="answerBox"></div>
+  <div class="tiles" id="tilesBox"></div>
+  <div class="actions">
+    <button onclick="backspace()">مسح</button>
+    <button onclick="clearAnswer()">مسح الكل</button>
+  </div>
+  <button onclick="submitAnswer()">إرسال</button>
+  <div id="correctAnswer" class="answer"></div>
+</div>
+<script>
+const socket=io();let pin="";let selected=[];
+function joinGame(){pin=pinInput.value.trim();let name=nameInput.value.trim()||"Player";socket.emit("arabquiz_player_join",{pin,name});}
+socket.on("arabquiz_join_error",d=>joinError.innerText=d.msg);
+socket.on("arabquiz_player_joined",d=>{pin=d.pin;joinBox.classList.add("hidden");gameBox.classList.remove("hidden");pinText.innerText=pin;});
+socket.on("arabquiz_wrong",()=>{messageText.innerText="غلط، جرّب مرة ثانية";messageText.style.color="#ff5252";});
+socket.on("arabquiz_player_state",s=>{pinText.innerText=s.pin;roundText.innerText="الجولة: "+s.round+"/"+s.roundLimit;timeText.innerText=s.timeLeft||0;messageText.style.color="#fff";if(s.status==="lobby")messageText.innerText="انتظر الهوست يبدأ";else if(s.status==="question")messageText.innerText=s.answered?"تم إرسال إجابتك ✅":"رتب الجواب";else if(s.status==="result")messageText.innerText="انتهت الجولة";else if(s.status==="finished")messageText.innerText="انتهت اللعبة";correctAnswer.innerText=s.correctAnswer?"الجواب الصحيح: "+s.correctAnswer:"";selected=[];updateAnswerBox();renderTiles(s.tiles||[]);});
+function renderTiles(tiles){tilesBox.innerHTML="";tiles.forEach(t=>{let b=document.createElement("button");b.className="tile";b.innerText=t.text;b.dataset.id=t.id;b.onclick=()=>{b.classList.add("used");selected.push(t);updateAnswerBox();};tilesBox.appendChild(b);});}
+function updateAnswerBox(){answerBox.innerText=selected.map(x=>x.text).join(" ");}
+function backspace(){if(!selected.length)return;let last=selected.pop();document.querySelectorAll(".tile").forEach(b=>{if(b.dataset.id==last.id)b.classList.remove("used");});updateAnswerBox();}
+function clearAnswer(){selected=[];document.querySelectorAll(".tile").forEach(b=>b.classList.remove("used"));updateAnswerBox();}
+function submitAnswer(){let answer=selected.map(x=>x.text).join(" ");socket.emit("arabquiz_player_answer",{pin,answer});}
+</script>
+</body>
+</html>
