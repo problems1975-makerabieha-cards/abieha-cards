@@ -1,7 +1,7 @@
 from flask import Flask, request, send_file, session, redirect
 from flask_socketio import SocketIO, join_room, emit
 import random, os, threading
-import json, urllib.request
+import json, urllib.request, urllib.parse
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "abieha-final-secret")
@@ -97,7 +97,33 @@ def get_random_puzzle_image(category="general"):
 
 @app.route("/")
 def home():
-    return send_file("templates/home.html")
+    home_path = "templates/home.html"
+
+    try:
+        with open(home_path, "r", encoding="utf-8") as f:
+            html = f.read()
+
+        # إضافة لعبة تتحداني للصفحة الرئيسية بدون تخريب التصميم الحالي
+        if "تتحداني" not in html and "/tatahadani-host" not in html:
+            tatahadani_card = """
+            <div style="max-width:420px;margin:18px auto;padding:18px;border-radius:22px;background:linear-gradient(135deg,#ffcc33,#ff7a00);color:#111;text-align:center;font-family:Arial,Tahoma,sans-serif;box-shadow:0 10px 25px rgba(0,0,0,.25)">
+                <div style="font-size:42px">🏆</div>
+                <h2 style="margin:8px 0;font-size:32px">تتحداني</h2>
+                <p style="font-size:18px;margin:8px 0 16px">لعبة أسئلة مثل كاهوت: الهوست يعرض السؤال واللاعبين يجاوبون من الجوال</p>
+                <a href="/tatahadani-host" style="display:inline-block;margin:6px;padding:13px 20px;border-radius:14px;background:#111;color:white;text-decoration:none;font-size:20px;font-weight:bold">شاشة الهوست</a>
+                <a href="/tatahadani-play" style="display:inline-block;margin:6px;padding:13px 20px;border-radius:14px;background:white;color:#111;text-decoration:none;font-size:20px;font-weight:bold">دخول لاعب</a>
+            </div>
+            """
+
+            if "</body>" in html:
+                html = html.replace("</body>", tatahadani_card + "\n</body>")
+            else:
+                html += tatahadani_card
+
+        return html
+
+    except Exception:
+        return send_file(home_path)
 
 
 @app.route("/uno")
@@ -3360,38 +3386,67 @@ def scramble_kick(data):
     send_scramble_state(room)
 
 
-# ===== تتحداني - نظام كاهوت =====
+# ===== تتحداني - نظام كاهوت متكامل =====
 arabquiz_rooms = {}
 arabquiz_lock = threading.Lock()
 
-ARABQUIZ_QUESTIONS = [
-    {
-        "question": "من هذا اللاعب؟",
-        "answer": "ميسي",
-        "type": "letters",
-        "image": "https://upload.wikimedia.org/wikipedia/commons/b/b8/Messi_vs_Nigeria_2018.jpg"
-    },
-    {
-        "question": "رتب الجملة",
-        "answer": "الكويت بلد جميل",
-        "type": "words",
-        "tiles": ["جميل", "الكويت", "بلد"],
-        "image": ""
-    },
-    {
-        "question": "ما عاصمة الكويت؟",
-        "answer": "مدينة الكويت",
-        "type": "words",
-        "tiles": ["الكويت", "مدينة"],
-        "image": ""
-    },
-    {
-        "question": "ما اسم هذا الشيء؟",
-        "answer": "قهوة",
-        "type": "letters",
-        "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=900"
-    }
-]
+TATAHADANI_CATEGORIES = {
+    "general": "معلومات عامة",
+    "football": "كرة قدم",
+    "movies": "أفلام ومسلسلات",
+    "games": "ألعاب",
+    "countries": "دول ومدن",
+    "islamic": "إسلاميات",
+    "animals": "حيوانات",
+    "food": "أكلات",
+    "cars": "سيارات",
+    "brands": "شعارات وماركات",
+}
+
+TATAHADANI_FALLBACK_QUESTIONS = {
+    "general": [
+        {"question": "ما عاصمة الكويت؟", "answer": "مدينة الكويت", "type": "words", "tiles": ["الكويت", "مدينة"], "image": ""},
+        {"question": "ما الكوكب الأحمر؟", "answer": "المريخ", "type": "letters", "image": "https://source.unsplash.com/900x500/?mars,planet"},
+        {"question": "رتب الجملة", "answer": "العلم نور", "type": "words", "tiles": ["نور", "العلم"], "image": ""},
+    ],
+    "football": [
+        {"question": "من هذا اللاعب؟", "answer": "ميسي", "type": "letters", "image": "https://source.unsplash.com/900x500/?lionel,messi,football"},
+        {"question": "أي منتخب فاز بكأس العالم 2022؟", "answer": "الأرجنتين", "type": "letters", "image": "https://source.unsplash.com/900x500/?argentina,football"},
+        {"question": "رتب اسم النادي", "answer": "ريال مدريد", "type": "words", "tiles": ["مدريد", "ريال"], "image": "https://source.unsplash.com/900x500/?real,madrid"},
+    ],
+    "movies": [
+        {"question": "رتب اسم الفيلم", "answer": "الرسالة", "type": "letters", "image": ""},
+        {"question": "رتب الجملة", "answer": "فيلم مصري قديم", "type": "words", "tiles": ["قديم", "مصري", "فيلم"], "image": ""},
+    ],
+    "games": [
+        {"question": "رتب اسم اللعبة", "answer": "كول أوف ديوتي", "type": "words", "tiles": ["ديوتي", "أوف", "كول"], "image": "https://source.unsplash.com/900x500/?video,game"},
+        {"question": "لعبة بناء ومكعبات مشهورة", "answer": "ماينكرافت", "type": "letters", "image": "https://source.unsplash.com/900x500/?minecraft"},
+    ],
+    "countries": [
+        {"question": "رتب اسم الدولة", "answer": "السعودية", "type": "letters", "image": "https://source.unsplash.com/900x500/?saudi,arabia"},
+        {"question": "ما عاصمة مصر؟", "answer": "القاهرة", "type": "letters", "image": "https://source.unsplash.com/900x500/?cairo"},
+    ],
+    "islamic": [
+        {"question": "ما أول سورة في القرآن؟", "answer": "الفاتحة", "type": "letters", "image": ""},
+        {"question": "رتب الجملة", "answer": "رمضان شهر كريم", "type": "words", "tiles": ["كريم", "شهر", "رمضان"], "image": ""},
+    ],
+    "animals": [
+        {"question": "ما أسرع حيوان بري؟", "answer": "الفهد", "type": "letters", "image": "https://source.unsplash.com/900x500/?cheetah"},
+        {"question": "حيوان يلقب بملك الغابة", "answer": "الأسد", "type": "letters", "image": "https://source.unsplash.com/900x500/?lion"},
+    ],
+    "food": [
+        {"question": "مشروب صباحي مشهور", "answer": "قهوة", "type": "letters", "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=900"},
+        {"question": "رتب اسم الأكلة", "answer": "مجبوس دجاج", "type": "words", "tiles": ["دجاج", "مجبوس"], "image": ""},
+    ],
+    "cars": [
+        {"question": "شركة سيارات ألمانية", "answer": "مرسيدس", "type": "letters", "image": "https://source.unsplash.com/900x500/?mercedes,car"},
+        {"question": "رتب اسم السيارة", "answer": "تويوتا لاندكروزر", "type": "words", "tiles": ["لاندكروزر", "تويوتا"], "image": "https://source.unsplash.com/900x500/?toyota,landcruiser"},
+    ],
+    "brands": [
+        {"question": "شركة شعارها التفاحة", "answer": "آبل", "type": "letters", "image": "https://source.unsplash.com/900x500/?apple,logo"},
+        {"question": "رتب اسم الماركة", "answer": "ستاربكس", "type": "letters", "image": "https://source.unsplash.com/900x500/?starbucks,logo"},
+    ],
+}
 
 
 @app.route("/tatahadani-host")
@@ -3409,7 +3464,6 @@ def tatahadani_redirect_page():
     return redirect("/tatahadani-host")
 
 
-# روابط قديمة تظل شغالة لو فاتحها قبل
 @app.route("/arabquiz-host")
 def arabquiz_host_page():
     return redirect("/tatahadani-host")
@@ -3438,7 +3492,7 @@ def arabquiz_make_tiles(q):
 
     if q.get("type") == "words":
         tiles = q.get("tiles") or answer.split()
-        tiles = [{"id": i, "text": t} for i, t in enumerate(tiles)]
+        tiles = [{"id": i, "text": str(t)} for i, t in enumerate(tiles)]
         random.shuffle(tiles)
         return tiles
 
@@ -3456,6 +3510,103 @@ def arabquiz_new_pin():
     return str(random.randint(1000000, 9999999))
 
 
+def tatahadani_pick_fallback(category, used_answers=None):
+    used_answers = used_answers or set()
+    pool = list(TATAHADANI_FALLBACK_QUESTIONS.get(category) or TATAHADANI_FALLBACK_QUESTIONS["general"])
+    random.shuffle(pool)
+    for q in pool:
+        if arabquiz_clean_answer(q.get("answer")) not in used_answers:
+            return dict(q)
+    return dict(random.choice(pool))
+
+
+def tatahadani_ai_question(category="general", used_answers=None):
+    api_key = os.environ.get("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return tatahadani_pick_fallback(category, used_answers)
+
+    used_answers = used_answers or set()
+    category_label = TATAHADANI_CATEGORIES.get(category, TATAHADANI_CATEGORIES["general"])
+    used_text = ", ".join(list(used_answers)[-80:])
+
+    prompt = f"""
+أنت مولد أسئلة للعبة عربية اسمها تتحداني، نفس أسلوب كاهوت.
+المطلوب توليد سؤال واحد فقط باللغة العربية من فئة: {category_label}.
+لا تكرر إجابات مستخدمة سابقاً: {used_text}
+
+القواعد:
+- أرجع JSON فقط بدون شرح.
+- question: نص السؤال.
+- answer: الإجابة الصحيحة قصيرة وواضحة.
+- type: إما letters إذا الإجابة كلمة واحدة، أو words إذا الإجابة أكثر من كلمة/جملة.
+- tiles: إذا type=words ضع كلمات الإجابة بترتيب عشوائي. إذا letters اجعلها قائمة فارغة.
+- image: رابط صورة مباشر اختياري، وإذا غير متأكد اجعله فارغاً.
+- image_query: كلمات بحث إنجليزية للصورة مثل football player أو Kuwait city.
+- السؤال لا يكون صعب جداً ولا طويل.
+
+مثال:
+{{"question":"ما عاصمة الكويت؟","answer":"مدينة الكويت","type":"words","tiles":["الكويت","مدينة"],"image":"","image_query":"Kuwait City skyline"}}
+"""
+
+    payload = {
+        "model": os.environ.get("OPENAI_QUESTION_MODEL", os.environ.get("OPENAI_WORD_MODEL", "gpt-4.1-mini")),
+        "messages": [
+            {"role": "system", "content": "أجب JSON فقط صالح للقراءة بواسطة json.loads."},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.9,
+        "max_tokens": 350
+    }
+
+    try:
+        req = urllib.request.Request(
+            "https://api.openai.com/v1/chat/completions",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Authorization": "Bearer " + api_key, "Content-Type": "application/json"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+        content = data.get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+        content = content.replace("```json", "").replace("```", "").strip()
+        q = json.loads(content)
+
+        answer = str(q.get("answer", "")).strip()
+        if len(answer) < 2:
+            return tatahadani_pick_fallback(category, used_answers)
+
+        qtype = q.get("type", "letters")
+        if qtype not in ["letters", "words"]:
+            qtype = "words" if " " in answer else "letters"
+
+        image = str(q.get("image", "") or "").strip()
+        image_query = str(q.get("image_query", "") or "").strip()
+        if not image and image_query:
+            safe_query = urllib.parse.quote_plus(image_query)
+            image = f"https://source.unsplash.com/900x500/?{safe_query}"
+
+        out = {
+            "question": str(q.get("question", "")).strip() or "رتب الإجابة",
+            "answer": answer,
+            "type": qtype,
+            "image": image,
+        }
+
+        if qtype == "words":
+            tiles = q.get("tiles") if isinstance(q.get("tiles"), list) else answer.split()
+            tiles = [str(x).strip() for x in tiles if str(x).strip()]
+            if not tiles:
+                tiles = answer.split()
+            random.shuffle(tiles)
+            out["tiles"] = tiles
+
+        return out
+
+    except Exception as e:
+        print("TATAHADANI AI QUESTION ERROR:", repr(e))
+        return tatahadani_pick_fallback(category, used_answers)
+
+
 def arabquiz_host_state(pin):
     r = arabquiz_rooms[pin]
     q = r.get("current")
@@ -3465,17 +3616,23 @@ def arabquiz_host_state(pin):
     return {
         "pin": pin,
         "status": r.get("status", "lobby"),
+        "category": r.get("category", "general"),
+        "categoryLabel": TATAHADANI_CATEGORIES.get(r.get("category", "general"), "عام"),
         "round": r.get("round", 0),
         "roundLimit": r.get("roundLimit", 10),
         "timeLeft": r.get("timeLeft", 0),
+        "timeLimit": r.get("timeLimit", 25),
         "players": players,
         "answered": r.get("answered", []),
         "showAnswer": r.get("showAnswer", False),
         "correctAnswer": q.get("answer", "") if q and r.get("showAnswer") else "",
+        "podium": players[:3] if r.get("status") == "finished" else [],
+        "message": r.get("message", ""),
         "question": {
             "question": q.get("question", ""),
             "image": q.get("image", ""),
-            "type": q.get("type", "letters")
+            "type": q.get("type", "letters"),
+            "key": r.get("questionKey", 0)
         } if q else None
     }
 
@@ -3491,10 +3648,14 @@ def arabquiz_player_state(pin, pid):
         "round": r.get("round", 0),
         "roundLimit": r.get("roundLimit", 10),
         "timeLeft": r.get("timeLeft", 0),
+        "timeLimit": r.get("timeLimit", 25),
         "answered": answered,
         "showAnswer": r.get("showAnswer", False),
         "correctAnswer": q.get("answer", "") if q and r.get("showAnswer") else "",
         "tiles": r.get("tiles", []) if q and r.get("status") == "question" and not answered else [],
+        "questionKey": r.get("questionKey", 0),
+        "players": sorted(list(r.get("players", {}).values()), key=lambda x: int(x.get("score", 0)), reverse=True),
+        "podium": sorted(list(r.get("players", {}).values()), key=lambda x: int(x.get("score", 0)), reverse=True)[:3] if r.get("status") == "finished" else [],
         "message": r.get("message", "")
     }
 
@@ -3519,10 +3680,16 @@ def arabquiz_next_question(pin):
         r["status"] = "finished"
         r["showAnswer"] = False
         r["timeLeft"] = 0
+        r["message"] = "انتهت اللعبة"
+        r["timerToken"] = random.randint(100000, 999999)
         arabquiz_emit_all(pin)
         return
 
-    q = random.choice(ARABQUIZ_QUESTIONS)
+    category = r.get("category", "general")
+    used_answers = r.setdefault("usedAnswers", set())
+    q = tatahadani_ai_question(category, used_answers)
+    used_answers.add(arabquiz_clean_answer(q.get("answer", "")))
+
     r["round"] = int(r.get("round", 0)) + 1
     r["current"] = q
     r["tiles"] = arabquiz_make_tiles(q)
@@ -3531,6 +3698,7 @@ def arabquiz_next_question(pin):
     r["status"] = "question"
     r["timeLeft"] = int(r.get("timeLimit", 25))
     r["timerToken"] = random.randint(100000, 999999)
+    r["questionKey"] = int(r.get("questionKey", 0)) + 1
     r["message"] = ""
 
     arabquiz_emit_all(pin)
@@ -3567,6 +3735,9 @@ def arabquiz_host_create(data):
     data = data or {}
     pin = arabquiz_new_pin()
     host_sid = request.sid
+    category = str(data.get("category", "general") or "general").strip()
+    if category not in TATAHADANI_CATEGORIES:
+        category = "general"
 
     join_room("arabquiz_host_" + pin)
 
@@ -3576,16 +3747,19 @@ def arabquiz_host_create(data):
             "host": host_sid,
             "players": {},
             "status": "lobby",
+            "category": category,
             "round": 0,
-            "roundLimit": int(data.get("roundLimit", 10) or 10),
-            "timeLimit": int(data.get("timeLimit", 25) or 25),
+            "roundLimit": max(1, min(50, int(data.get("roundLimit", 10) or 10))),
+            "timeLimit": max(5, min(90, int(data.get("timeLimit", 25) or 25))),
             "timeLeft": 0,
             "current": None,
             "tiles": [],
             "answered": [],
             "showAnswer": False,
             "message": "",
-            "timerToken": 0
+            "timerToken": 0,
+            "questionKey": 0,
+            "usedAnswers": set()
         }
 
     emit("arabquiz_host_created", {"pin": pin})
@@ -3612,11 +3786,7 @@ def arabquiz_player_join(data):
             emit("arabquiz_join_error", {"msg": "اللعبة بدأت، ادخل الجولة القادمة"}, room=request.sid)
             return
 
-        r["players"][pid] = {
-            "pid": pid,
-            "name": name,
-            "score": 0
-        }
+        r["players"][pid] = {"pid": pid, "name": name, "score": 0}
 
     emit("arabquiz_player_joined", {"pin": pin, "pid": pid}, room=request.sid)
     arabquiz_emit_all(pin)
@@ -3627,20 +3797,25 @@ def arabquiz_host_start(data):
     data = data or {}
     pin = str(data.get("pin", "")).strip()
     pid = request.sid
+    category = str(data.get("category", "general") or "general").strip()
+    if category not in TATAHADANI_CATEGORIES:
+        category = "general"
 
     with arabquiz_lock:
         if pin not in arabquiz_rooms:
             return
-
         r = arabquiz_rooms[pin]
         if r.get("host") != pid:
             return
 
         r["roundLimit"] = max(1, min(50, int(data.get("roundLimit", r.get("roundLimit", 10)) or 10)))
         r["timeLimit"] = max(5, min(90, int(data.get("timeLimit", r.get("timeLimit", 25)) or 25)))
+        r["category"] = category
         r["round"] = 0
         r["status"] = "question"
-
+        r["usedAnswers"] = set()
+        r["questionKey"] = 0
+        r["timerToken"] = random.randint(100000, 999999)
         for p in r.get("players", {}).values():
             p["score"] = 0
 
@@ -3672,7 +3847,6 @@ def arabquiz_player_answer(data):
     with arabquiz_lock:
         if pin not in arabquiz_rooms:
             return
-
         r = arabquiz_rooms[pin]
 
         if r.get("status") != "question":
@@ -3691,27 +3865,28 @@ def arabquiz_player_answer(data):
             return
 
         place = len(r.get("answered", [])) + 1
-        if place == 1:
-            points = 100
-        elif place == 2:
-            points = 70
-        elif place == 3:
-            points = 50
-        else:
-            points = 20
+        base_points = {1: 100, 2: 80, 3: 60, 4: 40}.get(place, 20)
+        time_limit = max(1, int(r.get("timeLimit", 25) or 25))
+        time_left = max(0, int(r.get("timeLeft", 0) or 0))
+        speed_bonus = int((time_left / time_limit) * 50)
+        points = base_points + speed_bonus
 
         r["players"][pid]["score"] = int(r["players"][pid].get("score", 0)) + points
         r["answered"].append({
             "pid": pid,
             "name": r["players"][pid].get("name", "Player"),
             "place": place,
-            "points": points
+            "base": base_points,
+            "bonus": speed_bonus,
+            "points": points,
+            "timeLeft": time_left
         })
 
         if len(r["answered"]) >= len(r.get("players", {})):
             r["status"] = "result"
             r["showAnswer"] = True
             r["message"] = "الكل جاوب"
+            r["timerToken"] = random.randint(100000, 999999)
 
     arabquiz_emit_all(pin)
 
@@ -3725,7 +3900,6 @@ def arabquiz_host_reset(data):
     with arabquiz_lock:
         if pin not in arabquiz_rooms:
             return
-
         r = arabquiz_rooms[pin]
         if r.get("host") != pid:
             return
@@ -3739,11 +3913,13 @@ def arabquiz_host_reset(data):
         r["showAnswer"] = False
         r["message"] = ""
         r["timerToken"] = random.randint(100000, 999999)
-
+        r["questionKey"] = 0
+        r["usedAnswers"] = set()
         for p in r.get("players", {}).values():
             p["score"] = 0
 
     arabquiz_emit_all(pin)
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
