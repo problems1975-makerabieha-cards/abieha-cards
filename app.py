@@ -3706,7 +3706,7 @@ def tatahadani_ai_question(category="general", used_answers=None, used_questions
         image_query = str(q.get("image_query", "") or "").strip()
         if not image and image_query:
             safe_query = urllib.parse.quote_plus(image_query)
-            image = f"https://source.unsplash.com/900x500/?{safe_query}"
+            image = ""
 
         out = {
             "question": question_text or "رتب الإجابة",
