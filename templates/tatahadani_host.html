@@ -13,7 +13,7 @@
 <div class="wrap">
   <div class="panel">
     <h1>تتحداني 🎮</h1>
-    <div class="sub">شاشة الهوست مثل كاهوت</div>
+    <div class="sub">أبيها</div>
 
     <div id="setup" class="setup">
       <label>الجولات <input id="roundLimit" type="number" value="10" min="1" max="50"></label>
@@ -38,7 +38,11 @@
     <div id="game" style="display:none">
       <div>كود دخول اللاعبين</div>
       <div class="pin" id="pinText"></div>
-      <div class="links">دخول اللاعبين: <a href="/tatahadani-play" target="_blank">/tatahadani-play</a></div>
+     <div class="setup" style="margin-top:15px">
+  <button onclick="window.open('/tatahadani-play','_blank')">
+    🎮 دخول اللاعبين
+  </button>
+</div>
       <div class="setup">
         <button onclick="startGame()">Start</button>
         <button onclick="nextQuestion()">Next</button>
