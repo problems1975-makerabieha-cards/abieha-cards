@@ -32,10 +32,14 @@
             margin:10px auto;">
 
    <div id="playerQuestionText"
-        style="font-size:28px;
-               font-weight:bold;
-               margin:15px">
-   </div>
+     style="font-size:28px;
+            font-weight:bold;
+            margin:15px">
+</div>
+
+<div id="answerHint"
+     style="font-size:22px;color:#ffd43b;font-weight:bold;margin:10px">
+</div>
 
 <div id="answerBox" class="answerBox"></div>
   <div class="tiles" id="tilesBox"></div>
@@ -85,6 +89,7 @@ socket.on("arabquiz_player_state", state=>{
   document.getElementById("roundText").innerText = "الجولة: " + state.round + "/" + state.roundLimit;
   document.getElementById("timeText").innerText = state.timeLeft || "";
   answeredCurrent = !!state.answered;
+  document.getElementById("answerHint").innerText = state.hint || "";
   if(state.question){
     document.getElementById("playerQuestionText").innerText = state.question.question;
 
