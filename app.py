@@ -3359,6 +3359,392 @@ def scramble_kick(data):
 
     send_scramble_state(room)
 
+
+# ===== تتحداني - نظام كاهوت =====
+arabquiz_rooms = {}
+arabquiz_lock = threading.Lock()
+
+ARABQUIZ_QUESTIONS = [
+    {
+        "question": "من هذا اللاعب؟",
+        "answer": "ميسي",
+        "type": "letters",
+        "image": "https://upload.wikimedia.org/wikipedia/commons/b/b8/Messi_vs_Nigeria_2018.jpg"
+    },
+    {
+        "question": "رتب الجملة",
+        "answer": "الكويت بلد جميل",
+        "type": "words",
+        "tiles": ["جميل", "الكويت", "بلد"],
+        "image": ""
+    },
+    {
+        "question": "ما عاصمة الكويت؟",
+        "answer": "مدينة الكويت",
+        "type": "words",
+        "tiles": ["الكويت", "مدينة"],
+        "image": ""
+    },
+    {
+        "question": "ما اسم هذا الشيء؟",
+        "answer": "قهوة",
+        "type": "letters",
+        "image": "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=900"
+    }
+]
+
+
+@app.route("/tatahadani-host")
+def tatahadani_host_page():
+    return send_file("templates/tatahadani_host.html")
+
+
+@app.route("/tatahadani-play")
+def tatahadani_play_page():
+    return send_file("templates/tatahadani_play.html")
+
+
+@app.route("/tatahadani")
+def tatahadani_redirect_page():
+    return redirect("/tatahadani-host")
+
+
+# روابط قديمة تظل شغالة لو فاتحها قبل
+@app.route("/arabquiz-host")
+def arabquiz_host_page():
+    return redirect("/tatahadani-host")
+
+
+@app.route("/arabquiz-play")
+def arabquiz_play_page():
+    return redirect("/tatahadani-play")
+
+
+@app.route("/arabquiz")
+def arabquiz_redirect_page():
+    return redirect("/tatahadani-host")
+
+
+def arabquiz_clean_answer(value):
+    value = str(value or "")
+    value = value.replace(" ", "").replace("ـ", "")
+    value = value.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
+    value = value.replace("ى", "ي").replace("ة", "ه")
+    return value.strip().lower()
+
+
+def arabquiz_make_tiles(q):
+    answer = str(q.get("answer", "")).strip()
+
+    if q.get("type") == "words":
+        tiles = q.get("tiles") or answer.split()
+        tiles = [{"id": i, "text": t} for i, t in enumerate(tiles)]
+        random.shuffle(tiles)
+        return tiles
+
+    chars = [c for c in answer if c != " "]
+    tiles = [{"id": i, "text": c} for i, c in enumerate(chars)]
+    random.shuffle(tiles)
+    return tiles
+
+
+def arabquiz_new_pin():
+    for _ in range(200):
+        pin = str(random.randint(100000, 999999))
+        if pin not in arabquiz_rooms:
+            return pin
+    return str(random.randint(1000000, 9999999))
+
+
+def arabquiz_host_state(pin):
+    r = arabquiz_rooms[pin]
+    q = r.get("current")
+    players = list(r.get("players", {}).values())
+    players.sort(key=lambda x: int(x.get("score", 0)), reverse=True)
+
+    return {
+        "pin": pin,
+        "status": r.get("status", "lobby"),
+        "round": r.get("round", 0),
+        "roundLimit": r.get("roundLimit", 10),
+        "timeLeft": r.get("timeLeft", 0),
+        "players": players,
+        "answered": r.get("answered", []),
+        "showAnswer": r.get("showAnswer", False),
+        "correctAnswer": q.get("answer", "") if q and r.get("showAnswer") else "",
+        "question": {
+            "question": q.get("question", ""),
+            "image": q.get("image", ""),
+            "type": q.get("type", "letters")
+        } if q else None
+    }
+
+
+def arabquiz_player_state(pin, pid):
+    r = arabquiz_rooms[pin]
+    q = r.get("current")
+    answered = pid in [a.get("pid") for a in r.get("answered", [])]
+
+    return {
+        "pin": pin,
+        "status": r.get("status", "lobby"),
+        "round": r.get("round", 0),
+        "roundLimit": r.get("roundLimit", 10),
+        "timeLeft": r.get("timeLeft", 0),
+        "answered": answered,
+        "showAnswer": r.get("showAnswer", False),
+        "correctAnswer": q.get("answer", "") if q and r.get("showAnswer") else "",
+        "tiles": r.get("tiles", []) if q and r.get("status") == "question" and not answered else [],
+        "message": r.get("message", "")
+    }
+
+
+def arabquiz_emit_all(pin):
+    if pin not in arabquiz_rooms:
+        return
+
+    socketio.emit("arabquiz_host_state", arabquiz_host_state(pin), room="arabquiz_host_" + pin)
+
+    for pid in list(arabquiz_rooms[pin].get("players", {}).keys()):
+        socketio.emit("arabquiz_player_state", arabquiz_player_state(pin, pid), room=pid)
+
+
+def arabquiz_next_question(pin):
+    if pin not in arabquiz_rooms:
+        return
+
+    r = arabquiz_rooms[pin]
+
+    if int(r.get("round", 0)) >= int(r.get("roundLimit", 10)):
+        r["status"] = "finished"
+        r["showAnswer"] = False
+        r["timeLeft"] = 0
+        arabquiz_emit_all(pin)
+        return
+
+    q = random.choice(ARABQUIZ_QUESTIONS)
+    r["round"] = int(r.get("round", 0)) + 1
+    r["current"] = q
+    r["tiles"] = arabquiz_make_tiles(q)
+    r["answered"] = []
+    r["showAnswer"] = False
+    r["status"] = "question"
+    r["timeLeft"] = int(r.get("timeLimit", 25))
+    r["timerToken"] = random.randint(100000, 999999)
+    r["message"] = ""
+
+    arabquiz_emit_all(pin)
+    socketio.start_background_task(arabquiz_question_timer, pin, r["timerToken"])
+
+
+def arabquiz_question_timer(pin, token):
+    while True:
+        socketio.sleep(1)
+
+        with arabquiz_lock:
+            if pin not in arabquiz_rooms:
+                return
+
+            r = arabquiz_rooms[pin]
+
+            if r.get("timerToken") != token or r.get("status") != "question":
+                return
+
+            r["timeLeft"] = max(0, int(r.get("timeLeft", 0)) - 1)
+
+            if r["timeLeft"] <= 0:
+                r["status"] = "result"
+                r["showAnswer"] = True
+                r["message"] = "انتهى الوقت"
+                arabquiz_emit_all(pin)
+                return
+
+        arabquiz_emit_all(pin)
+
+
+@socketio.on("arabquiz_host_create")
+def arabquiz_host_create(data):
+    data = data or {}
+    pin = arabquiz_new_pin()
+    host_sid = request.sid
+
+    join_room("arabquiz_host_" + pin)
+
+    with arabquiz_lock:
+        arabquiz_rooms[pin] = {
+            "pin": pin,
+            "host": host_sid,
+            "players": {},
+            "status": "lobby",
+            "round": 0,
+            "roundLimit": int(data.get("roundLimit", 10) or 10),
+            "timeLimit": int(data.get("timeLimit", 25) or 25),
+            "timeLeft": 0,
+            "current": None,
+            "tiles": [],
+            "answered": [],
+            "showAnswer": False,
+            "message": "",
+            "timerToken": 0
+        }
+
+    emit("arabquiz_host_created", {"pin": pin})
+    arabquiz_emit_all(pin)
+
+
+@socketio.on("arabquiz_player_join")
+def arabquiz_player_join(data):
+    data = data or {}
+    pin = str(data.get("pin", "")).strip()
+    name = str(data.get("name", "Player")).strip()[:18] or "Player"
+    pid = request.sid
+
+    if pin not in arabquiz_rooms:
+        emit("arabquiz_join_error", {"msg": "الكود غلط"}, room=request.sid)
+        return
+
+    join_room(pid)
+
+    with arabquiz_lock:
+        r = arabquiz_rooms[pin]
+
+        if r.get("status") != "lobby":
+            emit("arabquiz_join_error", {"msg": "اللعبة بدأت، ادخل الجولة القادمة"}, room=request.sid)
+            return
+
+        r["players"][pid] = {
+            "pid": pid,
+            "name": name,
+            "score": 0
+        }
+
+    emit("arabquiz_player_joined", {"pin": pin, "pid": pid}, room=request.sid)
+    arabquiz_emit_all(pin)
+
+
+@socketio.on("arabquiz_host_start")
+def arabquiz_host_start(data):
+    data = data or {}
+    pin = str(data.get("pin", "")).strip()
+    pid = request.sid
+
+    with arabquiz_lock:
+        if pin not in arabquiz_rooms:
+            return
+
+        r = arabquiz_rooms[pin]
+        if r.get("host") != pid:
+            return
+
+        r["roundLimit"] = max(1, min(50, int(data.get("roundLimit", r.get("roundLimit", 10)) or 10)))
+        r["timeLimit"] = max(5, min(90, int(data.get("timeLimit", r.get("timeLimit", 25)) or 25)))
+        r["round"] = 0
+        r["status"] = "question"
+
+        for p in r.get("players", {}).values():
+            p["score"] = 0
+
+    arabquiz_next_question(pin)
+
+
+@socketio.on("arabquiz_host_next")
+def arabquiz_host_next(data):
+    data = data or {}
+    pin = str(data.get("pin", "")).strip()
+    pid = request.sid
+
+    with arabquiz_lock:
+        if pin not in arabquiz_rooms:
+            return
+        if arabquiz_rooms[pin].get("host") != pid:
+            return
+
+    arabquiz_next_question(pin)
+
+
+@socketio.on("arabquiz_player_answer")
+def arabquiz_player_answer(data):
+    data = data or {}
+    pin = str(data.get("pin", "")).strip()
+    answer = str(data.get("answer", ""))
+    pid = request.sid
+
+    with arabquiz_lock:
+        if pin not in arabquiz_rooms:
+            return
+
+        r = arabquiz_rooms[pin]
+
+        if r.get("status") != "question":
+            return
+        if pid not in r.get("players", {}):
+            return
+        if pid in [a.get("pid") for a in r.get("answered", [])]:
+            return
+
+        q = r.get("current")
+        if not q:
+            return
+
+        if arabquiz_clean_answer(answer) != arabquiz_clean_answer(q.get("answer", "")):
+            emit("arabquiz_wrong", {"msg": "غلط"}, room=request.sid)
+            return
+
+        place = len(r.get("answered", [])) + 1
+        if place == 1:
+            points = 100
+        elif place == 2:
+            points = 70
+        elif place == 3:
+            points = 50
+        else:
+            points = 20
+
+        r["players"][pid]["score"] = int(r["players"][pid].get("score", 0)) + points
+        r["answered"].append({
+            "pid": pid,
+            "name": r["players"][pid].get("name", "Player"),
+            "place": place,
+            "points": points
+        })
+
+        if len(r["answered"]) >= len(r.get("players", {})):
+            r["status"] = "result"
+            r["showAnswer"] = True
+            r["message"] = "الكل جاوب"
+
+    arabquiz_emit_all(pin)
+
+
+@socketio.on("arabquiz_host_reset")
+def arabquiz_host_reset(data):
+    data = data or {}
+    pin = str(data.get("pin", "")).strip()
+    pid = request.sid
+
+    with arabquiz_lock:
+        if pin not in arabquiz_rooms:
+            return
+
+        r = arabquiz_rooms[pin]
+        if r.get("host") != pid:
+            return
+
+        r["status"] = "lobby"
+        r["round"] = 0
+        r["timeLeft"] = 0
+        r["current"] = None
+        r["tiles"] = []
+        r["answered"] = []
+        r["showAnswer"] = False
+        r["message"] = ""
+        r["timerToken"] = random.randint(100000, 999999)
+
+        for p in r.get("players", {}).values():
+            p["score"] = 0
+
+    arabquiz_emit_all(pin)
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     socketio.run(app, host="0.0.0.0", port=port, allow_unsafe_werkzeug=True)
