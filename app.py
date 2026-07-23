@@ -662,12 +662,14 @@ def is_allowed(r, card):
             or (card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"])
         )
 
-    # أثناء عقوبة +2
+    # أثناء عقوبة +2:
+    # 1) +2 بأي لون: تزيد العقوبة وتنتقل للاعب التالي.
+    # 2) عكس بنفس اللون الحالي: يعكس الاتجاه وتبقى العقوبة.
+    # 3) تخطي بنفس اللون الحالي: يتخطى اللاعب التالي وتبقى العقوبة.
+    # لا يمكن الرد على +2 بكرت +4.
     if r.get("pendingDraw2", 0) > 0:
         return (
             card["n"] == "+2"
-            or card["n"] == "+4"
-            or card["n"] == top["n"]
             or (card["n"] in ["عكس", "تخطي"] and card["c"] == r["color"])
         )
 
@@ -716,28 +718,26 @@ def apply_effect(r, card):
         r["turn"] = next_index(r)
         return
 
-    # عكس / تخطي أثناء العقوبة: يمرر العقوبة ولا يصفرها
+    # عكس / تخطي أثناء العقوبة: العقوبة تبقى ولا يتم تصفيرها.
     if card["n"] in ["عكس", "تخطي"]:
 
         if r.get("pendingDraw2", 0) > 0 or r.get("pendingDraw4", 0) > 0:
 
             if card["n"] == "عكس":
+                # نعكس الاتجاه أولاً، ثم ننقل العقوبة لأول لاعب حسب الاتجاه الجديد.
+                # هذا يعمل أيضاً مع لاعبين فقط: ترجع العقوبة إلى اللاعب الآخر.
                 r["direction"] *= -1
                 r["log"].insert(0, "↺ عكس أثناء العقوبة — العقوبة مستمرة")
-
-            if card["n"] == "تخطي":
-                r["log"].insert(0, "⊘ تخطي أثناء العقوبة — العقوبة مستمرة")
-
-            # إذا لاعبين فقط: نفس اللاعب يلعب مرة ثانية
-            if len(r["players"]) == 2:
+                r["turn"] = next_index(r)
                 return
 
-            r["turn"] = next_index(r)
-
             if card["n"] == "تخطي":
+                # نتخطى اللاعب التالي حسب اتجاه اللعب، ثم تنتقل العقوبة للي بعده.
+                # مع لاعبين فقط ترجع العقوبة لنفس من لعب كرت التخطي.
+                r["log"].insert(0, "⊘ تخطي أثناء العقوبة — العقوبة مستمرة")
                 r["turn"] = next_index(r)
-
-            return
+                r["turn"] = next_index(r)
+                return
 
         # عكس / تخطي بدون عقوبة
         r["pendingDraw2"] = 0
@@ -791,7 +791,8 @@ def handle_timeout(room):
         r["pendingDraw4"] = 0
         r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته وسحب {total}")
     elif amount2 > 0:
-        total = amount2 + 1
+        # عند انتهاء الوقت أثناء عقوبة +2 يسحب اللاعب العقوبة المتراكمة فقط.
+        total = amount2
         draw_to(r, idx, total)
         r["pendingDraw2"] = 0
         r["log"].insert(0, f"{r['players'][idx]['name']} انتهى وقته وسحب {total}")
